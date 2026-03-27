@@ -1,13 +1,16 @@
 /* ═══════════════════════════════════════════════════════════
    JUST BURGER 🍔 — app_v3.js
-   Versão: 2026-03-27
+   Controle de Produção — Firebase Realtime Database (compat)
+   Versão: 2026-03-27 — GitHub Edition
 ═══════════════════════════════════════════════════════════ */
 'use strict';
 
+/* ══ SENHAS ══════════════════════════════════════════════ */
 const LEADER_PASSWORD  = 'lider123';
 const COLLAB_PASSWORDS = { 'DINA': 'lider123*', 'SANDRO': 'lider123*' };
 const DEPT_PASSWORD    = { 'ATENDIMENTO': 'lider123*' };
 
+/* ══ MAPA COLABORADOR → DEPARTAMENTO ════════════════════ */
 const COLLAB_DEPT = {
   'ANTONIEL':'ATENDIMENTO','ANTONIEL INICIO':'ATENDIMENTO','ANTONIEL FINALIZAÇÃO':'ATENDIMENTO',
   'MARCUS':'ATENDIMENTO','MARCUS INICIO':'ATENDIMENTO','MARCUS FINALIZAÇÃO':'ATENDIMENTO',
@@ -20,6 +23,7 @@ const COLLAB_DEPT = {
   'DINA':'PRODUCAO','SANDRO':'PRODUCAO',
 };
 
+/* ══ CONSTANTES ═══════════════════════════════════════════ */
 const UNIDADES_CHECKLIST = [
   'checklist','vídeo','video','execução','execucao','tarefa','atividade',
   'limpeza','higienização','higienizacao','conferir','verificar','organizar',
@@ -90,6 +94,7 @@ const ATEND_COLABS = [
   'DESPACHO','SANDRO','DINA',
 ];
 
+/* ══ ESTADO GLOBAL ═══════════════════════════════════════ */
 let _deptAtual   = 'PRODUCAO';
 let _thanksIv    = null;
 let _atendRegIds = {};
@@ -107,6 +112,7 @@ const S = {
   producaoIniciada: false,
 };
 
+/* ══ HELPERS FIREBASE ════════════════════════════════════ */
 async function _fbGetAll(col)        { return fbv2_getAll(col); }
 async function _fbGetOne(col,id)     { return fbv2_getOne(col,id); }
 async function _fbPost(col,data)     { return fbv2_post(col,data); }
@@ -114,11 +120,13 @@ async function _fbPatch(col,id,data) { return fbv2_patch(col,id,data); }
 async function _fbPut(col,id,data)   { return fbv2_put(col,id,data); }
 async function _fbDelete(col,id)     { return fbv2_delete(col,id); }
 
+/* ══ CACHE ═══════════════════════════════════════════════ */
 function _invalidarCache() {
   _cache.tarefas=null; _cache.sessoes=null;
   _cache._faltas=null; _cache._registros=null;
 }
 
+/* ══ CHECKLIST DETECTOR ══════════════════════════════════ */
 function isChecklist(t) {
   if (!t) return false;
   const u  = (t.unidade||'').toLowerCase().trim();
@@ -131,6 +139,7 @@ function isChecklist(t) {
   return false;
 }
 
+/* ══ INIT ════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
   initWorkDate();
   renderDayGrid();
@@ -163,6 +172,7 @@ function _atualizarBadge(qtd) {
   else b.style.display='none';
 }
 
+/* ══ DATA DE TRABALHO ════════════════════════════════════ */
 function initWorkDate() {
   const inp = document.getElementById('work-date-input');
   if (!inp) return;
@@ -195,6 +205,7 @@ function _updateWorkDateDisplay(ds) {
     ${ehHoje?'<span class="wdd-today-tag">HOJE</span>':''}`;
 }
 
+/* ══ NAVEGAÇÃO ════════════════════════════════════════════ */
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
   const el = document.getElementById(id);
@@ -260,6 +271,7 @@ function switchLeaderTab(tab) {
   if (tab==='tarefas') loadTarefasGestao();
 }
 
+/* ══ TURNO ═══════════════════════════════════════════════ */
 function selectTurno(turno) {
   if (!S.dataTrabalho) {
     const inp=document.getElementById('work-date-input');
@@ -274,6 +286,7 @@ function selectTurno(turno) {
   showScreen('screen-day');
 }
 
+/* ══ DIA ══════════════════════════════════════════════════ */
 function renderDayGrid() {
   const dataTrab = S.dataTrabalho || today();
   const dtTrab   = new Date(dataTrab+'T12:00:00');
@@ -292,9 +305,15 @@ function renderDayGrid() {
   }).join('');
 }
 
-function selectDia(dia) { S.dia=dia; _irParaDept(); }
+function selectDia(dia) {
+  S.dia=dia;
+  _irParaDept();
+}
 
-function _getDept(nome) { return COLLAB_DEPT[(nome||'').toUpperCase()] || 'PRODUCAO'; }
+/* ══ DEPARTAMENTO ════════════════════════════════════════ */
+function _getDept(nome) {
+  return COLLAB_DEPT[(nome||'').toUpperCase()] || 'PRODUCAO';
+}
 
 function _irParaDept() {
   const dObj=DIAS_LIST.find(d=>d.key===S.dia);
@@ -306,7 +325,10 @@ function _irParaDept() {
 }
 
 function _abrirSetorCards(dept) {
-  if (dept==='ATENDIMENTO') { _pedirSenhaDepto(()=>_mostrarTelaSetor(dept)); return; }
+  if (dept==='ATENDIMENTO') {
+    _pedirSenhaDepto(()=>_mostrarTelaSetor(dept));
+    return;
+  }
   _mostrarTelaSetor(dept);
 }
 
@@ -366,11 +388,11 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
   });
   const cores=['cc-0','cc-1','cc-2','cc-3','cc-4','cc-5','cc-6','cc-7','cc-8','cc-9','cc-10','cc-11'];
   grid.innerHTML=nomes.map((nome,i)=>{
-    const em=COLLAB_EMOJI[nome]||'👤';
-    const setor=COLLAB_SETOR[nome]||'';
-    const cnt=map[nome];
-    const cor=cores[i%cores.length];
-    const ne=nome.replace(/'/g,"\\'");
+    const em       = COLLAB_EMOJI[nome]||'👤';
+    const setor    = COLLAB_SETOR[nome]||'';
+    const cnt      = map[nome];
+    const cor      = cores[i%cores.length];
+    const ne       = nome.replace(/'/g,"\\'");
     const sessStatus=sessMap[nome];
     const jaFinaliz=!!sessStatus;
     const isCompleto=sessStatus==='completo';
@@ -383,9 +405,9 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
       overlay=`<div class="collab-done-overlay ${isCompleto?'done-100':'done-parcial'}" style="pointer-events:none">${isCompleto?'✅ Finalizado 100%':'⚠️ Parcial'}</div>`;
     }
     let acao;
-    if (tipoFalta&&S.leaderOk) acao=`_gerenciarFalta('${ne}','${tipoFalta}','remover')`;
-    else if (jaFinaliz)         acao=`_clickColab('${ne}','__reabrir__')`;
-    else                        acao=`_clickColab('${ne}','__selecionar__')`;
+    if (tipoFalta&&S.leaderOk)  acao=`_gerenciarFalta('${ne}','${tipoFalta}','remover')`;
+    else if (jaFinaliz)          acao=`_clickColab('${ne}','__reabrir__')`;
+    else                         acao=`_clickColab('${ne}','__selecionar__')`;
     const btnFalta=(S.leaderOk&&!tipoFalta&&!jaFinaliz)
       ?`<button class="btn-falta-card" onclick="event.stopPropagation();_abrirModalFalta('${ne}')">🚫 Falta</button>`:'';
     return `<div class="collab-card-wrap">
@@ -399,6 +421,7 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
   }).join('');
 }
 
+/* ══ MODAL SENHA GENÉRICO ════════════════════════════════ */
 function _abrirModalSenha(emoji,titulo,subtitulo,senhaEsperada,callback) {
   let ov=document.getElementById('_modal_pw_generico');
   if (!ov) {
@@ -427,9 +450,10 @@ function _abrirModalSenha(emoji,titulo,subtitulo,senhaEsperada,callback) {
     </div>
   </div>`;
   ov.style.display='flex';
-  ov._senhaEsperada=senhaEsperada; ov._callback=callback;
+  ov._senhaEsperada=senhaEsperada;
+  ov._callback=callback;
   const inp=document.getElementById('_pw_gen_input');
-  const ok=document.getElementById('_pw_gen_ok');
+  const ok =document.getElementById('_pw_gen_ok');
   const err=document.getElementById('_pw_gen_err');
   const confirm=()=>{
     if (inp.value!==ov._senhaEsperada) { err.textContent='❌ Senha incorreta!'; inp.value=''; inp.focus(); return; }
@@ -441,6 +465,7 @@ function _abrirModalSenha(emoji,titulo,subtitulo,senhaEsperada,callback) {
   setTimeout(()=>inp.focus(),80);
 }
 
+/* ══ CLICK COLABORADOR ═══════════════════════════════════ */
 function _clickColab(nome,acao) {
   const pw=COLLAB_PASSWORDS[nome.toUpperCase()];
   if (acao==='__reabrir__') {
@@ -463,7 +488,7 @@ async function _reabrirTurnoColab(nome) {
     const dt=S.dataTrabalho||today();
     const isAtend=ATEND_COLABS.includes(nome.toUpperCase());
     const [sessoes,pendencias,registros]=await Promise.all([
-      _fbGetAll('sessoes'),_fbGetAll('pendencias'),
+      _fbGetAll('sessoes'), _fbGetAll('pendencias'),
       isAtend?_fbGetAll('registros'):Promise.resolve([])
     ]);
     const sf=sessoes.filter(s=>s.colaborador_card===nome&&s.data===dt&&s.turno===S.turno&&s.dia_semana===S.dia);
@@ -477,6 +502,7 @@ async function _reabrirTurnoColab(nome) {
   finally { showLoading(false); }
 }
 
+/* ══ FALTAS ══════════════════════════════════════════════ */
 function _abrirModalFalta(nome) {
   let ov=document.getElementById('_modal_falta');
   if (!ov) {
@@ -520,6 +546,7 @@ async function _gerenciarFalta(nome,tipo,acao) {
   }
 }
 
+/* ══ SELECIONAR COLABORADOR ══════════════════════════════ */
 async function selectColaborador(nome) {
   if (_thanksIv) { clearInterval(_thanksIv); _thanksIv=null; }
   S.colaborador=nome; S.s1={}; S.s2={};
@@ -577,25 +604,30 @@ function _prepararModoAtendimento() {
   const bSub=document.getElementById('prod-banner-sub'); if (bSub) bSub.textContent='Marque as tarefas conforme forem concluídas';
 }
 
+/* ══ CHIPS DE NAVEGAÇÃO ══════════════════════════════════ */
 function _setNavChips(nome) {
   const dObj=DIAS_LIST.find(d=>d.key===S.dia);
   const turnoTxt=(S.turno==='dia'?'☀️':'🌙')+' '+(S.turno==='dia'?'Dia':'Noite');
-  const diaTxt=dObj?dObj.short+' '+dObj.icon:S.dia;
-  const userTxt=(COLLAB_EMOJI[nome]||'👤')+' '+nome;
+  const diaTxt  =dObj?dObj.short+' '+dObj.icon:S.dia;
+  const userTxt =(COLLAB_EMOJI[nome]||'👤')+' '+nome;
   [['s1-turno-chip',turnoTxt],['s1-day-chip',diaTxt],['s1-user-chip',userTxt]].forEach(([id,txt])=>{
     const el=document.getElementById(id); if (el) el.textContent=txt;
   });
 }
+
+/* ══ ETAPA 1 — PROGRAMAÇÃO ═══════════════════════════════ */
 function renderStep1() {
   const list=document.getElementById('s1-list');
   if (!list) return;
   const allConfirmed=S.tarefas.every(t=>S.s1[t.id]&&S.s1[t.id].confirmed);
-  const confirmed=S.tarefas.filter(t=>S.s1[t.id]&&S.s1[t.id].confirmed).length;
-  const total=S.tarefas.length;
+  const confirmed   =S.tarefas.filter(t=>S.s1[t.id]&&S.s1[t.id].confirmed).length;
+  const total       =S.tarefas.length;
+
   const fill=document.getElementById('s1-progress');
-  const txt=document.getElementById('s1-progress-text');
+  const txt =document.getElementById('s1-progress-text');
   if (fill) fill.style.width=(total?Math.round(confirmed/total*100):0)+'%';
   if (txt)  txt.textContent=`${confirmed} / ${total} programados`;
+
   const banner=document.getElementById('prod-banner');
   if (banner) {
     banner.className='step-banner step-banner-1';
@@ -603,6 +635,7 @@ function renderStep1() {
     const bTitle=document.getElementById('prod-banner-title'); if (bTitle) bTitle.textContent='Etapa 1 — Programe as quantidades';
     const bSub=document.getElementById('prod-banner-sub'); if (bSub) bSub.textContent='Toque em cada card para definir estoque e quantidade a produzir';
   }
+
   list.innerHTML=S.tarefas.map(t=>{
     const cc=getCatColor(t.categoria);
     const ce=getCatEmoji(t.categoria);
@@ -620,9 +653,10 @@ function renderStep1() {
             :`<div class="task-qty-display">${isConf?`<strong>${fmt(conf.programada)}</strong> ${t.unidade||''}`:`Padrão: ${fmt(t.quantidade_padrao)} ${t.unidade||''}`}</div>`}
       </div></div>`;
   }).join('');
-  const pInfo=document.getElementById('btn-pending-info');
-  const pTxt=document.getElementById('pending-count-text');
-  const s1done=document.getElementById('s1-done-footer');
+
+  const pInfo     =document.getElementById('btn-pending-info');
+  const pTxt      =document.getElementById('pending-count-text');
+  const s1done    =document.getElementById('s1-done-footer');
   const concludeBtn=document.getElementById('btn-conclude');
   if (!S.producaoIniciada) {
     if (pInfo) pInfo.style.display='flex';
@@ -646,19 +680,20 @@ let _s1Id=null;
 function openS1Modal(id) {
   const t=S.tarefas.find(x=>x.id===id);
   if (!t) return;
-  if (!S.producaoIniciada) { showToast('⚠️ Clique em "Iniciar Produção" primeiro!'); return; }
+  // Inicia produção automaticamente ao clicar no primeiro card
+  if (!S.producaoIniciada) { S.producaoIniciada=true; }
   _s1Id=id;
-  const ck=isChecklist(t);
+  const ck  =isChecklist(t);
   const conf=S.s1[id]||{};
   document.getElementById('modal-s1-title').textContent=t.item;
   document.getElementById('modal-s1-cat').textContent=t.categoria||'';
   document.getElementById('modal-s1-header').style.background=getCatColor(t.categoria);
   const qtyMode=document.getElementById('s1-qty-mode');
-  const ckMode=document.getElementById('s1-checklist-mode');
+  const ckMode =document.getElementById('s1-checklist-mode');
   if (qtyMode) qtyMode.style.display=ck?'none':'';
   if (ckMode)  ckMode.classList.toggle('hidden',!ck);
   if (!ck) {
-    const padrao=Number(t.quantidade_padrao)||0;
+    const padrao      =Number(t.quantidade_padrao)||0;
     const estoqueAtual=conf.estoque!==undefined?conf.estoque:0;
     document.getElementById('modal-s1-estoque').textContent=estoqueAtual;
     document.getElementById('modal-s1-unidade').textContent=t.unidade||'un';
@@ -676,10 +711,10 @@ function _calcNecessario() {
   const padEl=document.getElementById('calc-padrao');
   const necEl=document.getElementById('calc-necessario');
   if (!estEl||!padEl||!necEl) return;
-  const est=Number(estEl.textContent)||0;
+  const est   =Number(estEl.textContent)||0;
   const padStr=(padEl.textContent||'').replace(/[^0-9,.]/g,'').replace(',','.');
-  const pad=parseFloat(padStr)||0;
-  const nec=Math.max(0,pad-est);
+  const pad   =parseFloat(padStr)||0;
+  const nec   =Math.max(0,pad-est);
   necEl.textContent=fmt(nec);
   const progEl=document.getElementById('modal-s1-prog');
   if (progEl) progEl.textContent=nec;
@@ -713,18 +748,25 @@ function confirmS1() {
   renderStep1();
 }
 
-function iniciarProducao() { S.producaoIniciada=true; renderStep1(); }
+function iniciarProducao() {
+  S.producaoIniciada=true;
+  renderStep2();
+}
+
 function doPrintDirect() { printColaborador(); }
 
+/* ══ ETAPA 2 — PRODUÇÃO / FINALIZAÇÃO ═══════════════════ */
 function renderStep2() {
   const list=document.getElementById('s1-list');
   if (!list) return;
-  const done=S.tarefas.filter(t=>S.s2[t.id]&&S.s2[t.id].status).length;
+  const done =S.tarefas.filter(t=>S.s2[t.id]&&S.s2[t.id].status).length;
   const total=S.tarefas.length;
+
   const fill=document.getElementById('s1-progress');
-  const txt=document.getElementById('s1-progress-text');
+  const txt =document.getElementById('s1-progress-text');
   if (fill) { fill.className='progress-bar-fill prog-green'; fill.style.width=(total?Math.round(done/total*100):0)+'%'; }
   if (txt)  txt.textContent=`${done} / ${total} finalizados`;
+
   list.innerHTML=S.tarefas.map(t=>{
     const cc=getCatColor(t.categoria);
     const ce=getCatEmoji(t.categoria);
@@ -747,9 +789,10 @@ function renderStep2() {
             :`<div class="task-qty-display">${isConf?`<span>${fmt(d2.produzida)}/${fmt(prog)} ${t.unidade||''}</span>`:`<span>Prog: ${fmt(prog)} ${t.unidade||''}</span>`}</div>`}
       </div></div>`;
   }).join('');
-  const allDone=S.tarefas.every(t=>S.s2[t.id]&&S.s2[t.id].status);
-  const pInfo=document.getElementById('btn-pending-info');
-  const s1done=document.getElementById('s1-done-footer');
+
+  const allDone   =S.tarefas.every(t=>S.s2[t.id]&&S.s2[t.id].status);
+  const pInfo     =document.getElementById('btn-pending-info');
+  const s1done    =document.getElementById('s1-done-footer');
   const concludeBtn=document.getElementById('btn-conclude');
   if (pInfo) pInfo.style.display='none';
   if (s1done) s1done.classList.add('hidden');
@@ -779,9 +822,13 @@ function openS2Modal(id) {
   if (d2.status) { const ab=document.querySelector(`.sbtn[data-status="${d2.status}"]`); if (ab) ab.classList.add('active'); }
   _s2Status=d2.status||null; _s2Motivo=d2.motivo||'';
   const qpw=document.getElementById('qty-prod-wrap'); if (qpw) qpw.classList.add('hidden');
-  const mw=document.getElementById('motivos-wrap');   if (mw)  mw.classList.add('hidden');
-  const mc=document.getElementById('motivo-custom');   if (mc)  mc.value='';
+  const mw =document.getElementById('motivos-wrap');  if (mw)  mw.classList.add('hidden');
+  const mc =document.getElementById('motivo-custom'); if (mc)  mc.value='';
   document.querySelectorAll('.motivo-btn').forEach(b=>b.classList.remove('active'));
+  if (_s2Motivo) {
+    const mb=document.querySelector(`.motivo-btn[onclick*="${_s2Motivo.replace(/'/g,"\\'")}"]`);
+    if (mb) mb.classList.add('active');
+  }
   document.getElementById('modal-s2').classList.remove('hidden');
 }
 
@@ -791,7 +838,7 @@ function selectStatus(status) {
   const ab=document.querySelector(`.sbtn[data-status="${status}"]`);
   if (ab) ab.classList.add('active');
   const qpw=document.getElementById('qty-prod-wrap');
-  const mw=document.getElementById('motivos-wrap');
+  const mw =document.getElementById('motivos-wrap');
   if (qpw) qpw.classList.toggle('hidden',status!=='parcial');
   if (mw)  mw.classList.toggle('hidden',status==='total');
 }
@@ -806,28 +853,32 @@ async function confirmS2() {
   const t=S.tarefas.find(x=>x.id===_s2Id);
   const ck=isChecklist(t);
   let prod=1;
-  if (!ck&&_s2Status==='parcial') prod=Number(document.getElementById('modal-s2-prod').textContent)||0;
+  if (!ck&&_s2Status==='parcial') {
+    prod=Number(document.getElementById('modal-s2-prod').textContent)||0;
+  }
   if (_s2Status!=='total'&&!_s2Motivo) {
     const inp=document.getElementById('motivo-custom');
     const mv=inp?inp.value.trim():'';
     if (!mv) { shakeEl('motivos-wrap'); showToast('⚠️ Informe o motivo!'); return; }
     _s2Motivo=mv;
   }
-  if (_s2Status==='total')         prod=ck?1:(S.s1[_s2Id]||{}).programada||t.quantidade_padrao||0;
+  if (_s2Status==='total')        prod=ck?1:(S.s1[_s2Id]||{}).programada||t.quantidade_padrao||0;
   if (_s2Status==='nao_finalizado') prod=0;
   S.s2[_s2Id]={produzida:prod,status:_s2Status,motivo:_s2Motivo};
   closeModal('modal-s2');
   renderStep2();
+
+  /* Salvar no Firebase em background */
   const dt=S.dataTrabalho||today();
   const d1=S.s1[_s2Id]||{};
   const payload={
-    data:dt,turno:S.turno,dia_semana:S.dia,
-    colaborador_nome:S.colaborador,colaborador_card:S.colaborador,
-    tarefa_id:t?t.id:'',item:t?t.item:'',
+    data:dt, turno:S.turno, dia_semana:S.dia,
+    colaborador_nome:S.colaborador, colaborador_card:S.colaborador,
+    tarefa_id:t?t.id:'', item:t?t.item:'',
     quantidade_padrao:t?t.quantidade_padrao:0,
     quantidade_programada:d1.programada!==undefined?d1.programada:(t?t.quantidade_padrao:0),
     quantidade_produzida:prod,
-    status:_s2Status,motivo:_s2Motivo,
+    status:_s2Status, motivo:_s2Motivo,
     sessao_id:S.sessaoId,
     hora_registro:new Date().toLocaleTimeString('pt-BR'),
     is_checklist:ck?1:0,
@@ -843,11 +894,12 @@ async function confirmS2() {
   }
 }
 
+/* ══ CONCLUIR TURNO ══════════════════════════════════════ */
 function openFinishModal() {
-  const total=S.tarefas.length;
-  const totais=Object.values(S.s2).filter(d=>d.status==='total').length;
+  const total  =S.tarefas.length;
+  const totais =Object.values(S.s2).filter(d=>d.status==='total').length;
   const parciais=Object.values(S.s2).filter(d=>d.status==='parcial').length;
-  const nao=Object.values(S.s2).filter(d=>d.status==='nao_finalizado').length;
+  const nao    =Object.values(S.s2).filter(d=>d.status==='nao_finalizado').length;
   document.getElementById('finish-summary').innerHTML=`
     <div class="finish-row"><span>📋 Total de tarefas</span><span class="finish-num">${total}</span></div>
     <div class="finish-row"><span>✅ Finalizadas 100%</span><span class="finish-num" style="color:#16a34a">${totais}</span></div>
@@ -858,36 +910,38 @@ function openFinishModal() {
 }
 
 async function finalizarTurno() {
-  const total=S.tarefas.length;
+  const total =S.tarefas.length;
   const totais=Object.values(S.s2).filter(d=>d.status==='total').length;
-  const obs=document.getElementById('finish-obs').value.trim();
+  const obs   =document.getElementById('finish-obs').value.trim();
   const completo=totais===total;
   const dt=S.dataTrabalho||today();
   showLoading(true);
   try {
     await _fbPost('sessoes',{
-      data:dt,turno:S.turno,dia_semana:S.dia,
-      colaborador_card:S.colaborador,colaborador_nome:S.colaborador,
+      data:dt, turno:S.turno, dia_semana:S.dia,
+      colaborador_card:S.colaborador, colaborador_nome:S.colaborador,
       hora_fim:new Date().toLocaleTimeString('pt-BR'),
       status_geral:completo?'completo':'parcial',
-      observacao:obs,total_tarefas:total,tarefas_concluidas:totais,
+      observacao:obs, total_tarefas:total, tarefas_concluidas:totais,
     });
     const pendencias=S.tarefas.filter(t=>{ const d2=S.s2[t.id]; return !d2||d2.status!=='total'; });
     for (const t of pendencias) {
       const d2=S.s2[t.id]||{};
       await _fbPost('pendencias',{
-        data:dt,turno:S.turno,dia_semana:S.dia,colaborador:S.colaborador,
-        item:t.item,categoria:t.categoria||'',
+        data:dt, turno:S.turno, dia_semana:S.dia, colaborador:S.colaborador,
+        item:t.item, categoria:t.categoria||'',
         quantidade_programada:(S.s1[t.id]||{}).programada||t.quantidade_padrao||0,
         quantidade_produzida:d2.produzida!==undefined?d2.produzida:0,
-        status:d2.status||'nao_finalizado',motivo:d2.motivo||'',
-        vistoriado:0,sessao_id:S.sessaoId,
+        status:d2.status||'nao_finalizado', motivo:d2.motivo||'',
+        vistoriado:0, sessao_id:S.sessaoId,
       });
     }
   } catch(e) { console.error(e); }
   finally { showLoading(false); }
+
   closeModal('modal-finish');
   if (!completo) _autoPrintPendencias(S.tarefas.slice(),{...S.s1},{...S.s2},S.colaborador,S.turno,S.dia);
+
   S.s1={}; S.s2={}; S.producaoIniciada=false;
   _cache.sessoes=null; _cache._registros=null;
   _checkPendenciasNotif();
@@ -914,8 +968,9 @@ function _autoPrintPendencias(tarefas,s1,s2,col,turno,dia) {
   }).join('');
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>⚠️ Pendências — ${col}</title>
     <style>body{font-family:Arial,sans-serif;font-size:12px;padding:20px}h1{font-size:18px;margin:0 0 4px}
-    table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}th{background:#f5f5f5;font-weight:700}</style>
-    </head><body onload="window.print()">
+    p{font-size:12px;color:#555;margin:0 0 16px}table{width:100%;border-collapse:collapse}
+    th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}th{background:#f5f5f5;font-weight:700}</style>
+    </head><body onload="window.print();setTimeout(function(){window.close()},500)">
     <h1>⚠️ Pendências — ${col}</h1>
     <p>Turno: ${turno==='dia'?'☀️ Dia':'🌙 Noite'} · ${dObj?dObj.label:dia} · ${today()}</p>
     <table><thead><tr><th>Categoria</th><th>Item</th><th>Programado</th><th>Produzido</th><th>Restante</th><th>Status</th><th>Motivo</th></tr></thead>
@@ -936,7 +991,7 @@ function printColaborador() {
     <style>body{font-family:Arial,sans-serif;font-size:12px;padding:20px}h1{font-size:18px;margin:0 0 4px}
     table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}
     th{background:#f5f5f5;font-weight:700}</style>
-    </head><body onload="window.print()">
+    </head><body onload="window.print();setTimeout(function(){window.close()},500)">
     <h1>📋 ${S.colaborador}</h1>
     <p>Turno: ${S.turno==='dia'?'☀️ Dia':'🌙 Noite'} · ${dObj?dObj.label:S.dia} · ${today()}</p>
     <table><thead><tr><th>Categoria</th><th>Item</th><th>Qtd</th><th>✓</th></tr></thead>
@@ -945,6 +1000,7 @@ function printColaborador() {
   if (w) { w.document.write(html); w.document.close(); }
 }
 
+/* ══ RESULTADOS / PENDÊNCIAS DO DIA ═════════════════════ */
 function abrirResultados() {
   const dataRef=S.dataTrabalho||today();
   const dtRef=new Date(dataRef+'T12:00:00');
@@ -974,17 +1030,17 @@ function setResDia(dia) {
 
 async function loadResultados() {
   const container=document.getElementById('res-lista');
-  const summBar=document.getElementById('res-summary-bar');
+  const summBar  =document.getElementById('res-summary-bar');
   if (!container) return;
   container.innerHTML='<div style="padding:30px;text-align:center;color:#888"><div style="font-size:28px;margin-bottom:8px">⏳</div>Carregando...</div>';
   if (summBar) summBar.innerHTML='';
   const turno=(document.getElementById('res-turno')||{}).value||'dia';
-  const dia=(document.getElementById('res-dia')||{}).value||'segunda';
-  const data=((document.getElementById('res-data')||{}).value)||today();
+  const dia  =(document.getElementById('res-dia')||{}).value||'segunda';
+  const data =((document.getElementById('res-data')||{}).value)||today();
   try {
     const [pendencias,sessoes]=await Promise.all([_fbGetAll('pendencias'),_fbGetAll('sessoes')]);
     const pends=pendencias.filter(p=>(!data||p.data===data)&&(!turno||p.turno===turno)&&(!dia||p.dia_semana===dia));
-    const sess=sessoes.filter(s=>(!data||s.data===data)&&(!turno||s.turno===turno)&&(!dia||s.dia_semana===dia));
+    const sess =sessoes.filter(s=>(!data||s.data===data)&&(!turno||s.turno===turno)&&(!dia||s.dia_semana===dia));
     const pendAtivos=pends.filter(p=>!(p.vistoriado==1));
     const collabNomes=[...new Set([...sess.map(s=>s.colaborador_nome).filter(Boolean),...pends.map(p=>p.colaborador).filter(Boolean)])];
     const collabSemPend=collabNomes.filter(n=>!pends.find(p=>p.colaborador===n)).length;
@@ -1003,13 +1059,14 @@ async function loadResultados() {
     pends.forEach(p=>{ const n=p.colaborador||'?'; if (!porColab[n]) porColab[n]=[]; porColab[n].push(p); });
     let html='<div style="padding:12px 16px">';
     Object.keys(porColab).sort().forEach(nome=>{
-      const itens=porColab[nome];
+      const itens   =porColab[nome];
       const nParcial=itens.filter(i=>i.status==='parcial').length;
-      const nNao=itens.filter(i=>i.status==='nao_finalizado').length;
-      const nCiente=itens.filter(i=>i.vistoriado==1).length;
+      const nNao    =itens.filter(i=>i.status==='nao_finalizado').length;
+      const nCiente =itens.filter(i=>i.vistoriado==1).length;
       const todoCiente=nCiente===itens.length;
       const slug=_resSlug(nome);
-      html+=`<div class="res-collab-card${todoCiente?' res-all-done':''}" id="rcc-${slug}">
+      html+=`
+      <div class="res-collab-card${todoCiente?' res-all-done':''}" id="rcc-${slug}">
         <div class="res-card-header" onclick="_resToggle('${slug}')">
           <div class="res-card-avatar">${COLLAB_EMOJI[nome]||_resEmoji(nome)}</div>
           <div class="res-card-info">
@@ -1023,24 +1080,27 @@ async function loadResultados() {
           </div>
           <i class="fas fa-chevron-down res-chevron" id="rch-${slug}"></i>
         </div>
-        <div class="res-tasks-list hidden" id="rtl-${slug}">${_resRenderTasks(itens,slug)}</div>
+        <div class="res-tasks-list hidden" id="rtl-${slug}">
+          ${_resRenderTasks(itens,slug)}
+        </div>
       </div>`;
     });
     html+='</div>';
     container.innerHTML=html;
   } catch(e) {
+    console.error(e);
     container.innerHTML=`<div style="padding:20px;color:#dc3545">❌ Erro ao carregar: ${e.message}</div>`;
   }
 }
 
 function _resRenderTasks(itens,slug) {
   return itens.map(item=>{
-    const isVist=item.vistoriado==1;
+    const isVist  =item.vistoriado==1;
     const isParcial=item.status==='parcial';
     const qProg=item.quantidade_programada||0;
     const qFeit=item.quantidade_produzida||0;
     const qRest=Math.max(0,qProg-qFeit);
-    const icon=isParcial?'⚠️':'❌';
+    const icon   =isParcial?'⚠️':'❌';
     const stColor=isParcial?'#f97316':'#ef4444';
     return `<div class="res-task-item" id="rti-${item.id}">
       <div class="res-task-icon">${icon}</div>
@@ -1064,7 +1124,7 @@ function _resRenderTasks(itens,slug) {
 
 function _resToggle(slug) {
   const list=document.getElementById(`rtl-${slug}`);
-  const arr=document.getElementById(`rch-${slug}`);
+  const arr =document.getElementById(`rch-${slug}`);
   if (!list) return;
   const isOpen=!list.classList.contains('hidden');
   list.classList.toggle('hidden',isOpen);
@@ -1091,9 +1151,10 @@ function _resVerificaVazio(slug) {
   }
 }
 
-function _resSlug(s) { return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'-'); }
+function _resSlug(s)  { return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'-'); }
 function _resEmoji(n) { const e=['👨‍🍳','👩‍🍳','🧑‍🍳','😎','🙂','😊','🤩','👌','💪','🍔','⭐','🌟']; let s=0; for(let i=0;i<n.length;i++) s+=n.charCodeAt(i); return e[s%e.length]; }
 
+/* ══ PAINEL DO LÍDER ═════════════════════════════════════ */
 function setDefaultDates() {
   const hoje=today();
   const dt=new Date(); dt.setDate(dt.getDate()-7);
@@ -1107,8 +1168,8 @@ function setDefaultDates() {
 async function loadLeaderData() {
   showLoading(true);
   try {
-    const ds=(document.getElementById('filter-start')||{}).value||'';
-    const de=(document.getElementById('filter-end')||{}).value||'';
+    const ds =(document.getElementById('filter-start')||{}).value||'';
+    const de =(document.getElementById('filter-end')||{}).value||'';
     const turno=(document.getElementById('filter-turno')||{}).value||'';
     const col=(document.getElementById('filter-colaborador')||{}).value||'';
     let data=await _fbGetAll('registros');
@@ -1126,7 +1187,7 @@ async function loadLeaderData() {
     if (tab==='espelho')   renderEspelho(data);
     if (tab==='relatorio') loadRelatorio();
     if (tab==='tarefas')   loadTarefasGestao();
-  } catch(e) { showToast('❌ Erro ao carregar dados'); }
+  } catch(e) { console.error(e); showToast('❌ Erro ao carregar dados'); }
   finally { showLoading(false); }
 }
 
@@ -1138,7 +1199,7 @@ function populateCollabFilter(all) {
 }
 
 function renderLeaderSummary(data) {
-  const total=data.length,ok=data.filter(r=>r.status==='total').length;
+  const total=data.length, ok=data.filter(r=>r.status==='total').length;
   const parcial=data.filter(r=>r.status==='parcial').length;
   const nao=data.filter(r=>r.status==='nao_finalizado').length;
   const taxa=total?Math.round(ok/total*100):0;
@@ -1153,14 +1214,17 @@ function renderLeaderTable(data) {
   const bmap={total:'<span class="badge badge-total">✅ 100%</span>',parcial:'<span class="badge badge-parcial">⚠️ Parcial</span>',nao_finalizado:'<span class="badge badge-nao">❌ Não feito</span>'};
   tbody.innerHTML=data.map(r=>{
     const dObj=DIAS_LIST.find(d=>d.key===r.dia_semana);
-    return `<tr><td>${r.data||'—'}</td><td>${r.turno==='dia'?'☀️':'🌙'} ${r.turno||'—'}</td>
+    return `<tr>
+      <td>${r.data||'—'}</td>
+      <td>${r.turno==='dia'?'☀️':'🌙'} ${r.turno||'—'}</td>
       <td>${dObj?dObj.short:(r.dia_semana||'—')}</td>
       <td><strong>${r.colaborador_card||'—'}</strong></td>
       <td>${r.item||'—'}</td>
       <td style="text-align:center">${r.quantidade_programada!==undefined?fmt(r.quantidade_programada):'—'}</td>
       <td style="text-align:center">${r.quantidade_produzida!==undefined?fmt(r.quantidade_produzida):'—'}</td>
       <td>${bmap[r.status]||'<span class="badge badge-pend">⏳</span>'}</td>
-      <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.motivo||''}">${r.motivo||'—'}</td></tr>`;
+      <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.motivo||''}">${r.motivo||'—'}</td>
+    </tr>`;
   }).join('');
 }
 
@@ -1168,8 +1232,8 @@ async function renderPendentes() {
   const container=document.getElementById('pendentes-list'); if (!container) return;
   container.innerHTML='<div style="padding:20px;text-align:center">⏳ Carregando...</div>';
   try {
-    const ds=(document.getElementById('filter-start')||{}).value||'';
-    const de=(document.getElementById('filter-end')||{}).value||'';
+    const ds =(document.getElementById('filter-start')||{}).value||'';
+    const de =(document.getElementById('filter-end')||{}).value||'';
     const turno=(document.getElementById('filter-turno')||{}).value||'';
     const col=(document.getElementById('filter-colaborador')||{}).value||'';
     let data=await _fbGetAll('pendencias');
@@ -1229,7 +1293,7 @@ function renderEspelho(data) {
   const byDate={};
   data.forEach(r=>{ const dk=r.data||'sem data'; if (!byDate[dk]) byDate[dk]={}; const ck=r.colaborador_card||'—'; if (!byDate[dk][ck]) byDate[dk][ck]=[]; byDate[dk][ck].push(r); });
   container.innerHTML=Object.entries(byDate).sort((a,b)=>b[0].localeCompare(a[0])).map(([dt,collabs])=>{
-    const tot=Object.values(collabs).flat().length,ok=Object.values(collabs).flat().filter(r=>r.status==='total').length;
+    const tot=Object.values(collabs).flat().length, ok=Object.values(collabs).flat().filter(r=>r.status==='total').length;
     return `<div class="espelho-date-group">
       <div class="espelho-date-header">📅 ${dt} — ${ok}/${tot} itens 100%</div>
       ${Object.entries(collabs).map(([col,rows])=>{
@@ -1258,8 +1322,8 @@ async function loadRelatorio() {
   const container=document.getElementById('relatorio-list'); if (!container) return;
   container.innerHTML='<div style="padding:20px;text-align:center">⏳ Carregando...</div>';
   try {
-    const ds=(document.getElementById('rel-start')||document.getElementById('filter-start')||{}).value||'';
-    const de=(document.getElementById('rel-end')||document.getElementById('filter-end')||{}).value||'';
+    const ds =(document.getElementById('rel-start')||document.getElementById('filter-start')||{}).value||'';
+    const de =(document.getElementById('rel-end')||document.getElementById('filter-end')||{}).value||'';
     const turno=(document.getElementById('rel-turno')||{}).value||'';
     const col=(document.getElementById('rel-colaborador')||{}).value||'';
     const motivo=(document.getElementById('rel-motivo')||{}).value||'';
@@ -1274,8 +1338,8 @@ async function loadRelatorio() {
     if (col)    data=data.filter(r=>r.colaborador_card===col);
     if (status) data=data.filter(r=>r.status===status);
     if (motivo) data=data.filter(r=>(r.motivo||'').toLowerCase().includes(motivo));
-    const total=data.length,ok=data.filter(r=>r.status==='total').length;
-    const parc=data.filter(r=>r.status==='parcial').length,naoF=data.filter(r=>r.status==='nao_finalizado').length;
+    const total=data.length, ok=data.filter(r=>r.status==='total').length;
+    const parc=data.filter(r=>r.status==='parcial').length, naoF=data.filter(r=>r.status==='nao_finalizado').length;
     const taxa=total?Math.round(ok/total*100):0;
     const sumRow=document.getElementById('rel-summary-row');
     if (sumRow) { sumRow.style.display='flex'; sumRow.innerHTML=`
@@ -1309,6 +1373,7 @@ async function loadRelatorio() {
   } catch(e) { container.innerHTML='<div style="padding:20px;color:#dc3545">❌ Erro ao carregar.</div>'; }
 }
 
+/* ══ GESTÃO DE TAREFAS ═══════════════════════════════════ */
 function setTarTurno(turno) {
   const el=document.getElementById('tar-filter-turno'); if (el) el.value=turno;
   document.getElementById('tarbtn-dia').classList.toggle('active',turno==='dia');
@@ -1326,7 +1391,7 @@ async function loadTarefasGestao() {
   const container=document.getElementById('tarefas-gestao-list'); if (!container) return;
   container.innerHTML='<div style="padding:20px;text-align:center;color:#888">⏳ Carregando...</div>';
   const turno=(document.getElementById('tar-filter-turno')||{}).value||'dia';
-  const dia=(document.getElementById('tar-filter-dia')||{}).value||'segunda';
+  const dia  =(document.getElementById('tar-filter-dia')||{}).value||'segunda';
   const colab=((document.getElementById('tar-filter-colab')||{}).value)||'';
   try {
     const all=await _fbGetAll('tarefas');
@@ -1338,7 +1403,7 @@ async function loadTarefasGestao() {
     data.sort((a,b)=>(a.colaborador||'').localeCompare(b.colaborador||'')||(a.ordem||0)-(b.ordem||0));
     const cb=document.getElementById('tar-count-bar');
     if (cb) cb.innerHTML=`<span>${data.length} tarefa${data.length!==1?'s':''} — ${colabsNoDia.length} colaborador${colabsNoDia.length!==1?'es':''}</span>`;
-    if (!data.length) { container.innerHTML=`<div style="padding:40px;text-align:center;color:#888"><div style="font-size:40px;margin-bottom:12px">😕</div><strong>Nenhuma tarefa</strong><br><small>Clique em "+ Nova Tarefa" para adicionar</small></div>`; return; }
+    if (!data.length) { container.innerHTML=`<div style="padding:40px;text-align:center;color:#888"><div style="font-size:40px;margin-bottom:12px">😕</div><strong>Nenhuma tarefa para ${turno==='dia'?'☀️ Dia':'🌙 Noite'} — ${dia}</strong><br><small style="color:#aaa">Clique em "+ Nova Tarefa" para adicionar</small></div>`; return; }
     const byCol={};
     data.forEach(t=>{ if (!byCol[t.colaborador]) byCol[t.colaborador]=[]; byCol[t.colaborador].push(t); });
     container.innerHTML=Object.entries(byCol).map(([col,tasks])=>`
@@ -1370,7 +1435,7 @@ async function loadTarefasGestao() {
 function adjTarQty(id,delta) { const i=document.getElementById(`tqty-${id}`); if (i) i.value=Math.max(0,Number(i.value)+delta); }
 
 async function saveTarQty(id) {
-  const inp=document.getElementById(`tqty-${id}`),btn=document.getElementById(`sbtn-${id}`);
+  const inp=document.getElementById(`tqty-${id}`), btn=document.getElementById(`sbtn-${id}`);
   if (!inp) return;
   try {
     await _fbPatch('tarefas',id,{quantidade_padrao:Number(inp.value)});
@@ -1452,6 +1517,7 @@ async function saveTaskEdit() {
   finally { if (btn) { btn.disabled=false; btn.innerHTML='💾 Salvar'; } }
 }
 
+/* ══ IMPRESSÕES ══════════════════════════════════════════ */
 function printLeaderReport() {
   if (!S.leaderData||!S.leaderData.length) { showToast('Sem dados. Filtre primeiro.'); return; }
   const linhas=S.leaderData.map(r=>{
@@ -1496,12 +1562,13 @@ function printEspelho() { printAllCollabs(); }
 function _triggerPrint(titulo,sub,headerRow,linhas) {
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${titulo}</title>
     <style>body{font-family:Arial,sans-serif;font-size:11px;padding:20px}h1{font-size:16px;margin:0 0 2px}p{font-size:11px;color:#555;margin:0 0 12px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:5px 7px;text-align:left}th{background:#f0f0f0;font-weight:700}tr:nth-child(even) td{background:#fafafa}</style>
-    </head><body onload="window.print()"><h1>${titulo}</h1><p>${sub}</p>
+    </head><body onload="window.print();setTimeout(function(){window.close()},500)"><h1>${titulo}</h1><p>${sub}</p>
     <table><thead>${headerRow}</thead><tbody>${linhas}</tbody></table></body></html>`;
   const w=window.open('','_blank','width=900,height=700');
   if (w) { w.document.write(html); w.document.close(); }
 }
 
+/* ══ UTILITÁRIOS ═════════════════════════════════════════ */
 function showLoading(on) { const el=document.getElementById('loading-overlay'); if (el) el.classList.toggle('hidden',!on); }
 
 let _toastT=null;
