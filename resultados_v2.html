@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <title>📊 Just Burger — Resultados do Dia</title>
+  <!-- Firebase SDK v9 compat -->
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
+  <!-- Fontes e ícones -->
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
+  <style>
+    :root {
+      --brand:  #e8590c;
+      --brand2: #ff7b2f;
+      --dark:   #1a1a2e;
+      --card:   #fff;
+      --bg:     #f4f6fb;
+      --radius: 16px;
+      --shadow: 0 4px 24px rgba(0,0,0,.10);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Nunito', 'Segoe UI', sans-serif;
+      background: var(--bg); color: var(--dark);
+      min-height: 100vh; -webkit-font-smoothing: antialiased;
+    }
+    .res-header {
+      background: linear-gradient(135deg, var(--brand), var(--brand2));
+      color: #fff; padding: 16px 20px;
+      display: flex; align-items: center; gap: 12px;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 16px rgba(0,0,0,.2);
+    }
+    .res-header-back {
+      background: rgba(255,255,255,.2); border: none; color: #fff;
+      width: 38px; height: 38px; border-radius: 50%; font-size: 18px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      text-decoration: none; flex-shrink: 0; transition: background .2s;
+    }
+    .res-header-back:hover { background: rgba(255,255,255,.35); }
+    .res-header-title { font-size: 18px; font-weight: 900; flex: 1; }
+    .res-header-sub   { font-size: 12px; opacity: .85; }
+    .btn-reload {
+      background: rgba(255,255,255,.2); border: none; color: #fff;
+      padding: 8px 14px; border-radius: 12px;
+      font-family: inherit; font-size: 12px; font-weight: 800;
+      cursor: pointer; display: flex; align-items: center; gap: 6px;
+      transition: background .2s;
+    }
+    .btn-reload:hover { background: rgba(255,255,255,.35); }
+    .filter-bar {
+      background: var(--card); padding: 14px 16px;
+      border-bottom: 1px solid #e8ecf4;
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; min-width: 100px; }
+    .filter-label { font-size: 11px; font-weight: 800; color: #888; text-transform: uppercase; }
+    .filter-group input[type="date"],
+    .filter-group select {
+      border: 2px solid #e2e6f0; border-radius: 10px; padding: 7px 10px;
+      font-family: inherit; font-size: 13px; font-weight: 700;
+      color: var(--dark); background: #f9fafb; outline: none; cursor: pointer;
+      transition: border-color .2s;
+    }
+    .filter-group input[type="date"]:focus,
+    .filter-group select:focus { border-color: var(--brand); }
+    .btn-turno-group { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn-turno {
+      padding: 7px 14px; border-radius: 20px; border: 2px solid #e2e6f0;
+      background: #f9fafb; font-family: inherit; font-size: 12px; font-weight: 800;
+      cursor: pointer; color: #888; transition: all .2s;
+    }
+    .btn-turno.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .btn-dia-group { display: flex; gap: 4px; flex-wrap: wrap; }
+    .btn-dia {
+      padding: 6px 10px; border-radius: 16px; border: 2px solid #e2e6f0;
+      background: #f9fafb; font-family: inherit; font-size: 11px; font-weight: 800;
+      cursor: pointer; color: #888; transition: all .2s;
+    }
+    .btn-dia.active { background: var(--dark); border-color: var(--dark); color: #fff; }
+    .summary-bar {
+      display: flex; gap: 8px; padding: 12px 16px;
+      flex-wrap: wrap; overflow-x: auto;
+    }
+    .sum-card {
+      flex: 1; min-width: 80px; background: var(--card);
+      border-radius: 14px; padding: 10px 12px;
+      display: flex; flex-direction: column; align-items: center;
+      box-shadow: var(--shadow); border-top: 3px solid transparent;
+    }
+    .sum-card.sc-blue   { border-color: #3b82f6; }
+    .sum-card.sc-green  { border-color: #22c55e; }
+    .sum-card.sc-orange { border-color: #f97316; }
+    .sum-card.sc-red    { border-color: #ef4444; }
+    .sum-val { font-size: 22px; font-weight: 900; }
+    .sum-lbl { font-size: 10px; font-weight: 700; color: #888; text-align: center; margin-top: 2px; }
+    .res-list { padding: 0 16px 30px; }
+    .collab-card {
+      background: var(--card); border-radius: var(--radius);
+      box-shadow: var(--shadow); margin-bottom: 12px;
+      overflow: hidden; border: 2px solid transparent; transition: border-color .3s;
+    }
+    .collab-card.all-ciente { border-color: #22c55e; }
+    .collab-card-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 16px; cursor: pointer;
+      background: #fafbff; transition: background .2s;
+    }
+    .collab-card-header:hover { background: #f0f4ff; }
+    .collab-avatar { font-size: 26px; flex-shrink: 0; }
+    .collab-info { flex: 1; min-width: 0; }
+    .collab-name { font-size: 15px; font-weight: 900; }
+    .collab-meta { font-size: 12px; color: #888; margin-top: 2px; }
+    .pills-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .pill { padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 800; }
+    .pill-orange { background: #fff7ed; color: #c2410c; }
+    .pill-red    { background: #fef2f2; color: #dc2626; }
+    .pill-green  { background: #f0fdf4; color: #16a34a; }
+    .chevron { color: #aaa; font-size: 14px; transition: transform .3s; flex-shrink: 0; }
+    .chevron.open { transform: rotate(180deg); }
+    .tasks-list { display: none; padding: 0 14px 12px; }
+    .tasks-list.open { display: block; }
+    .task-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid #f0f4ff;
+      transition: opacity .3s, max-height .3s;
+    }
+    .task-item:last-child { border-bottom: none; }
+    .task-icon { font-size: 18px; flex-shrink: 0; padding-top: 2px; }
+    .task-body { flex: 1; min-width: 0; }
+    .task-name   { font-size: 14px; font-weight: 800; }
+    .task-detail { font-size: 12px; color: #888; margin-top: 3px; }
+    .task-qtds   { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+    .qtd-badge   { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 800; }
+    .qtd-prog    { background: #dbeafe; color: #1d4ed8; }
+    .qtd-feito   { background: #dcfce7; color: #16a34a; }
+    .qtd-rest    { background: #fee2e2; color: #dc2626; }
+    .btn-ciente {
+      background: linear-gradient(135deg,#22c55e,#16a34a);
+      color: #fff; border: none; padding: 7px 12px; border-radius: 10px;
+      font-family: inherit; font-size: 12px; font-weight: 800; cursor: pointer;
+      display: flex; align-items: center; gap: 5px; flex-shrink: 0;
+      transition: opacity .2s; white-space: nowrap;
+    }
+    .btn-ciente:hover { opacity: .85; }
+    .btn-ciente-done {
+      background: #f0fdf4; color: #16a34a; padding: 7px 12px; border-radius: 10px;
+      font-size: 12px; font-weight: 800; display: flex; align-items: center; gap: 5px;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .empty-state { text-align: center; padding: 50px 20px; color: #aaa; }
+    .empty-state .es-icon { font-size: 52px; margin-bottom: 14px; }
+    .empty-state strong   { display: block; font-size: 16px; color: #555; margin-bottom: 6px; }
+    .empty-state small    { font-size: 13px; }
+    .loading-state { text-align: center; padding: 40px 20px; color: #888; }
+    .loading-state .ls-icon { font-size: 36px; animation: spin 1s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-state { padding: 20px; color: #dc3545; text-align: center; font-weight: 700; }
+    .toast {
+      position: fixed; bottom: 20px; left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      background: var(--dark); color: #fff; padding: 12px 20px; border-radius: 30px;
+      font-size: 14px; font-weight: 700; opacity: 0; transition: all .3s;
+      z-index: 9999; pointer-events: none; white-space: nowrap; max-width: 90vw;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<!-- HEADER -->
+<header class="res-header">
+  <a href="index_v2.html" class="res-header-back" title="Voltar">
+    <i class="fas fa-arrow-left"></i>
+  </a>
+  <div style="flex:1">
+    <div class="res-header-title">📊 Resultados do Dia</div>
+    <div class="res-header-sub">Pendências e ciência por colaborador</div>
+  </div>
+  <button class="btn-reload" onclick="loadResultados()">
+    <i class="fas fa-sync-alt"></i> Atualizar
+  </button>
+</header>
+
+<!-- FILTROS -->
+<div class="filter-bar">
+  <div class="filter-group">
+    <span class="filter-label">📅 Data</span>
+    <input type="date" id="res-data" onchange="loadResultados()"/>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">☀️ Turno</span>
+    <div class="btn-turno-group">
+      <button class="btn-turno active" id="resbtn-dia"   onclick="setResTurno('dia')">☀️ Dia</button>
+      <button class="btn-turno"        id="resbtn-noite" onclick="setResTurno('noite')">🌙 Noite</button>
+    </div>
+    <input type="hidden" id="res-turno" value="dia"/>
+  </div>
+  <div class="filter-group" style="min-width:260px">
+    <span class="filter-label">📆 Dia da semana</span>
+    <div class="btn-dia-group" id="dias-btn-group"></div>
+    <input type="hidden" id="res-dia" value="segunda"/>
+  </div>
+</div>
+
+<!-- SUMMARY -->
+<div class="summary-bar" id="summary-bar"></div>
+
+<!-- LISTA -->
+<div class="res-list" id="res-lista">
+  <div class="loading-state">
+    <div class="ls-icon">⏳</div>
+    <p style="margin-top:10px">Carregando...</p>
+  </div>
+</div>
+
+<script>
+const fbConfig = {
+  apiKey:            "AIzaSyDt1yzxGGzuT2cSdten1bFuXG7yeDQ90Po",
+  authDomain:        "justburger-producao-e9b27.firebaseapp.com",
+  databaseURL:       "https://justburger-producao-e9b27-default-rtdb.firebaseio.com",
+  projectId:         "justburger-producao-e9b27",
+  storageBucket:     "justburger-producao-e9b27.firebasestorage.app",
+  messagingSenderId: "387070713910",
+  appId:             "1:387070713910:web:f156d3247a1715a58ab897"
+};
+
+if (!firebase.apps.length) firebase.initializeApp(fbConfig);
+const DB = firebase.database();
+
+const DIAS_LIST = [
+  { key:'segunda', short:'SEG' }, { key:'terca',  short:'TER' },
+  { key:'quarta',  short:'QUA' }, { key:'quinta', short:'QUI' },
+  { key:'sexta',   short:'SEX' }, { key:'sabado', short:'SAB' },
+  { key:'domingo', short:'DOM' },
+];
+const DIA_JS_MAP = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
+
+const COLLAB_EMOJI_MAP = {
+  'DINA':'👩‍💼','SANDRO':'👨‍💼','PABLO':'🍗','MATEUS':'🥫','JOÃO':'🔪',
+  'ALAN RICARDO':'🔥','GABRIEL KHALYL':'🥩','GABRIEL LEITE':'🧊','LOHAINE':'🍟',
+  'RHUAN':'🍟','ATENDIMENTO / DESPACHO':'📦','ANTONIEL':'🎯','MARCUS':'📋',
+  'ALINE':'🎀','DESPACHO':'📦','SAMUEL':'🧊','NOITE - CHAPEIRO':'🔥',
+  'NOITE - MONTADOR':'🧊','NOITE - FRITADEIRA':'🍟',
+};
+
+window.addEventListener('DOMContentLoaded', () => {
+  const hoje   = new Date().toISOString().slice(0, 10);
+  const diaKey = DIA_JS_MAP[new Date().getDay()];
+  document.getElementById('res-data').value = hoje;
+  document.getElementById('res-dia').value  = diaKey;
+  renderDiasBtns(diaKey);
+  loadResultados();
+});
+
+function renderDiasBtns(activeKey) {
+  const wrap = document.getElementById('dias-btn-group');
+  if (!wrap) return;
+  wrap.innerHTML = DIAS_LIST.map(d =>
+    `<button class="btn-dia${d.key === activeKey ? ' active' : ''}" onclick="setResDia('${d.key}')">${d.short}</button>`
+  ).join('');
+}
+
+function setResTurno(turno) {
+  document.getElementById('res-turno').value = turno;
+  document.getElementById('resbtn-dia').classList.toggle('active',   turno === 'dia');
+  document.getElementById('resbtn-noite').classList.toggle('active', turno === 'noite');
+  loadResultados();
+}
+
+function setResDia(dia) {
+  document.getElementById('res-dia').value = dia;
+  document.querySelectorAll('.btn-dia').forEach(b =>
+    b.classList.toggle('active', b.textContent === DIAS_LIST.find(d => d.key === dia)?.short)
+  );
+  loadResultados();
+}
+
+async function fbGetAll(col) {
+  const snap = await DB.ref(col).once('value');
+  const val  = snap.val();
+  if (!val) return [];
+  return Object.entries(val).map(([id, obj]) => ({ id, ...obj }));
+}
+
+async function fbPatch(col, id, data) {
+  await DB.ref(col + '/' + id).update({ ...data, updated_at: Date.now() });
+}
+
+async function loadResultados() {
+  const container = document.getElementById('res-lista');
+  const summBar   = document.getElementById('summary-bar');
+
+  container.innerHTML = `<div class="loading-state"><div class="ls-icon">⏳</div><p style="margin-top:10px">Carregando...</p></div>`;
+  if (summBar) summBar.innerHTML = '';
+
+  const turno = document.getElementById('res-turno').value || 'dia';
+  const dia   = document.getElementById('res-dia').value   || 'segunda';
+  const data  = document.getElementById('res-data').value  || new Date().toISOString().slice(0, 10);
+
+  try {
+    const [pendencias, sessoes] = await Promise.all([
+      fbGetAll('pendencias'),
+      fbGetAll('sessoes')
+    ]);
+
+    const pends = pendencias.filter(p =>
+      p.data === data && p.turno === turno && p.dia_semana === dia
+    );
+    const sess = sessoes.filter(s =>
+      s.data === data && s.turno === turno && s.dia_semana === dia
+    );
+
+    const pendAtivos    = pends.filter(p => !p.vistoriado || p.vistoriado == 0);
+    const collabNomes   = [...new Set([
+      ...sess.map(s => s.colaborador_nome || s.colaborador_card).filter(Boolean),
+      ...pends.map(p => p.colaborador).filter(Boolean),
+    ])];
+    const collabSemPend = collabNomes.filter(n => !pends.find(p => p.colaborador === n)).length;
+
+    if (summBar) {
+      summBar.innerHTML = `
+        <div class="sum-card sc-blue"><span class="sum-val">${collabNomes.length}</span><span class="sum-lbl">Colaboradores</span></div>
+        <div class="sum-card sc-green"><span class="sum-val">${collabSemPend}</span><span class="sum-lbl">100% OK</span></div>
+        <div class="sum-card sc-orange"><span class="sum-val">${pends.length}</span><span class="sum-lbl">Pendências</span></div>
+        <div class="sum-card sc-red"><span class="sum-val">${pendAtivos.length}</span><span class="sum-lbl">Aguard. Ciência</span></div>`;
+    }
+
+    if (!pends.length) {
+      container.innerHTML = sess.length
+        ? `<div class="empty-state"><div class="es-icon">✅</div><strong>Tudo finalizado 100%!</strong><small>Nenhuma pendência para este turno/dia.</small></div>`
+        : `<div class="empty-state"><div class="es-icon">📭</div><strong>Nenhum dado encontrado</strong><small>Tente outro filtro ou aguarde os colaboradores finalizarem o turno.</small></div>`;
+      return;
+    }
+
+    const porColab = {};
+    pends.forEach(p => {
+      const nome = p.colaborador || '?';
+      if (!porColab[nome]) porColab[nome] = [];
+      porColab[nome].push(p);
+    });
+
+    container.innerHTML = Object.keys(porColab).sort().map(nome => {
+      const itens      = porColab[nome];
+      const nParcial   = itens.filter(i => i.status === 'parcial').length;
+      const nNao       = itens.filter(i => i.status === 'nao_finalizado').length;
+      const nCiente    = itens.filter(i => i.vistoriado == 1).length;
+      const todoCiente = nCiente === itens.length;
+      const slug       = _slug(nome);
+      const em         = COLLAB_EMOJI_MAP[nome] || _emojiFor(nome);
+
+      return `
+      <div class="collab-card${todoCiente ? ' all-ciente' : ''}" id="rcc-${slug}">
+        <div class="collab-card-header" onclick="_toggle('${slug}')">
+          <div class="collab-avatar">${em}</div>
+          <div class="collab-info">
+            <div class="collab-name">${nome}</div>
+            <div class="collab-meta">${itens.length} item(s) pendente(s)${todoCiente ? ' — ✅ Todos cientes' : ''}</div>
+          </div>
+          <div class="pills-row" style="margin-right:8px">
+            ${nParcial > 0 ? `<span class="pill pill-orange">⚠️ ${nParcial}</span>` : ''}
+            ${nNao     > 0 ? `<span class="pill pill-red">❌ ${nNao}</span>`         : ''}
+            ${nCiente  > 0 && !todoCiente ? `<span class="pill pill-green">✅ ${nCiente}</span>` : ''}
+          </div>
+          <i class="fas fa-chevron-down chevron" id="chv-${slug}"></i>
+        </div>
+        <div class="tasks-list" id="tl-${slug}">
+          ${_renderTasks(itens, slug)}
+        </div>
+      </div>`;
+    }).join('');
+
+  } catch(e) {
+    console.error(e);
+    container.innerHTML = `<div class="error-state">❌ Erro ao carregar: ${e.message}</div>`;
+  }
+}
+
+function _renderTasks(itens, slug) {
+  return itens.map(item => {
+    const isVist    = item.vistoriado == 1;
+    const isParcial = item.status === 'parcial';
+    const qProg = item.quantidade_programada || 0;
+    const qFeit = item.quantidade_produzida  || 0;
+    const qRest = Math.max(0, qProg - qFeit);
+    const icon    = isParcial ? '⚠️' : '❌';
+    const stLabel = isParcial ? 'Parcial' : 'Não feito';
+    const stColor = isParcial ? '#f97316' : '#ef4444';
+
+    return `
+    <div class="task-item" id="ti-${item.id}">
+      <div class="task-icon">${icon}</div>
+      <div class="task-body">
+        <div class="task-name">${item.item || '—'}</div>
+        <div class="task-detail">
+          ${item.categoria ? `<strong>${item.categoria}</strong> · ` : ''}
+          <span style="color:${stColor}">${stLabel}</span>
+          ${item.motivo ? ` · 💬 ${item.motivo}` : ''}
+        </div>
+        <div class="task-qtds">
+          ${qProg > 0 ? `<span class="qtd-badge qtd-prog">📋 ${qProg}</span>` : ''}
+          ${qFeit > 0 ? `<span class="qtd-badge qtd-feito">✅ ${qFeit}</span>` : ''}
+          ${qRest > 0 ? `<span class="qtd-badge qtd-rest">⬇️ ${qRest}</span>` : ''}
+        </div>
+      </div>
+      <div>
+        ${isVist
+          ? `<span class="btn-ciente-done"><i class="fas fa-check"></i> Ciente</span>`
+          : `<button class="btn-ciente" onclick="_ciente('${item.id}','${slug}')"><i class="fas fa-check"></i> Ciente</button>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function _toggle(slug) {
+  const tl  = document.getElementById(`tl-${slug}`);
+  const chv = document.getElementById(`chv-${slug}`);
+  if (!tl) return;
+  const isOpen = tl.classList.contains('open');
+  tl.classList.toggle('open', !isOpen);
+  if (chv) chv.classList.toggle('open', !isOpen);
+}
+
+async function _ciente(id, slug) {
+  try {
+    await fbPatch('pendencias', id, { vistoriado: 1 });
+    const el = document.getElementById(`ti-${id}`);
+    if (el) {
+      el.style.opacity = '0';
+      setTimeout(() => { el.remove(); _verificaVazio(slug); }, 300);
+    }
+    showToast('✅ Ciente registrado!');
+  } catch(e) {
+    console.error(e);
+    showToast('❌ Erro ao registrar ciência');
+  }
+}
+
+function _verificaVazio(slug) {
+  const tl = document.getElementById(`tl-${slug}`);
+  const cb = document.getElementById(`rcc-${slug}`);
+  if (!tl || !cb) return;
+  if (tl.querySelectorAll('.task-item').length === 0) {
+    cb.classList.add('all-ciente');
+    const meta = cb.querySelector('.collab-meta');
+    if (meta) meta.textContent = '✅ Todos os itens com ciência';
+  }
+}
+
+function _slug(str) {
+  return (str || '').toLowerCase().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '-');
+}
+
+function _emojiFor(nome) {
+  const emojis = ['👨‍🍳','👩‍🍳','🧑‍🍳','😎','🙂','😊','🤩','👌','💪','🍔','⭐','🌟'];
+  let s = 0;
+  for (let i = 0; i < nome.length; i++) s += nome.charCodeAt(i);
+  return emojis[s % emojis.length];
+}
+
+let _toastT = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastT);
+  _toastT = setTimeout(() => el.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
