@@ -6,7 +6,7 @@
 'use strict';
 
 /* ══ SENHAS ══════════════════════════════════════════════ */
-const LEADER_PASSWORD  = 'lider123';
+const LEADER_PASSWORD  = 'lider123*';
 const COLLAB_PASSWORDS = { 'DINA': 'lider123*', 'SANDRO': 'lider123*' };
 const DEPT_PASSWORD    = { 'ATENDIMENTO': 'lider123*' };
 
@@ -547,7 +547,26 @@ async function _registrarFalta(nome,tipo) {
 
 async function _gerenciarFalta(nome,tipo,acao) {
   if (acao==='remover'&&S.leaderOk) {
-    if (!confirm(`Remover a falta de ${nome}?`)) return;
+    /* Modal de confirmação no lugar do confirm() nativo */
+    const ok = await new Promise(resolve=>{
+      let ov=document.getElementById('_modal_confirm_falta');
+      if (!ov){ ov=document.createElement('div'); ov.id='_modal_confirm_falta';
+        ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+        document.body.appendChild(ov); }
+      ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:320px;box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:inherit;text-align:center">
+        <div style="font-size:36px;margin-bottom:10px">🚫</div>
+        <h3 style="font-size:15px;font-weight:900;margin:0 0 8px">Remover Falta</h3>
+        <p style="font-size:13px;color:#6b7280;margin:0 0 18px">Remover a falta de <strong>${nome}</strong>?</p>
+        <div style="display:flex;gap:10px">
+          <button onclick="document.getElementById('_modal_confirm_falta').style.display='none'" id="_cf_nao"
+            style="flex:1;padding:12px;border-radius:12px;border:2px solid #e2e6f0;background:#f9fafb;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">Cancelar</button>
+          <button id="_cf_sim" style="flex:2;padding:12px;border-radius:12px;border:none;background:#dc2626;color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">✅ Remover</button>
+        </div></div>`;
+      ov.style.display='flex';
+      document.getElementById('_cf_sim').onclick=()=>{ ov.style.display='none'; resolve(true); };
+      document.getElementById('_cf_nao').onclick=()=>{ ov.style.display='none'; resolve(false); };
+    });
+    if (!ok) return;
     try {
       const faltas=await _fbGetAll('faltas');
       const dt=S.dataTrabalho||today();
@@ -1262,19 +1281,52 @@ async function _resConfirmarTransferir(pendId,itemNome,origem,tarefaId,qProg,qFe
   const dia  =(document.getElementById('res-dia')||{}).value||'segunda';
   const data =((document.getElementById('res-data')||{}).value)||today();
   const qRest=Math.max(0,(qProg||0)-(qFeit||0));
+  const qtdFinal=qRest>0?qRest:qProg;
+  /* Busca categoria da tarefa original para manter contexto */
+  let catOriginal='';
+  let unidadeOriginal='un';
   try {
-    await _fbPatch('pendencias',pendId,{vistoriado:1,transferido_para:destino,obs_transferencia:obs});
+    if (tarefaId) {
+      const tOrig=await _fbGetOne('tarefas',tarefaId);
+      if (tOrig) { catOriginal=tOrig.categoria||''; unidadeOriginal=tOrig.unidade||'un'; }
+    }
+  } catch(e) {}
+  try {
+    /* 1. Marca pendência original como transferida/vistoriada */
+    await _fbPatch('pendencias',pendId,{vistoriado:1,transferido_para:destino,obs_transferencia:obs||`Transferido para ${destino}`});
+
+    /* 2. Cria nova entrada em TAREFAS para o colaborador destino (tarefa temporária do dia) */
+    const novaTarefa=await _fbPost('tarefas',{
+      turno, dia_semana:dia,
+      colaborador:destino,
+      categoria:catOriginal||'Transferência',
+      item:itemNome,
+      quantidade_padrao:qtdFinal,
+      unidade:unidadeOriginal,
+      ordem:99,
+      transferida_de:origem,
+      transferida_em:data,
+      transferida_sessao:pendId,
+    });
+
+    /* 3. Cria pendência para o destino com referência à nova tarefa */
     await _fbPost('pendencias',{
       data,turno,dia_semana:dia,colaborador:destino,
       item:itemNome+(obs?` (transf. de ${origem}: ${obs})`:`(transferido de ${origem})`),
-      categoria:'',quantidade_programada:qRest>0?qRest:qProg,
-      quantidade_produzida:0,status:'nao_finalizado',
-      motivo:obs||`Transferido de ${origem}`,vistoriado:0,
-      origem_transferencia:origem,tarefa_id:tarefaId||'',
+      categoria:catOriginal||'Transferência',
+      quantidade_programada:qtdFinal,
+      quantidade_produzida:0,
+      status:'nao_finalizado',
+      motivo:obs||`Transferido de ${origem}`,
+      vistoriado:0,
+      origem_transferencia:origem,
+      tarefa_id:novaTarefa?.id||tarefaId||'',
     });
+
     const ov=document.getElementById('_modal_transferir_embutido');
     if (ov) ov.style.display='none';
-    showToast(`✅ Tarefa transferida para ${destino}!`);
+    showToast(`✅ Tarefa transferida para ${destino}! (tarefa criada no turno)`);
+    _invalidarCache();
     setTimeout(()=>loadResultados(),600);
   } catch(e) { showToast('❌ Erro ao transferir: '+e.message); }
 }
@@ -1651,7 +1703,31 @@ async function _populateTeColab(selected) {
 async function saveTaskEdit() {
   const id=document.getElementById('te-id').value;
   let colab=document.getElementById('te-colab').value;
-  if (colab==='__novo__') { colab=prompt('Nome do colaborador (MAIÚSCULAS):'); if (!colab) return; colab=colab.trim().toUpperCase(); }
+  if (colab==='__novo__') {
+    /* Modal customizado no lugar do prompt() nativo */
+    let ov=document.getElementById('_modal_novo_colab');
+    if (!ov){ ov=document.createElement('div'); ov.id='_modal_novo_colab';
+      ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+      document.body.appendChild(ov); }
+    ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:inherit">
+      <h3 style="font-size:16px;font-weight:900;margin:0 0 14px">👤 Novo Colaborador</h3>
+      <input id="_nc_inp" type="text" placeholder="Nome em MAIÚSCULAS..."
+        style="width:100%;padding:12px 14px;border:2px solid #e2e6f0;border-radius:12px;font-size:15px;font-family:inherit;outline:none;box-sizing:border-box;text-transform:uppercase;margin-bottom:14px"/>
+      <div style="display:flex;gap:10px">
+        <button onclick="document.getElementById('_modal_novo_colab').style.display='none'"
+          style="flex:1;padding:12px;border-radius:12px;border:2px solid #e2e6f0;background:#f9fafb;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">Cancelar</button>
+        <button id="_nc_ok" style="flex:2;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#4f8ef7,#2563eb);color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">Confirmar ✅</button>
+      </div></div>`;
+    ov.style.display='flex';
+    await new Promise(resolve=>{
+      document.getElementById('_nc_ok').onclick=()=>{ ov.style.display='none'; resolve(); };
+      document.getElementById('_nc_inp').onkeydown=e=>{ if(e.key==='Enter'){ ov.style.display='none'; resolve(); } };
+      setTimeout(()=>document.getElementById('_nc_inp').focus(),80);
+    });
+    const val=(document.getElementById('_nc_inp').value||'').trim().toUpperCase();
+    if (!val) return;
+    colab=val;
+  }
   const body={
     colaborador:colab,
     turno:document.getElementById('te-turno').value,
