@@ -1,0 +1,843 @@
+  1	<!DOCTYPE html>
+     2	<html lang="pt-BR">
+     3	<head>
+     4	  <meta charset="UTF-8"/>
+     5	  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+     6	  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+     7	  <meta http-equiv="Pragma" content="no-cache"/>
+     8	  <meta http-equiv="Expires" content="0"/>
+     9	  <title>Just Burger 🍔 Produção (Firebase v2)</title>
+    10	  <!-- ══ Firebase SDK v9 compat — mesmo padrão Escala Motoboys ══ -->
+    11	  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
+    12	  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
+    13	  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+    14	  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
+    15	  <link rel="stylesheet" href="css/style.css?v=20260330"/>
+    16	</head>
+    17	<body>
+    18	
+    19	<!-- LOADING -->
+    20	<div id="loading-overlay" class="loading-overlay hidden">
+    21	  <div class="loading-spinner">🍔</div>
+    22	  <p>Carregando...</p>
+    23	</div>
+    24	
+    25	<!-- TOAST -->
+    26	<div id="toast" class="toast hidden"></div>
+    27	
+    28	<!-- ══════════════════════════════════════════
+    29	     TELA 0 — LOGIN LÍDER
+    30	══════════════════════════════════════════ -->
+    31	<div id="screen-leader-login" class="screen hidden">
+    32	  <div class="login-wrap">
+    33	    <div class="login-brand">
+    34	      <div class="login-logo">🍔</div>
+    35	      <h1>Just Burger</h1>
+    36	      <p>Área Restrita do Líder</p>
+    37	    </div>
+    38	    <div class="login-card">
+    39	      <div class="login-icon">🔐</div>
+    40	      <h2>Acesso do Líder</h2>
+    41	      <p class="login-sub">Digite a senha para continuar</p>
+    42	      <form onsubmit="event.preventDefault(); doLeaderLogin();" autocomplete="off">
+    43	        <input type="text" name="username" value="lider" autocomplete="username" style="display:none" aria-hidden="true"/>
+    44	        <div class="pass-input-wrap">
+    45	          <input type="password" id="leader-password" placeholder="Senha..." autocomplete="current-password"/>
+    46	          <button type="button" class="pass-toggle" onclick="togglePassVisibility()"><i class="fas fa-eye"></i></button>
+    47	        </div>
+    48	        <p class="login-error hidden" id="login-error">❌ Senha incorreta!</p>
+    49	        <button type="submit" class="btn-enter">🚀 Entrar</button>
+    50	      </form>
+    51	      <button class="btn-back-ghost" onclick="goToWelcome()">← Voltar ao Início</button>
+    52	    </div>
+    53	  </div>
+    54	</div>
+    55	
+    56	<!-- ══════════════════════════════════════════
+    57	     TELA 1 — BOAS-VINDAS / TURNO
+    58	══════════════════════════════════════════ -->
+    59	<div id="screen-welcome" class="screen">
+    60	  <header class="welcome-header">
+    61	    <div class="welcome-brand">
+    62	      <span class="welcome-emoji">🍔</span>
+    63	      <div>
+    64	        <h1>Just Burger</h1>
+    65	        <p>Controle de Produção</p>
+    66	      </div>
+    67	    </div>
+    68	  </header>
+    69	  <main class="welcome-body">
+    70	    <div class="welcome-hero">
+    71	      <div class="hero-emoji">👨‍🍳</div>
+    72	      <h2>Bem-vindo à cozinha!</h2>
+    73	      <p>Confirme a data e selecione o turno</p>
+    74	    </div>
+    75	
+    76	    <!-- SELETOR DE DATA — obrigatório antes de escolher turno -->
+    77	    <div class="date-selector-wrap">
+    78	      <div class="date-selector-label">
+    79	        <i class="fas fa-calendar-day"></i>
+    80	        <span>Data de Trabalho</span>
+    81	      </div>
+    82	      <div class="date-selector-row">
+    83	        <input
+    84	          type="date"
+    85	          id="work-date-input"
+    86	          class="work-date-input"
+    87	          onchange="onWorkDateChange()"
+    88	        />
+    89	        <div class="work-date-display" id="work-date-display">
+    90	          <!-- preenchido via JS -->
+    91	        </div>
+    92	      </div>
+    93	    </div>
+    94	
+    95	    <div class="shift-grid">
+    96	      <button class="shift-btn shift-day" onclick="selectTurno('dia')">
+    97	        <div class="shift-badge">☀️</div>
+    98	        <span class="shift-name">Turno Dia</span>
+    99	        <span class="shift-sub">Manhã / Tarde</span>
+   100	        <span class="shift-arrow">→</span>
+   101	      </button>
+   102	      <button class="shift-btn shift-night" onclick="selectTurno('noite')">
+   103	        <div class="shift-badge">🌙</div>
+   104	        <span class="shift-name">Turno Noite</span>
+   105	        <span class="shift-sub">Tarde / Noite</span>
+   106	        <span class="shift-arrow">→</span>
+   107	      </button>
+   108	    </div>
+   109	  </main>
+   110	  <footer class="welcome-footer">
+   111	    <div class="footer-links-row">
+   112	      <a href="resultados.html" class="footer-link-btn footer-link-blue" id="btn-resultados">
+   113	        <i class="fas fa-chart-bar"></i>
+   114	        Resultados
+   115	        <span class="notif-badge" id="badge-pendencias" style="display:none">!</span>
+   116	      </a>
+   117	      <a href="medias.html" class="footer-link-btn footer-link-green">
+   118	        <i class="fas fa-list-ol"></i>
+   119	        Médias
+   120	      </a>
+   121	      <a href="exportar.html" class="footer-link-btn footer-link-export">
+   122	        <i class="fas fa-clipboard-list"></i>
+   123	        Insumos
+   124	      </a>
+   125	      <a href="dashboard.html" class="footer-link-btn footer-link-dash">
+   126	        <i class="fas fa-chart-pie"></i>
+   127	        Dashboard
+   128	      </a>
+   129	    </div>
+   130	  </footer>
+   131	</div>
+   132	
+   133	<!-- ══════════════════════════════════════════
+   134	     TELA — RESULTADOS / PENDÊNCIAS DO DIA
+   135	══════════════════════════════════════════ -->
+   136	<div id="screen-resultados" class="screen hidden">
+   137	  <header class="nav-header">
+   138	    <button class="btn-back-circle" onclick="goBack('screen-welcome')"><i class="fas fa-arrow-left"></i></button>
+   139	    <div class="nav-chips">
+   140	      <span class="nav-chip">📋 Pendências do Dia</span>
+   141	    </div>
+   142	  </header>
+   143	
+   144	  <!-- Filtros de Turno e Dia -->
+   145	  <div class="res-filter-bar">
+   146	    <div class="res-filter-group">
+   147	      <label>⏰ Turno</label>
+   148	      <div class="tar-toggle-group">
+   149	        <button class="tar-toggle active" id="resbtn-dia"   onclick="setResTurno('dia')">☀️ Dia</button>
+   150	        <button class="tar-toggle"        id="resbtn-noite" onclick="setResTurno('noite')">🌙 Noite</button>
+   151	      </div>
+   152	    </div>
+   153	    <div class="res-filter-group">
+   154	      <label>📅 Dia</label>
+   155	      <div class="tar-dias-group">
+   156	        <button class="tar-dia-btn active" data-rdia="segunda" onclick="setResDia('segunda')">SEG</button>
+   157	        <button class="tar-dia-btn" data-rdia="terca"   onclick="setResDia('terca')">TER</button>
+   158	        <button class="tar-dia-btn" data-rdia="quarta"  onclick="setResDia('quarta')">QUA</button>
+   159	        <button class="tar-dia-btn" data-rdia="quinta"  onclick="setResDia('quinta')">QUI</button>
+   160	        <button class="tar-dia-btn" data-rdia="sexta"   onclick="setResDia('sexta')">SEX</button>
+   161	        <button class="tar-dia-btn" data-rdia="sabado"  onclick="setResDia('sabado')">SAB</button>
+   162	        <button class="tar-dia-btn" data-rdia="domingo" onclick="setResDia('domingo')">DOM</button>
+   163	      </div>
+   164	    </div>
+   165	    <div class="res-filter-group">
+   166	      <label>📅 Data</label>
+   167	      <input type="date" id="res-data" onchange="loadResultados()" style="padding:7px 10px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:13px;font-weight:700"/>
+   168	    </div>
+   169	  </div>
+   170	
+   171	  <!-- Resumo -->
+   172	  <div class="res-summary-bar" id="res-summary-bar"></div>
+   173	
+   174	  <!-- Lista de colaboradores com pendências -->
+   175	  <main class="tasks-scroll" id="res-lista" style="padding:12px 16px"></main>
+   176	
+   177	  <!-- Inputs ocultos de estado -->
+   178	  <input type="hidden" id="res-turno" value="dia"/>
+   179	  <input type="hidden" id="res-dia"   value="segunda"/>
+   180	</div>
+   181	
+   182	<!-- ══════════════════════════════════════════
+   183	     TELA 2 — DIA DA SEMANA
+   184	══════════════════════════════════════════ -->
+   185	<div id="screen-day" class="screen hidden">
+   186	  <header class="nav-header">
+   187	    <button class="btn-back-circle" onclick="goBack('screen-welcome')"><i class="fas fa-arrow-left"></i></button>
+   188	    <div class="nav-chips">
+   189	      <span class="nav-chip" id="day-turno-chip">☀️ Turno Dia</span>
+   190	    </div>
+   191	  </header>
+   192	  <main class="screen-body">
+   193	    <div class="screen-intro">
+   194	      <div class="screen-intro-emoji">📅</div>
+   195	      <h2>Qual é o dia hoje?</h2>
+   196	      <p>Selecione o dia da semana</p>
+   197	    </div>
+   198	    <div class="day-grid" id="day-grid"></div>
+   199	  </main>
+   200	</div>
+   201	
+   202	<!-- ══════════════════════════════════════════
+   203	     TELA 2.5 — ESCOLHA DE DEPARTAMENTO
+   204	══════════════════════════════════════════ -->
+   205	<div id="screen-dept" class="screen hidden">
+   206	  <header class="nav-header">
+   207	    <button class="btn-back-circle" onclick="goBack('screen-day')"><i class="fas fa-arrow-left"></i></button>
+   208	    <div class="nav-chips">
+   209	      <span class="nav-chip" id="dept-turno-chip">☀️ Dia</span>
+   210	      <span class="nav-chip chip-day" id="dept-day-chip">Segunda</span>
+   211	    </div>
+   212	  </header>
+   213	  <main class="screen-body">
+   214	    <div class="screen-intro">
+   215	      <div class="screen-intro-emoji">🏢</div>
+   216	      <h2>Qual departamento?</h2>
+   217	      <p>Selecione seu setor</p>
+   218	    </div>
+   219	    <div class="dept-btn-grid">
+   220	      <button class="dept-btn dept-btn-producao" onclick="_abrirSetorCards('PRODUCAO')">
+   221	        <span class="dept-btn-emoji">🏭</span>
+   222	        <span class="dept-btn-nome">Produção</span>
+   223	      </button>
+   224	      <button class="dept-btn dept-btn-operacao" onclick="_abrirSetorCards('OPERACAO')">
+   225	        <span class="dept-btn-emoji">⚙️</span>
+   226	        <span class="dept-btn-nome">Operação</span>
+   227	      </button>
+   228	      <button class="dept-btn dept-btn-atendimento" onclick="_abrirSetorCards('ATENDIMENTO')">
+   229	        <span class="dept-btn-emoji">🎯</span>
+   230	        <span class="dept-btn-nome">Atendimento</span>
+   231	        <span class="dept-btn-lock">🔒</span>
+   232	      </button>
+   233	    </div>
+   234	  </main>
+   235	</div>
+   236	
+   237	<!-- ══════════════════════════════════════════
+   238	     TELA 2.8 — CARDS DO SETOR
+   239	══════════════════════════════════════════ -->
+   240	<div id="screen-setor" class="screen hidden">
+   241	  <header class="nav-header">
+   242	    <button class="btn-back-circle" onclick="goBack('screen-dept')"><i class="fas fa-arrow-left"></i></button>
+   243	    <div class="nav-chips">
+   244	      <span class="nav-chip" id="setor-turno-chip">☀️ Dia</span>
+   245	      <span class="nav-chip chip-day" id="setor-day-chip">Segunda</span>
+   246	      <span class="nav-chip" id="setor-dept-chip" style="background:#f97316;color:#fff">🏭 Produção</span>
+   247	    </div>
+   248	  </header>
+   249	  <main class="screen-body">
+   250	    <div class="screen-intro">
+   251	      <div class="screen-intro-emoji">👋</div>
+   252	      <h2>Quem é você?</h2>
+   253	      <p>Toque no seu card para ver suas tarefas</p>
+   254	    </div>
+   255	    <div class="collab-grid" id="setor-collab-grid"></div>
+   256	    <div style="text-align:center;margin-top:20px;padding-bottom:4px">
+   257	      <button onclick="goBack('screen-dept')"
+   258	        style="background:none;border:2px solid #6b7280;color:#6b7280;padding:10px 28px;
+   259	               border-radius:12px;font-size:13px;font-weight:800;cursor:pointer;
+   260	               font-family:inherit;display:inline-flex;align-items:center;gap:8px">
+   261	        ← Voltar aos departamentos
+   262	      </button>
+   263	    </div>
+   264	  </main>
+   265	</div>
+   266	
+   267	<!-- ══════════════════════════════════════════
+   268	     TELA 3 — COLABORADOR / SETOR
+   269	══════════════════════════════════════════ -->
+   270	<div id="screen-collaborator" class="screen hidden">
+   271	  <header class="nav-header">
+   272	    <button class="btn-back-circle" onclick="goBack('screen-dept')"><i class="fas fa-arrow-left"></i></button>
+   273	    <div class="nav-chips">
+   274	      <span class="nav-chip" id="collab-turno-chip">☀️ Dia</span>
+   275	      <span class="nav-chip chip-day" id="collab-day-chip">Segunda</span>
+   276	      <span class="nav-chip" id="collab-dept-chip" style="background:#4f8ef7;color:#fff">🏭 Produção</span>
+   277	    </div>
+   278	  </header>
+   279	  <main class="screen-body">
+   280	    <div class="screen-intro">
+   281	      <div class="screen-intro-emoji">👋</div>
+   282	      <h2>Quem é você?</h2>
+   283	      <p>Toque no seu card para ver suas tarefas</p>
+   284	    </div>
+   285	    <div class="collab-grid" id="collab-grid"></div>
+   286	  </main>
+   287	</div>
+   288	
+   289	<!-- ══════════════════════════════════════════
+   290	     TELA DE PRODUÇÃO (etapa 1 + etapa 2 na mesma tela)
+   291	══════════════════════════════════════════ -->
+   292	<div id="screen-step1" class="screen hidden">
+   293	  <header class="nav-header">
+   294	    <button class="btn-back-circle" onclick="backToCollabScreen()"><i class="fas fa-arrow-left"></i></button>
+   295	    <div class="nav-chips">
+   296	      <span class="nav-chip" id="s1-turno-chip">☀️ Dia</span>
+   297	      <span class="nav-chip chip-day" id="s1-day-chip">Terça</span>
+   298	      <span class="nav-chip chip-user" id="s1-user-chip">👤 Colaborador</span>
+   299	    </div>
+   300	    <!-- Botão imprimir aparece só na fase de produção -->
+   301	    <button class="btn-print-header hidden" id="btn-print-header" onclick="printColaborador()" title="Imprimir">
+   302	      <i class="fas fa-print"></i>
+   303	    </button>
+   304	  </header>
+   305	
+   306	  <!-- Barra de progresso (muda de cor e texto conforme fase) -->
+   307	  <div class="progress-bar-wrap">
+   308	    <div class="progress-bar-track">
+   309	      <div class="progress-bar-fill prog-yellow" id="s1-progress" style="width:0%"></div>
+   310	    </div>
+   311	    <span class="progress-bar-text" id="s1-progress-text">0 / 0 programados</span>
+   312	  </div>
+   313	
+   314	  <!-- Banner (muda conforme fase) -->
+   315	  <div class="step-banner step-banner-1" id="prod-banner">
+   316	    <span class="step-banner-icon" id="prod-banner-icon">📋</span>
+   317	    <div>
+   318	      <strong id="prod-banner-title">Etapa 1 — Programe as quantidades</strong>
+   319	      <small id="prod-banner-sub">Toque em cada card para definir estoque e quantidade a produzir</small>
+   320	    </div>
+   321	  </div>
+   322	
+   323	  <!-- Lista de cards (renderStep1 ou renderStep2 preenchem este mesmo elemento) -->
+   324	  <main class="tasks-scroll" id="s1-list"></main>
+   325	
+   326	  <!-- Footer (muda conforme fase) -->
+   327	  <footer class="tasks-footer" id="s1-footer">
+   328	
+   329	    <!-- FASE 1: ainda programando -->
+   330	    <div class="btn-pending-info" id="btn-pending-info">
+   331	      <i class="fas fa-info-circle"></i>
+   332	      <span id="pending-count-text">Toque nos cards acima para programar</span>
+   333	    </div>
+   334	
+   335	    <!-- FASE 1: tudo programado -->
+   336	    <div class="s1-done-footer hidden" id="s1-done-footer">
+   337	      <button class="btn-print-s1" onclick="doPrintDirect()">
+   338	        <i class="fas fa-print"></i> Imprimir Folha
+   339	      </button>
+   340	      <button class="btn-start-prod" onclick="iniciarProducao()">
+   341	        🚀 Iniciar Produção
+   342	      </button>
+   343	    </div>
+   344	
+   345	    <!-- FASE 2: concluir turno (aparece quando todos os cards finalizados) -->
+   346	    <button class="btn-conclude hidden" id="btn-conclude" onclick="openFinishModal()">
+   347	      🏁 Concluir Turno
+   348	    </button>
+   349	
+   350	    <!-- Voltar (sempre visível na fase 1) -->
+   351	    <button class="btn-voltar-s1" id="btn-voltar" onclick="backToCollabScreen()">
+   352	      ← Voltar
+   353	    </button>
+   354	  </footer>
+   355	</div>
+   356	
+   357	<!-- ══════════════════════════════════════════
+   358	     TELA 6 — AGRADECIMENTO
+   359	══════════════════════════════════════════ -->
+   360	<div id="screen-thanks" class="screen hidden">
+   361	  <div class="thanks-wrap">
+   362	    <div class="thanks-emoji" id="thanks-emoji">🎉</div>
+   363	    <h2 id="thanks-msg">Turno concluído!</h2>
+   364	    <div class="thanks-stats" id="thanks-stats"></div>
+   365	    <p class="thanks-redirect-msg" id="thanks-redirect-msg">Voltando ao início em <span id="thanks-countdown">3</span>s…</p>
+   366	    <button class="btn-home-thanks" onclick="goToWelcome()">
+   367	      <i class="fas fa-home"></i> Voltar ao Início Agora
+   368	    </button>
+   369	  </div>
+   370	</div>
+   371	
+   372	<!-- ══════════════════════════════════════════
+   373	     TELA 7 — PAINEL DO LÍDER
+   374	══════════════════════════════════════════ -->
+   375	<div id="screen-leader" class="screen hidden">
+   376	  <header class="nav-header leader-nav">
+   377	    <button class="btn-back-circle" onclick="goToWelcome()"><i class="fas fa-arrow-left"></i></button>
+   378	    <div class="nav-chips">
+   379	      <span class="nav-chip">📊 Painel do Líder</span>
+   380	    </div>
+   381	    <a href="resultados.html" style="background:rgba(59,130,246,0.2);border:1px solid #3b82f6;color:#93c5fd;padding:7px 12px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px" title="Resultados">
+   382	      <i class="fas fa-chart-bar"></i> Resultados
+   383	    </a>
+   384	    <a href="medias.html" style="background:rgba(34,197,94,0.15);border:1px solid #22c55e;color:#86efac;padding:7px 12px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px" title="Médias">
+   385	      <i class="fas fa-list-ol"></i> Médias
+   386	    </a>
+   387	    <button class="btn-print-header" onclick="printLeaderReport()" title="Imprimir relatório">
+   388	      <i class="fas fa-print"></i>
+   389	    </button>
+   390	  </header>
+   391	
+   392	  <!-- Abas -->
+   393	  <div class="leader-tabs">
+   394	    <button class="leader-tab active" id="tab-registros"  onclick="switchLeaderTab('registros')">📄 Registros</button>
+   395	    <button class="leader-tab" id="tab-pendentes"         onclick="switchLeaderTab('pendentes')">⚠️ Cobranças</button>
+   396	    <button class="leader-tab" id="tab-espelho"           onclick="switchLeaderTab('espelho')">🔎 Espelho</button>
+   397	    <button class="leader-tab" id="tab-relatorio"         onclick="switchLeaderTab('relatorio')">📊 Relatório</button>
+   398	    <button class="leader-tab" id="tab-tarefas"           onclick="switchLeaderTab('tarefas')">⚙️ Tarefas</button>
+   399	  </div>
+   400	
+   401	  <main class="leader-body">
+   402	
+   403	    <!-- FILTROS (compartilhado) -->
+   404	    <div class="filter-card">
+   405	      <div class="filter-row">
+   406	        <div class="filter-group">
+   407	          <label>📅 De</label>
+   408	          <input type="date" id="filter-start"/>
+   409	        </div>
+   410	        <div class="filter-group">
+   411	          <label>📅 Até</label>
+   412	          <input type="date" id="filter-end"/>
+   413	        </div>
+   414	        <div class="filter-group">
+   415	          <label>⏰ Turno</label>
+   416	          <select id="filter-turno">
+   417	            <option value="">Todos</option>
+   418	            <option value="dia">☀️ Dia</option>
+   419	            <option value="noite">🌙 Noite</option>
+   420	          </select>
+   421	        </div>
+   422	        <div class="filter-group">
+   423	          <label>👤 Colaborador</label>
+   424	          <select id="filter-colaborador"><option value="">Todos</option></select>
+   425	        </div>
+   426	        <button class="btn-filter" onclick="loadLeaderData()">
+   427	          <i class="fas fa-search"></i> Filtrar
+   428	        </button>
+   429	      </div>
+   430	    </div>
+   431	
+   432	    <!-- Cards resumo -->
+   433	    <div class="summary-row">
+   434	      <div class="summ-card summ-total">
+   435	        <span class="summ-emoji">📋</span>
+   436	        <span class="summ-num" id="s-total">0</span>
+   437	        <span class="summ-lbl">Total</span>
+   438	      </div>
+   439	      <div class="summ-card summ-ok">
+   440	        <span class="summ-emoji">✅</span>
+   441	        <span class="summ-num" id="s-ok">0</span>
+   442	        <span class="summ-lbl">100%</span>
+   443	      </div>
+   444	      <div class="summ-card summ-warn">
+   445	        <span class="summ-emoji">⚠️</span>
+   446	        <span class="summ-num" id="s-parcial">0</span>
+   447	        <span class="summ-lbl">Parcial</span>
+   448	      </div>
+   449	      <div class="summ-card summ-err">
+   450	        <span class="summ-emoji">❌</span>
+   451	        <span class="summ-num" id="s-nao">0</span>
+   452	        <span class="summ-lbl">Não feito</span>
+   453	      </div>
+   454	      <div class="summ-card summ-taxa">
+   455	        <span class="summ-emoji">📈</span>
+   456	        <span class="summ-num" id="s-taxa">0%</span>
+   457	        <span class="summ-lbl">Conclusão</span>
+   458	      </div>
+   459	    </div>
+   460	
+   461	    <!-- ABA REGISTROS -->
+   462	    <div id="leader-panel-registros" class="leader-panel">
+   463	      <div class="leader-actions">
+   464	        <button class="btn-print-pending" onclick="printPendentes()">
+   465	          <i class="fas fa-exclamation-triangle"></i> Imprimir Pendências
+   466	        </button>
+   467	        <button class="btn-print-all-collab" onclick="printAllCollabs()">
+   468	          <i class="fas fa-users"></i> Imprimir por Colaborador
+   469	        </button>
+   470	      </div>
+   471	      <div class="table-card">
+   472	        <div class="table-header-row"><h3>📄 Todos os Registros</h3></div>
+   473	        <div class="table-scroll">
+   474	          <table class="data-table">
+   475	            <thead>
+   476	              <tr><th>Data</th><th>Turno</th><th>Dia</th><th>Colaborador</th>
+   477	                  <th>Item</th><th>Programado</th><th>Produzido</th><th>Status</th><th>Motivo</th></tr>
+   478	            </thead>
+   479	            <tbody id="leader-tbody">
+   480	              <tr><td colspan="9" class="empty-row">Clique em Filtrar para carregar</td></tr>
+   481	            </tbody>
+   482	          </table>
+   483	        </div>
+   484	      </div>
+   485	    </div>
+   486	
+   487	    <!-- ABA COBRANÇAS (antigo Pendentes — cards com check) -->
+   488	    <div id="leader-panel-pendentes" class="leader-panel hidden">
+   489	      <div class="leader-actions" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+   490	        <div style="display:flex;gap:8px;flex-wrap:wrap">
+   491	          <button class="btn-print-pending" onclick="printPendentes()">
+   492	            <i class="fas fa-print"></i> Imprimir
+   493	          </button>
+   494	          <button class="btn-danger-sm" onclick="zerarCobrancas()">
+   495	            <i class="fas fa-trash"></i> Zerar Lista
+   496	          </button>
+   497	        </div>
+   498	        <p class="pendentes-hint" style="margin:0">✅ Check = vistoriado · some da lista</p>
+   499	      </div>
+   500	      <div id="pendentes-list" class="pendentes-list">
+   501	        <div class="empty-row" style="padding:32px;text-align:center">Clique em Filtrar para carregar</div>
+   502	      </div>
+   503	    </div>
+   504	
+   505	    <!-- ABA ESPELHO -->
+   506	    <div id="leader-panel-espelho" class="leader-panel hidden">
+   507	      <div class="leader-actions">
+   508	        <button class="btn-print-all-collab" onclick="printEspelho()">
+   509	          <i class="fas fa-print"></i> Imprimir Espelho
+   510	        </button>
+   511	      </div>
+   512	      <div id="espelho-list" class="espelho-list">
+   513	        <div class="empty-row" style="padding:32px;text-align:center">Clique em Filtrar para carregar</div>
+   514	      </div>
+   515	    </div>
+   516	
+   517	    <!-- ABA RELATÓRIO ANALÍTICO -->
+   518	    <div id="leader-panel-relatorio" class="leader-panel hidden">
+   519	      <div class="rel-filters">
+   520	        <div class="filter-row" style="flex-wrap:wrap;gap:8px">
+   521	          <div class="filter-group">
+   522	            <label>📅 De</label>
+   523	            <input type="date" id="rel-start"/>
+   524	          </div>
+   525	          <div class="filter-group">
+   526	            <label>📅 Até</label>
+   527	            <input type="date" id="rel-end"/>
+   528	          </div>
+   529	          <div class="filter-group">
+   530	            <label>⏰ Turno</label>
+   531	            <select id="rel-turno">
+   532	              <option value="">Todos</option>
+   533	              <option value="dia">☀️ Dia</option>
+   534	              <option value="noite">🌙 Noite</option>
+   535	            </select>
+   536	          </div>
+   537	          <div class="filter-group">
+   538	            <label>👤 Colaborador</label>
+   539	            <select id="rel-colaborador"><option value="">Todos</option></select>
+   540	          </div>
+   541	          <div class="filter-group">
+   542	            <label>⚠️ Motivo</label>
+   543	            <select id="rel-motivo">
+   544	              <option value="">Todos</option>
+   545	              <option value="tempo">⏰ Tempo</option>
+   546	              <option value="equipamento">🔧 Equipamento</option>
+   547	              <option value="insumos">📦 Insumos</option>
+   548	              <option value="estoque">✅ Estoque OK</option>
+   549	              <option value="outros">🔄 Outros</option>
+   550	            </select>
+   551	          </div>
+   552	          <div class="filter-group">
+   553	            <label>📊 Status</label>
+   554	            <select id="rel-status">
+   555	              <option value="">Todos</option>
+   556	              <option value="total">✅ 100%</option>
+   557	              <option value="parcial">⚠️ Parcial</option>
+   558	              <option value="nao_finalizado">❌ Não feito</option>
+   559	            </select>
+   560	          </div>
+   561	          <button class="btn-filter" onclick="loadRelatorio()">
+   562	            <i class="fas fa-search"></i> Filtrar
+   563	          </button>
+   564	        </div>
+   565	      </div>
+   566	      <!-- Cards resumo do relatório -->
+   567	      <div class="summary-row" id="rel-summary-row" style="display:none"></div>
+   568	      <!-- Gráfico de causas -->
+   569	      <div id="rel-causas-wrap" class="rel-causas-wrap" style="display:none">
+   570	        <h4 style="margin:0 0 8px;font-size:14px;font-weight:800">📌 Causas de Não Conformidade</h4>
+   571	        <div id="rel-causas-bars"></div>
+   572	      </div>
+   573	      <!-- Tabela analítica -->
+   574	      <div id="relatorio-list"></div>
+   575	    </div>
+   576	
+   577	    <!-- ABA TAREFAS (gestão por dia/turno) -->
+   578	    <div id="leader-panel-tarefas" class="leader-panel hidden">
+   579	
+   580	      <!-- Filtros fixos -->
+   581	      <div class="tar-filter-bar">
+   582	        <div class="tar-filter-group">
+   583	          <label>⏰ Turno</label>
+   584	          <div class="tar-toggle-group">
+   585	            <button class="tar-toggle active" id="tarbtn-dia"   onclick="setTarTurno('dia')">☀️ Dia</button>
+   586	            <button class="tar-toggle"        id="tarbtn-noite" onclick="setTarTurno('noite')">🌙 Noite</button>
+   587	          </div>
+   588	        </div>
+   589	        <div class="tar-filter-group">
+   590	          <label>📅 Dia</label>
+   591	          <div class="tar-dias-group" id="tar-dias-btns">
+   592	            <button class="tar-dia-btn active" data-dia="segunda" onclick="setTarDia('segunda')">SEG</button>
+   593	            <button class="tar-dia-btn" data-dia="terca"   onclick="setTarDia('terca')">TER</button>
+   594	            <button class="tar-dia-btn" data-dia="quarta"  onclick="setTarDia('quarta')">QUA</button>
+   595	            <button class="tar-dia-btn" data-dia="quinta"  onclick="setTarDia('quinta')">QUI</button>
+   596	            <button class="tar-dia-btn" data-dia="sexta"   onclick="setTarDia('sexta')">SEX</button>
+   597	            <button class="tar-dia-btn" data-dia="sabado"  onclick="setTarDia('sabado')">SAB</button>
+   598	            <button class="tar-dia-btn" data-dia="domingo" onclick="setTarDia('domingo')">DOM</button>
+   599	          </div>
+   600	        </div>
+   601	        <div class="tar-filter-group">
+   602	          <label>👤 Colaborador</label>
+   603	          <select id="tar-filter-colab" class="tar-select" onchange="loadTarefasGestao()">
+   604	            <option value="">Todos</option>
+   605	          </select>
+   606	        </div>
+   607	        <button class="btn-new-task" onclick="openModalNewTask()">
+   608	          <i class="fas fa-plus"></i> Nova Tarefa
+   609	        </button>
+   610	      </div>
+   611	
+   612	      <!-- Contador de tarefas -->
+   613	      <div id="tar-count-bar" class="tar-count-bar"></div>
+   614	
+   615	      <!-- Lista estruturada -->
+   616	      <div id="tarefas-gestao-list"></div>
+   617	
+   618	      <!-- Input oculto para turno/dia atual -->
+   619	      <input type="hidden" id="tar-filter-turno" value="dia"/>
+   620	      <input type="hidden" id="tar-filter-dia"   value="segunda"/>
+   621	    </div>
+   622	
+   623	  </main>
+   624	</div>
+   625	
+   626	<!-- MODAL — NOVA / EDITAR TAREFA -->
+   627	<div class="modal-overlay hidden" id="modal-task-edit">
+   628	  <div class="modal-box modal-compact">
+   629	    <button class="modal-close" onclick="closeModal('modal-task-edit')">✕</button>
+   630	    <div class="modal-header-plain">
+   631	      <span class="modal-header-icon">⚙️</span>
+   632	      <h3 id="modal-task-edit-title">Nova Tarefa</h3>
+   633	    </div>
+   634	    <div class="modal-body modal-body-compact" style="gap:10px">
+   635	      <input type="hidden" id="te-id"/>
+   636	      <div class="filter-group" style="width:100%">
+   637	        <label>👤 Colaborador</label>
+   638	        <select id="te-colab" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit"></select>
+   639	      </div>
+   640	      <div class="filter-group" style="width:100%">
+   641	        <label>⏰ Turno</label>
+   642	        <select id="te-turno" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit">
+   643	          <option value="dia">☀️ Dia</option>
+   644	          <option value="noite">🌙 Noite</option>
+   645	        </select>
+   646	      </div>
+   647	      <div class="filter-group" style="width:100%">
+   648	        <label>📅 Dia da Semana</label>
+   649	        <select id="te-dia" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit">
+   650	          <option value="segunda">Segunda</option><option value="terca">Terça</option>
+   651	          <option value="quarta">Quarta</option><option value="quinta">Quinta</option>
+   652	          <option value="sexta">Sexta</option><option value="sabado">Sábado</option>
+   653	          <option value="domingo">Domingo</option>
+   654	        </select>
+   655	      </div>
+   656	      <div class="filter-group" style="width:100%">
+   657	        <label>🏷️ Categoria</label>
+   658	        <input type="text" id="te-cat" placeholder="Ex: Pré-preparo" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
+   659	      </div>
+   660	      <div class="filter-group" style="width:100%">
+   661	        <label>📝 Item</label>
+   662	        <input type="text" id="te-item" placeholder="Nome da tarefa" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
+   663	      </div>
+   664	      <div style="display:flex;gap:8px">
+   665	        <div class="filter-group" style="flex:1">
+   666	          <label>🔢 Qtd Padrão</label>
+   667	          <input type="number" id="te-qty" placeholder="0" min="0" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
+   668	        </div>
+   669	        <div class="filter-group" style="flex:1">
+   670	          <label>📏 Unidade</label>
+   671	          <input type="text" id="te-unit" placeholder="kg, un, L..." style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
+   672	        </div>
+   673	      </div>
+   674	      <div class="filter-group" style="width:100%">
+   675	        <label>🔢 Ordem</label>
+   676	        <input type="number" id="te-ordem" placeholder="1" min="1" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
+   677	      </div>
+   678	    </div>
+   679	    <div class="modal-footer">
+   680	      <button class="btn-modal-cancel" onclick="closeModal('modal-task-edit')">Cancelar</button>
+   681	      <button class="btn-modal-confirm" onclick="saveTaskEdit()">💾 Salvar</button>
+   682	    </div>
+   683	  </div>
+   684	</div>
+   685	
+   686	<!-- ══════════════════════════════════════════
+   687	     MODAL — PROGRAMAR ITEM (Etapa 1)
+   688	══════════════════════════════════════════ -->
+   689	<div class="modal-overlay hidden" id="modal-s1">
+   690	  <div class="modal-box modal-compact">
+   691	    <button class="modal-close" onclick="closeModal('modal-s1')">✕</button>
+   692	    <div class="modal-header-colored" id="modal-s1-header">
+   693	      <span class="modal-cat-badge" id="modal-s1-cat">Categoria</span>
+   694	      <h3 class="modal-title" id="modal-s1-title">Item</h3>
+   695	    </div>
+   696	    <div class="modal-body modal-body-compact">
+   697	
+   698	      <!-- Modo CHECKLIST (sem quantidade) -->
+   699	      <div id="s1-checklist-mode" class="hidden">
+   700	        <div class="checklist-prompt">
+   701	          <div class="checklist-icon">✅</div>
+   702	          <p>Esta tarefa é de <strong>execução</strong>.<br>Confirme que vai realizar.</p>
+   703	        </div>
+   704	      </div>
+   705	
+   706	      <!-- Modo QTD (com quantidade) -->
+   707	      <div id="s1-qty-mode">
+   708	        <!-- A produzir hoje (destaque) -->
+   709	        <div class="calc-card">
+   710	          <div class="calc-row-item calc-highlight">
+   711	            <span>⚡ A produzir hoje</span>
+   712	            <strong class="calc-num" id="calc-necessario">—</strong>
+   713	          </div>
+   714	        </div>
+   715	
+   716	        <!-- Estoque atual com -100/-10/-1/+1/+10/+100 centralizado -->
+   717	        <div class="field-label" style="margin-top:12px;text-align:center">📦 Estoque atual</div>
+   718	        <div class="qty-row compact" style="justify-content:center;flex-wrap:wrap;gap:6px">
+   719	          <button class="qty-btn" onclick="adjField('estoque',-100)">-100</button>
+   720	          <button class="qty-btn" onclick="adjField('estoque',-10)">-10</button>
+   721	          <button class="qty-btn" onclick="adjField('estoque',-1)">-1</button>
+   722	          <span class="qty-val" id="modal-s1-estoque">0</span>
+   723	          <span class="qty-unit" id="modal-s1-unidade" style="margin:0 4px;font-size:12px;opacity:.7">un</span>
+   724	          <button class="qty-btn plus" onclick="adjField('estoque',1)">+1</button>
+   725	          <button class="qty-btn plus" onclick="adjField('estoque',10)">+10</button>
+   726	          <button class="qty-btn plus" onclick="adjField('estoque',100)">+100</button>
+   727	        </div>
+   728	
+   729	        <!-- Campos ocultos mantidos para compatibilidade com JS -->
+   730	        <span id="calc-padrao" style="display:none">—</span>
+   731	        <span id="calc-estoque" style="display:none">0</span>
+   732	        <span id="modal-s1-prog" style="display:none">0</span>
+   733	        <span id="modal-s1-unit2" style="display:none"></span>
+   734	      </div>
+   735	
+   736	    </div>
+   737	    <div class="modal-footer">
+   738	      <button class="btn-modal-cancel" onclick="closeModal('modal-s1')">Cancelar</button>
+   739	      <button class="btn-modal-confirm" id="btn-s1-confirm" onclick="confirmS1()">🟡 Programar</button>
+   740	    </div>
+   741	  </div>
+   742	</div>
+   743	
+   744	<!-- ══════════════════════════════════════════
+   745	     MODAL — FINALIZAR ITEM (Etapa 2)
+   746	══════════════════════════════════════════ -->
+   747	<div class="modal-overlay hidden" id="modal-s2">
+   748	  <div class="modal-box modal-compact">
+   749	    <button class="modal-close" onclick="closeModal('modal-s2')">✕</button>
+   750	    <div class="modal-header-colored" id="modal-s2-header">
+   751	      <span class="modal-cat-badge" id="modal-s2-cat">Categoria</span>
+   752	      <h3 class="modal-title" id="modal-s2-title">Item</h3>
+   753	    </div>
+   754	    <div class="modal-body modal-body-compact" id="modal-s2-body">
+   755	
+   756	      <!-- Referência programada (só qty) -->
+   757	      <div class="info-boxes" id="s2-ref-box">
+   758	        <div class="info-box" style="flex:1">
+   759	          <span class="info-box-label">🎯 PROGRAMADO</span>
+   760	          <span class="info-box-val" id="modal-s2-prog">—</span>
+   761	          <span class="info-box-unit" id="modal-s2-unit-lbl">un</span>
+   762	        </div>
+   763	      </div>
+   764	
+   765	      <!-- Botões de status -->
+   766	      <div class="field-label">📊 Como ficou?</div>
+   767	      <div class="status-btns">
+   768	        <button class="sbtn sbtn-total" id="sbtn-total" onclick="selectStatus('total')">
+   769	          ✅ Executado 100%
+   770	        </button>
+   771	        <button class="sbtn sbtn-parcial" id="sbtn-parcial" onclick="selectStatus('parcial')">
+   772	          ⚠️ Parcial
+   773	        </button>
+   774	        <button class="sbtn sbtn-nao" id="sbtn-nao" onclick="selectStatus('nao_finalizado')">
+   775	          ❌ Não Executado
+   776	        </button>
+   777	      </div>
+   778	
+   779	      <!-- Quantidade produzida (SÓ parcial) -->
+   780	      <div id="qty-prod-wrap" class="hidden">
+   781	        <div class="field-label">📦 Quantidade Produzida</div>
+   782	        <div class="qty-row big">
+   783	          <button class="qty-btn minus" onclick="adjField('produzida',-10)">-10</button>
+   784	          <button class="qty-btn minus" onclick="adjField('produzida',-1)">-1</button>
+   785	          <span class="qty-val big-val" id="modal-s2-prod">0</span>
+   786	          <span class="qty-unit" id="modal-s2-unit2">un</span>
+   787	          <button class="qty-btn plus" onclick="adjField('produzida',1)">+1</button>
+   788	          <button class="qty-btn plus" onclick="adjField('produzida',10)">+10</button>
+   789	        </div>
+   790	      </div>
+   791	
+   792	      <!-- Motivos (parcial e não executado) -->
+   793	      <div id="motivos-wrap" class="hidden">
+   794	        <div class="field-label">💬 Motivo <span class="required-mark">*obrigatório</span></div>
+   795	        <div class="motivo-btns">
+   796	          <button class="motivo-btn" onclick="selectMotivo('⏰ Tempo insuficiente')">⏰ Tempo</button>
+   797	          <button class="motivo-btn" onclick="selectMotivo('🔧 Equipamento com problema')">🔧 Equipamento</button>
+   798	          <button class="motivo-btn" onclick="selectMotivo('📦 Falta de insumos')">📦 Insumos</button>
+   799	          <button class="motivo-btn" onclick="selectMotivo('✅ Estoque já completo')">✅ Estoque OK</button>
+   800	          <button class="motivo-btn" onclick="selectMotivo('🔄 Outros')">🔄 Outros</button>
+   801	        </div>
+   802	        <textarea id="motivo-custom" class="motivo-input" placeholder="Descreva o motivo..." rows="2"></textarea>
+   803	      </div>
+   804	
+   805	    </div>
+   806	    <div class="modal-footer">
+   807	      <button class="btn-modal-cancel" onclick="closeModal('modal-s2')">Cancelar</button>
+   808	      <button class="btn-modal-confirm" onclick="confirmS2()">💾 Salvar</button>
+   809	    </div>
+   810	  </div>
+   811	</div>
+   812	
+   813	<!-- sem tela intermediária pós-impressão -->
+   814	
+   815	<!-- ══════════════════════════════════════════
+   816	     MODAL — CONCLUIR TURNO
+   817	══════════════════════════════════════════ -->
+   818	<div class="modal-overlay hidden" id="modal-finish">
+   819	  <div class="modal-box modal-compact">
+   820	    <div class="modal-header-plain">
+   821	      <span class="modal-header-icon">🏁</span>
+   822	      <h3>Concluir Turno</h3>
+   823	    </div>
+   824	    <div class="modal-body modal-body-compact">
+   825	      <div class="finish-summary" id="finish-summary"></div>
+   826	      <div class="field-label">📝 Observação (opcional)</div>
+   827	      <textarea id="finish-obs" class="motivo-input" placeholder="Alguma observação para o líder?" rows="2"></textarea>
+   828	    </div>
+   829	    <div class="modal-footer">
+   830	      <button class="btn-modal-cancel" onclick="closeModal('modal-finish')">Voltar</button>
+   831	      <button class="btn-modal-finish" onclick="finalizarTurno()">🏁 Confirmar</button>
+   832	    </div>
+   833	  </div>
+   834	</div>
+   835	
+   836	<!-- modais de step1 e justificativa removidos -->
+   837	
+   838	<script src="js/data.js?v=20260329"></script>
+   839	<script src="js/firebase_v2.js?v=20260327"></script>
+   840	<script src="js/app_v2.js?v=20260327"></script>
+   841	</body>
+   842	</html>
+   843	
