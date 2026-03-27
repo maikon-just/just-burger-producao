@@ -379,8 +379,13 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
   }
   const sessMap={};
   todasSessoes.forEach(s=>{
-    if (s.data===dtTrab&&s.turno===S.turno&&s.dia_semana===S.dia)
-      sessMap[s.colaborador_card]=s.status_geral;
+    if (s.data===dtTrab&&s.turno===S.turno&&s.dia_semana===S.dia) {
+      /* Prioridade: completo/parcial > etapa1_ok */
+      const cur=sessMap[s.colaborador_card];
+      if (!cur || s.status_geral==='completo' || s.status_geral==='parcial') {
+        sessMap[s.colaborador_card]=s.status_geral;
+      }
+    }
   });
   const faltaMap={};
   (_cache._faltas||[]).forEach(f=>{
@@ -394,13 +399,16 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
     const cor      = cores[i%cores.length];
     const ne       = nome.replace(/'/g,"\\'");
     const sessStatus=sessMap[nome];
-    const jaFinaliz=!!sessStatus;
+    const isEtapa1Ok=sessStatus==='etapa1_ok';
+    const jaFinaliz=sessStatus==='completo'||sessStatus==='parcial';
     const isCompleto=sessStatus==='completo';
     const tipoFalta=faltaMap[nome];
     let overlay='';
     if (tipoFalta) {
       const isNJ=tipoFalta==='nao_justificada';
       overlay=`<div class="collab-done-overlay ${isNJ?'done-falta-nj':'done-falta-j'}" style="pointer-events:none">${isNJ?'🚫 Falta N/J':'📋 Falta Just.'}</div>`;
+    } else if (isEtapa1Ok) {
+      overlay=`<div class="collab-done-overlay done-etapa1" style="pointer-events:none">▶️ Em Produção</div>`;
     } else if (jaFinaliz) {
       overlay=`<div class="collab-done-overlay ${isCompleto?'done-100':'done-parcial'}" style="pointer-events:none">${isCompleto?'✅ Finalizado 100%':'⚠️ Parcial'}</div>`;
     }
@@ -411,7 +419,7 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
     const btnFalta=(S.leaderOk&&!tipoFalta&&!jaFinaliz)
       ?`<button class="btn-falta-card" onclick="event.stopPropagation();_abrirModalFalta('${ne}')">🚫 Falta</button>`:'';
     return `<div class="collab-card-wrap">
-      <button class="collab-card ${cor}${jaFinaliz?' collab-done':''}${tipoFalta?' collab-falta':''}" onclick="${acao}">
+      <button class="collab-card ${cor}${jaFinaliz?' collab-done':''}${isEtapa1Ok?' collab-etapa1':''}${tipoFalta?' collab-falta':''}" onclick="${acao}">
         <div class="collab-emoji">${em}</div>
         <span class="collab-name">${nome}</span>
         ${setor?`<span class="collab-setor">${setor}</span>`:''}
@@ -491,7 +499,7 @@ async function _reabrirTurnoColab(nome) {
       _fbGetAll('sessoes'), _fbGetAll('pendencias'),
       isAtend?_fbGetAll('registros'):Promise.resolve([])
     ]);
-    const sf=sessoes.filter(s=>s.colaborador_card===nome&&s.data===dt&&s.turno===S.turno&&s.dia_semana===S.dia);
+    const sf=sessoes.filter(s=>s.colaborador_card===nome&&s.data===dt&&s.turno===S.turno&&s.dia_semana===S.dia&&(s.status_geral==='completo'||s.status_geral==='parcial'||s.status_geral==='etapa1_ok'));
     const pf=pendencias.filter(p=>p.colaborador===nome&&p.data===dt&&p.turno===S.turno&&p.dia_semana===S.dia);
     const rf=registros.filter(r=>r.colaborador_card===nome&&r.data===dt&&r.turno===S.turno&&r.dia_semana===S.dia);
     await Promise.all([...sf.map(s=>_fbDelete('sessoes',s.id)),...pf.map(p=>_fbDelete('pendencias',p.id)),...(isAtend?rf.map(r=>_fbDelete('registros',r.id)):[] )]);
@@ -550,7 +558,7 @@ async function _gerenciarFalta(nome,tipo,acao) {
 async function selectColaborador(nome) {
   if (_thanksIv) { clearInterval(_thanksIv); _thanksIv=null; }
   S.colaborador=nome; S.s1={}; S.s2={};
-  S.sessaoId='sess_'+Date.now(); S.producaoIniciada=false;
+  S.producaoIniciada=false;
   _atendRegIds={};
   const isAtend=ATEND_COLABS.includes(nome.toUpperCase());
   showLoading(true);
@@ -561,11 +569,40 @@ async function selectColaborador(nome) {
       .filter(t=>t.turno===S.turno&&t.dia_semana===S.dia&&t.colaborador===nome)
       .sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     if (!S.tarefas.length) { showToast('😕 Sem tarefas para este colaborador'); return; }
-    if (isAtend) await _carregarRegistrosAtendimento(nome);
-    _setNavChips(nome);
-    if (isAtend) { _prepararModoAtendimento(); renderStep2(); }
-    else renderStep1();
-    showScreen('screen-step1');
+
+    /* Verifica se já tem sessão "etapa1_ok" salva para este colaborador hoje */
+    const dt=S.dataTrabalho||today();
+    const todasSessoes=_cache.sessoes||await _fbGetAll('sessoes');
+    const sessEtapa1=todasSessoes.find(s=>
+      s.colaborador_card===nome&&s.data===dt&&s.turno===S.turno&&
+      s.dia_semana===S.dia&&s.status_geral==='etapa1_ok'
+    );
+
+    if (isAtend) {
+      await _carregarRegistrosAtendimento(nome);
+      _setNavChips(nome);
+      _prepararModoAtendimento();
+      renderStep2();
+      showScreen('screen-step1');
+    } else if (sessEtapa1) {
+      /* Já programou — vai direto para Etapa 2 */
+      S.sessaoId=sessEtapa1.id;
+      /* Restaura s1 da sessão salva */
+      if (sessEtapa1.s1_data) {
+        try { Object.assign(S.s1, JSON.parse(sessEtapa1.s1_data)); } catch(e) {}
+      }
+      S.producaoIniciada=true;
+      _setNavChips(nome);
+      renderStep2();
+      showScreen('screen-step1');
+      showToast('▶️ Continue a finalização!');
+    } else {
+      /* Primeira entrada — Etapa 1 */
+      S.sessaoId='sess_'+Date.now();
+      _setNavChips(nome);
+      renderStep1();
+      showScreen('screen-step1');
+    }
   } catch(e) { console.error(e); showToast('❌ Erro ao carregar tarefas'); }
   finally { showLoading(false); }
 }
@@ -748,12 +785,39 @@ function confirmS1() {
   renderStep1();
 }
 
-function iniciarProducao() {
+async function iniciarProducao() {
   S.producaoIniciada=true;
-  renderStep2();
+  /* Garante que todos os cards sem s1 usem o padrão */
+  S.tarefas.forEach(t=>{ if (!S.s1[t.id]) S.s1[t.id]={estoque:0,programada:t.quantidade_padrao||0,confirmed:true}; });
+  /* Salva no Firebase que a Etapa 1 foi concluída, guardando s1_data */
+  const dt=S.dataTrabalho||today();
+  try {
+    const s1Json=JSON.stringify(S.s1);
+    await _fbPost('sessoes',{
+      data:dt, turno:S.turno, dia_semana:S.dia,
+      colaborador_card:S.colaborador, colaborador_nome:S.colaborador,
+      status_geral:'etapa1_ok',
+      s1_data:s1Json,
+      hora_inicio:new Date().toLocaleTimeString('pt-BR'),
+      total_tarefas:S.tarefas.length,
+    });
+    _cache.sessoes=null; /* invalida cache de sessões */
+  } catch(e) { console.error('Erro ao salvar etapa1:', e); }
+
+  /* Abre impressão da folha de produção */
+  printColaborador();
+
+  /* Volta para a tela de cards */
+  showToast('✅ Etapa 1 salva! Entre novamente para finalizar.');
+  _mostrarTelaSetor(_deptAtual);
 }
 
-function doPrintDirect() { printColaborador(); }
+function doPrintDirect() {
+  /* Garante que todas tarefas sem s1 usem o padrão */
+  S.tarefas.forEach(t=>{ if (!S.s1[t.id]) S.s1[t.id]={estoque:0,programada:t.quantidade_padrao||0,confirmed:true}; });
+  printColaborador();
+  return false; /* evita qualquer comportamento padrão */
+}
 
 /* ══ ETAPA 2 — PRODUÇÃO / FINALIZAÇÃO ═══════════════════ */
 function renderStep2() {
@@ -917,6 +981,15 @@ async function finalizarTurno() {
   const dt=S.dataTrabalho||today();
   showLoading(true);
   try {
+    /* Remove sessão etapa1_ok antiga deste colaborador */
+    const todasSessoes=await _fbGetAll('sessoes');
+    const sessE1=todasSessoes.filter(s=>
+      s.colaborador_card===S.colaborador&&s.data===dt&&s.turno===S.turno&&
+      s.dia_semana===S.dia&&s.status_geral==='etapa1_ok'
+    );
+    await Promise.all(sessE1.map(s=>_fbDelete('sessoes',s.id)));
+
+    /* Salva sessão final */
     await _fbPost('sessoes',{
       data:dt, turno:S.turno, dia_semana:S.dia,
       colaborador_card:S.colaborador, colaborador_nome:S.colaborador,
