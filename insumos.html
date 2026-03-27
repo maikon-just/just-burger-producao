@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Just Burger — Controle de Insumos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
+  <style>
+    :root{
+      --bg:#f4f6fa;--card:#ffffff;--card2:#f0f2f8;--border:#dde1ed;
+      --yellow:#e6a800;--yd:#c98f00;--green:#16a34a;--orange:#ea580c;
+      --red:#dc2626;--blue:#2563eb;--text:#1a1d2e;--muted:#6b7280;
+      --r:12px;--sh:0 2px 12px rgba(0,0,0,0.07);
+      --brand:#e8590c;--brand2:#ff7b2f;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+    /* ── TOP BAR ── */
+    .top-bar{
+      background:#1a1d2e;border-bottom:3px solid var(--yellow);
+      padding:13px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+      position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,0.25);
+    }
+    .back-btn{
+      width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.2);color:#fff;text-decoration:none;
+      font-size:15px;display:flex;align-items:center;justify-content:center;
+      transition:.2s;flex-shrink:0;
+    }
+    .back-btn:hover{background:rgba(255,255,255,.22)}
+    .logo{font-size:17px;font-weight:900;color:var(--yellow);flex:1}
+    .sub{font-size:11px;color:rgba(255,255,255,.6);margin-top:1px}
+
+    /* ── TAB BAR ── */
+    .tabs{display:flex;gap:0;background:#fff;border-bottom:2px solid var(--border);
+      overflow-x:auto;position:sticky;top:56px;z-index:99;}
+    .tab-btn{
+      flex:1;min-width:90px;padding:12px 10px;border:none;background:none;
+      font-family:inherit;font-size:12px;font-weight:800;color:#888;cursor:pointer;
+      border-bottom:3px solid transparent;margin-bottom:-2px;
+      transition:all .2s;white-space:nowrap;
+    }
+    .tab-btn.active{color:var(--brand);border-bottom-color:var(--brand)}
+    .tab-btn:hover{background:#fef9f7}
+
+    /* ── FILTER BAR ── */
+    .filter-bar{
+      background:#fff;border-bottom:1px solid var(--border);
+      padding:10px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+      box-shadow:0 2px 8px rgba(0,0,0,0.05);
+      position:sticky;top:92px;z-index:90;
+    }
+    .filter-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+    .tgl{
+      padding:6px 13px;border:1.5px solid var(--border);background:#fff;
+      color:var(--muted);border-radius:8px;cursor:pointer;font-size:12px;
+      font-weight:700;font-family:inherit;transition:all .15s;
+    }
+    .tgl.active{background:var(--yellow);border-color:var(--yellow);color:#fff}
+    .cat-sel{
+      background:#fff;border:1.5px solid var(--border);color:var(--text);
+      padding:7px 11px;border-radius:8px;font-size:13px;font-family:inherit;
+      outline:none;cursor:pointer;flex:1;min-width:140px;max-width:220px;
+    }
+    .cat-sel:focus{border-color:var(--yellow)}
+    .btn-refresh{
+      background:var(--yellow);color:#fff;border:none;padding:7px 14px;
+      border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;
+      font-family:inherit;display:flex;align-items:center;gap:5px;
+    }
+    .btn-refresh:hover{background:var(--yd)}
+    .btn-nova{
+      background:var(--brand);color:#fff;border:none;padding:7px 14px;
+      border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;
+      font-family:inherit;display:flex;align-items:center;gap:5px;margin-left:auto;
+    }
+    .btn-nova:hover{background:#c0470a}
+
+    /* ── MAIN ── */
+    .main{max-width:980px;margin:0 auto;padding:16px 16px 80px}
+
+    /* ── CARDS DE CATEGORIA ── */
+    .cat-section{
+      background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+      margin-bottom:14px;overflow:hidden;box-shadow:var(--sh);
+    }
+    .cat-hdr{
+      background:linear-gradient(135deg,#fffbea,#fff8d6);
+      padding:11px 16px;display:flex;align-items:center;gap:10px;
+      border-bottom:1px solid #f0e090;cursor:pointer;
+    }
+    .cat-hdr:hover{background:linear-gradient(135deg,#fff3b0,#ffec80)}
+    .cat-icon{font-size:22px;flex-shrink:0}
+    .cat-name{font-size:14px;font-weight:800;flex:1;color:var(--text)}
+    .cat-cnt{font-size:11px;color:var(--muted)}
+    .cat-body{padding:0}
+    .cat-body.collapsed{display:none}
+
+    /* ── TABELA ── */
+    .ins-table{width:100%;border-collapse:collapse}
+    .ins-table thead th{
+      background:#f8f9fc;padding:8px 12px;font-size:11px;font-weight:700;
+      color:var(--muted);text-transform:uppercase;letter-spacing:.4px;
+      text-align:left;border-bottom:1px solid var(--border);
+    }
+    .ins-table tbody tr:hover{background:#fafbff}
+    .ins-table td{
+      padding:9px 12px;border-bottom:1px solid #eef0f6;
+      vertical-align:middle;font-size:13px;
+    }
+    .ins-table tr:last-child td{border-bottom:none}
+    .item-name{font-weight:700;color:var(--text)}
+    .item-unit{font-size:11px;color:var(--muted)}
+
+    /* Estoque atual — com cor por nível */
+    .estq-val{
+      display:inline-block;padding:3px 10px;border-radius:8px;
+      font-size:13px;font-weight:800;min-width:50px;text-align:center;
+    }
+    .estq-ok    {background:#dcfce7;color:#16a34a}
+    .estq-baixo {background:#fff7ed;color:#c2410c}
+    .estq-critico{background:#fee2e2;color:#dc2626}
+    .estq-zerado{background:#f1f5f9;color:#64748b}
+
+    /* Controle de quantidade inline */
+    .qty-ctrl{display:flex;align-items:center;gap:5px;justify-content:center}
+    .qty-btn{
+      width:28px;height:28px;border:1.5px solid var(--border);background:#fff;
+      color:var(--text);border-radius:6px;cursor:pointer;font-size:14px;font-weight:700;
+      display:flex;align-items:center;justify-content:center;transition:all .12s;
+    }
+    .qty-btn:hover{background:var(--border)}
+    .qty-btn.minus:hover{background:#fee2e2;border-color:var(--red);color:var(--red)}
+    .qty-btn.plus:hover{background:#dcfce7;border-color:var(--green);color:var(--green)}
+    .qty-inp{
+      width:60px;text-align:center;background:#fff;border:1.5px solid var(--border);
+      color:var(--text);padding:4px;border-radius:6px;font-size:13px;font-weight:700;
+      font-family:inherit;outline:none;
+    }
+    .qty-inp:focus{border-color:var(--yellow)}
+
+    /* Botões de ação */
+    .row-actions{display:flex;gap:5px;justify-content:center}
+    .btn-save-row{
+      background:none;border:1.5px solid var(--green);color:var(--green);
+      border-radius:6px;padding:4px 9px;font-size:11px;font-weight:700;
+      cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:3px;
+      white-space:nowrap;transition:all .15s;
+    }
+    .btn-save-row:hover{background:var(--green);color:#fff}
+    .btn-save-row.saved{background:#dcfce7;border-color:var(--green)}
+    .btn-hist{
+      background:none;border:1.5px solid var(--blue);color:var(--blue);
+      border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;
+      cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;
+      display:flex;align-items:center;gap:3px;
+    }
+    .btn-hist:hover{background:var(--blue);color:#fff}
+    .btn-del{
+      background:none;border:1.5px solid var(--red);color:var(--red);
+      border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;
+      cursor:pointer;font-family:inherit;transition:all .15s;
+    }
+    .btn-del:hover{background:var(--red);color:#fff}
+
+    /* ── ALERTAS RESUMO ── */
+    .alert-bar{
+      background:#fff;border-radius:var(--r);border:1px solid var(--border);
+      box-shadow:var(--sh);padding:14px 16px;margin-bottom:14px;
+      display:flex;gap:10px;flex-wrap:wrap;
+    }
+    .alert-chip{
+      display:flex;align-items:center;gap:6px;padding:6px 13px;
+      border-radius:8px;font-size:12px;font-weight:800;
+    }
+    .chip-ok{background:#dcfce7;color:#16a34a}
+    .chip-baixo{background:#fff7ed;color:#c2410c}
+    .chip-critico{background:#fee2e2;color:#dc2626}
+    .chip-zerado{background:#f1f5f9;color:#64748b}
+
+    /* ── ABA HISTÓRICO ── */
+    .hist-card{
+      background:#fff;border-radius:var(--r);border:1px solid var(--border);
+      box-shadow:var(--sh);overflow:hidden;margin-bottom:12px;
+    }
+    .hist-row{
+      display:flex;align-items:center;gap:10px;padding:10px 14px;
+      border-bottom:1px solid #f0f4ff;font-size:13px;
+    }
+    .hist-row:last-child{border-bottom:none}
+    .hist-icon{font-size:18px;flex-shrink:0}
+    .hist-info{flex:1}
+    .hist-item{font-weight:800}
+    .hist-meta{font-size:11px;color:var(--muted);margin-top:2px}
+    .hist-delta{font-weight:900;font-size:14px}
+    .hist-delta.plus{color:var(--green)}
+    .hist-delta.minus{color:var(--red)}
+
+    /* ── ESTADOS ── */
+    .state-box{text-align:center;padding:56px 20px;color:var(--muted)}
+    .state-box i{font-size:38px;margin-bottom:12px;display:block;opacity:.35}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .state-box.loading i{animation:spin 1s linear infinite;opacity:.6}
+
+    /* ── MODAL ── */
+    .modal-overlay{
+      position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;
+      display:flex;align-items:center;justify-content:center;padding:16px;
+    }
+    .modal-overlay.hidden{display:none}
+    .modal-box{
+      background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);
+      width:100%;max-width:500px;max-height:90vh;overflow-y:auto;
+    }
+    .modal-hdr{
+      padding:16px 20px;border-bottom:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;
+    }
+    .modal-hdr h3{font-size:16px;font-weight:800;color:var(--text)}
+    .modal-close{
+      background:none;border:none;font-size:20px;cursor:pointer;
+      color:var(--muted);line-height:1;padding:2px 6px;border-radius:6px;
+    }
+    .modal-close:hover{background:var(--card2)}
+    .modal-body{padding:20px;display:flex;flex-direction:column;gap:14px}
+    .form-group{display:flex;flex-direction:column;gap:5px}
+    .form-group label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+    .form-group input,.form-group select,.form-group textarea{
+      width:100%;background:#fff;border:1.5px solid var(--border);color:var(--text);
+      padding:9px 12px;border-radius:8px;font-size:13px;font-family:inherit;outline:none;
+    }
+    .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--yellow)}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .form-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .modal-footer{
+      padding:14px 20px;border-top:1px solid var(--border);
+      display:flex;gap:8px;justify-content:flex-end;
+    }
+    .btn-cancel{
+      background:var(--card2);border:1px solid var(--border);color:var(--muted);
+      padding:9px 18px;border-radius:8px;font-weight:700;font-size:13px;
+      cursor:pointer;font-family:inherit;
+    }
+    .btn-confirm{
+      background:var(--brand);color:#fff;border:none;
+      padding:9px 22px;border-radius:8px;font-weight:700;font-size:13px;
+      cursor:pointer;font-family:inherit;
+    }
+    .btn-confirm:hover{background:#c0470a}
+    .btn-confirm.green{background:var(--green)}
+    .btn-confirm.green:hover{background:#15803d}
+
+    /* ── TOAST ── */
+    #toast-ins{
+      position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+      background:#1e293b;color:#fff;padding:10px 22px;border-radius:30px;
+      font-size:13px;font-weight:600;z-index:9999;transition:transform .3s;pointer-events:none;
+      white-space:nowrap;box-shadow:0 6px 24px rgba(0,0,0,0.2);
+    }
+    #toast-ins.show{transform:translateX(-50%) translateY(0)}
+
+    /* ── PASSWORD OVERLAY ── */
+    #pw-overlay{
+      position:fixed;inset:0;background:linear-gradient(135deg,#1a1d2e,#2d3250);
+      z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;
+    }
+
+    @media(max-width:600px){
+      .form-row{grid-template-columns:1fr}
+      .form-row3{grid-template-columns:1fr 1fr}
+      .row-actions{flex-wrap:wrap}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ OVERLAY DE SENHA ══ -->
+<div id="pw-overlay">
+  <div style="background:#fff;border-radius:18px;padding:36px 32px;width:100%;max-width:360px;
+              box-shadow:0 20px 60px rgba(0,0,0,0.4);text-align:center;">
+    <div style="font-size:48px;margin-bottom:8px">📦</div>
+    <h2 style="font-size:20px;font-weight:900;color:#1a1d2e;margin-bottom:4px">Controle de Insumos</h2>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:24px">Área restrita — informe a senha para acessar</p>
+    <form onsubmit="event.preventDefault();_pwEnter()">
+      <input type="text" name="username" value="lider" autocomplete="username" style="display:none" aria-hidden="true"/>
+      <div style="position:relative;margin-bottom:14px">
+        <input id="pw-input" type="password" name="password" placeholder="Senha..."
+          autocomplete="current-password"
+          style="width:100%;padding:12px 44px 12px 16px;border:2px solid #dde1ed;border-radius:10px;
+                 font-size:15px;font-family:inherit;outline:none;box-sizing:border-box;"
+          onfocus="this.style.borderColor='#e6a800'" onblur="this.style.borderColor='#dde1ed'"/>
+        <button type="button" onclick="_pwToggle()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);
+          background:none;border:none;cursor:pointer;font-size:16px;color:#6b7280;padding:4px">👁️</button>
+      </div>
+      <p id="pw-err" style="color:#dc2626;font-size:12px;font-weight:700;margin-bottom:10px;min-height:16px;"></p>
+      <button type="submit" style="width:100%;background:#e8590c;color:#fff;border:none;
+        padding:13px;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">
+        🚀 Entrar
+      </button>
+    </form>
+    <a href="index.html" style="display:block;margin-top:14px;font-size:13px;color:#6b7280;text-decoration:none">← Voltar ao App</a>
+  </div>
+</div>
+<script>
+(function(){
+  function _pwEnter(){
+    const v=document.getElementById('pw-input').value;
+    const ok=['lider123','lider123*'];
+    if(ok.includes(v)){
+      document.getElementById('pw-overlay').style.display='none';
+    } else {
+      const e=document.getElementById('pw-err');
+      e.textContent='❌ Senha incorreta!';
+      document.getElementById('pw-input').style.borderColor='#dc2626';
+      setTimeout(()=>{e.textContent='';document.getElementById('pw-input').style.borderColor='#dde1ed';},2500);
+    }
+  }
+  function _pwToggle(){const i=document.getElementById('pw-input');i.type=i.type==='password'?'text':'password';}
+  window._pwEnter=_pwEnter;window._pwToggle=_pwToggle;
+})();
+</script>
+
+<!-- ══ TOP BAR ══ -->
+<div class="top-bar">
+  <a href="index.html" class="back-btn" title="Voltar ao App"><i class="fas fa-arrow-left"></i></a>
+  <div style="flex:1">
+    <div class="logo">🍔 Just Burger</div>
+    <div class="sub">Controle de Insumos e Estoque</div>
+  </div>
+  <a href="medias.html" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;
+     padding:7px 12px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;
+     display:flex;align-items:center;gap:5px;transition:.2s"
+     onmouseover="this.style.background='rgba(255,255,255,.22)'" onmouseout="this.style.background='rgba(255,255,255,.12)'">
+    <i class="fas fa-list-alt"></i> Médias
+  </a>
+</div>
+
+<!-- ══ ABAS ══ -->
+<div class="tabs">
+  <button class="tab-btn active" id="tab-estoque"  onclick="switchTab('estoque')">📦 Estoque Atual</button>
+  <button class="tab-btn"        id="tab-historico" onclick="switchTab('historico')">📜 Histórico</button>
+  <button class="tab-btn"        id="tab-alertas"   onclick="switchTab('alertas')">⚠️ Alertas</button>
+</div>
+
+<!-- ══ FILTER BAR ══ -->
+<div class="filter-bar" id="filter-bar-estoque">
+  <span class="filter-label">Categoria</span>
+  <select class="cat-sel" id="sel-cat" onchange="renderEstoque()">
+    <option value="">Todas</option>
+  </select>
+  <button class="btn-refresh" onclick="carregar()"><i class="fas fa-sync-alt"></i> Atualizar</button>
+  <button class="btn-nova" onclick="abrirModalNovo()"><i class="fas fa-plus"></i> Novo Insumo</button>
+</div>
+
+<div class="filter-bar" id="filter-bar-historico" style="display:none">
+  <span class="filter-label">De</span>
+  <input type="date" id="hist-de" style="border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:inherit;font-size:13px;outline:none"/>
+  <span class="filter-label">Até</span>
+  <input type="date" id="hist-ate" style="border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:inherit;font-size:13px;outline:none"/>
+  <button class="btn-refresh" onclick="loadHistorico()"><i class="fas fa-search"></i> Buscar</button>
+</div>
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+  <!-- ABA ESTOQUE -->
+  <div id="painel-estoque">
+    <div id="alert-bar-estoque" class="alert-bar" style="display:none"></div>
+    <div id="estoque-content">
+      <div class="state-box loading"><i class="fas fa-spinner"></i><p>Carregando insumos...</p></div>
+    </div>
+  </div>
+
+  <!-- ABA HISTÓRICO -->
+  <div id="painel-historico" style="display:none">
+    <div id="historico-content">
+      <div class="state-box"><i class="fas fa-history"></i><p>Use os filtros acima e clique em <strong>Buscar</strong></p></div>
+    </div>
+  </div>
+
+  <!-- ABA ALERTAS -->
+  <div id="painel-alertas" style="display:none">
+    <div id="alertas-content">
+      <div class="state-box loading"><i class="fas fa-spinner"></i><p>Verificando alertas...</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL NOVO INSUMO ══ -->
+<div class="modal-overlay hidden" id="modal-novo">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3 id="modal-novo-title">➕ Novo Insumo</h3>
+      <button class="modal-close" onclick="fecharModalNovo()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nome do Insumo *</label>
+        <input type="text" id="ni-nome" placeholder="Ex: Queijo Cheddar, Carne 90g..."/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Categoria</label>
+          <input type="text" id="ni-cat" list="ni-cat-list" placeholder="Categoria..."/>
+          <datalist id="ni-cat-list"></datalist>
+        </div>
+        <div class="form-group">
+          <label>Unidade</label>
+          <select id="ni-unidade">
+            <option value="un">un — Unidades</option>
+            <option value="kg">kg — Quilogramas</option>
+            <option value="g">g — Gramas</option>
+            <option value="L">L — Litros</option>
+            <option value="ml">ml — Mililitros</option>
+            <option value="pct">pct — Pacotes</option>
+            <option value="cx">cx — Caixas</option>
+            <option value="band">band — Bandejas</option>
+            <option value="saco">saco — Sacos</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group">
+          <label>Estoque Atual</label>
+          <input type="number" id="ni-estoque" value="0" min="0" step="0.1"/>
+        </div>
+        <div class="form-group">
+          <label>Mínimo (alerta)</label>
+          <input type="number" id="ni-minimo" value="0" min="0" step="0.1"/>
+        </div>
+        <div class="form-group">
+          <label>Ideal</label>
+          <input type="number" id="ni-ideal" value="0" min="0" step="0.1"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Fornecedor / Observações</label>
+        <input type="text" id="ni-obs" placeholder="Fornecedor ou nota..."/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fecharModalNovo()">Cancelar</button>
+      <button class="btn-confirm green" onclick="salvarNovoInsumo()"><i class="fas fa-save"></i> Salvar Insumo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL MOVIMENTAÇÃO ══ -->
+<div class="modal-overlay hidden" id="modal-mov">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3 id="modal-mov-title">📦 Movimentar Estoque</h3>
+      <button class="modal-close" onclick="fecharModalMov()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="mov-item-nome" style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px"></p>
+      <p id="mov-estoque-atual" style="font-size:12px;color:var(--muted)"></p>
+      <div class="form-group" style="margin-top:8px">
+        <label>Tipo de Movimentação</label>
+        <div style="display:flex;gap:8px">
+          <button id="mov-btn-entrada" onclick="setTipoMov('entrada')"
+            style="flex:1;padding:10px;border-radius:8px;border:2px solid #86efac;background:#dcfce7;
+                   color:#16a34a;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">
+            ⬆️ Entrada
+          </button>
+          <button id="mov-btn-saida" onclick="setTipoMov('saida')"
+            style="flex:1;padding:10px;border-radius:8px;border:2px solid #fca5a5;background:#fee2e2;
+                   color:#dc2626;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">
+            ⬇️ Saída
+          </button>
+          <button id="mov-btn-ajuste" onclick="setTipoMov('ajuste')"
+            style="flex:1;padding:10px;border-radius:8px;border:2px solid #bfdbfe;background:#dbeafe;
+                   color:#1d4ed8;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">
+            🔧 Ajuste
+          </button>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Quantidade *</label>
+          <input type="number" id="mov-qtd" value="1" min="0" step="0.1"/>
+        </div>
+        <div class="form-group">
+          <label>Responsável</label>
+          <input type="text" id="mov-resp" placeholder="Seu nome..."/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Motivo / Observação</label>
+        <input type="text" id="mov-obs" placeholder="Motivo da movimentação..."/>
+      </div>
+      <input type="hidden" id="mov-insumo-id"/>
+      <input type="hidden" id="mov-tipo" value="entrada"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fecharModalMov()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmarMov()" id="btn-confirmar-mov">
+        <i class="fas fa-check"></i> Confirmar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL EDITAR INSUMO ══ -->
+<div class="modal-overlay hidden" id="modal-editar">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3>✏️ Editar Insumo</h3>
+      <button class="modal-close" onclick="fecharModalEditar()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nome</label>
+        <input type="text" id="ed-nome"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Categoria</label>
+          <input type="text" id="ed-cat" list="ed-cat-list"/>
+          <datalist id="ed-cat-list"></datalist>
+        </div>
+        <div class="form-group">
+          <label>Unidade</label>
+          <select id="ed-unidade">
+            <option value="un">un</option>
+            <option value="kg">kg</option>
+            <option value="g">g</option>
+            <option value="L">L</option>
+            <option value="ml">ml</option>
+            <option value="pct">pct</option>
+            <option value="cx">cx</option>
+            <option value="band">band</option>
+            <option value="saco">saco</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group">
+          <label>Estoque</label>
+          <input type="number" id="ed-estoque" min="0" step="0.1"/>
+        </div>
+        <div class="form-group">
+          <label>Mínimo</label>
+          <input type="number" id="ed-minimo" min="0" step="0.1"/>
+        </div>
+        <div class="form-group">
+          <label>Ideal</label>
+          <input type="number" id="ed-ideal" min="0" step="0.1"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Observações</label>
+        <input type="text" id="ed-obs"/>
+      </div>
+      <input type="hidden" id="ed-id"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fecharModalEditar()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmarEditar()"><i class="fas fa-save"></i> Salvar Alterações</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-ins"></div>
+
+<script>
+/* ══════════════════════════════════════════
+   JUST BURGER — Controle de Insumos
+   Integração com RESTful Table API (insumos + movimentacoes)
+══════════════════════════════════════════ */
+const CAT_ICONS = {
+  'carnes':'🥩','laticínios':'🧀','pães':'🍞','molhos':'🫙','vegetais':'🥗',
+  'frituras':'🍟','bebidas':'🥤','embalagens':'📦','limpeza':'🧹','temperos':'🌶️',
+  'congelados':'❄️','grãos':'🌾','aves':'🍗','peixes':'🐟','defumados':'🥓',
+  'legumes':'🥕','frutas':'🍎','laticínio':'🧀','estoque':'📦','geral':'📋',
+};
+function _catIcon(cat){ return CAT_ICONS[(cat||'').toLowerCase()] || '📦'; }
+
+let I = { insumos:[], cats:[], abaSelecionada:'estoque' };
+
+window.addEventListener('DOMContentLoaded', () => {
+  /* Define datas padrão para histórico */
+  const hoje = new Date().toISOString().slice(0,10);
+  const ha30 = new Date(Date.now() - 30*864e5).toISOString().slice(0,10);
+  const dEl = document.getElementById('hist-de');
+  const aEl = document.getElementById('hist-ate');
+  if (dEl) dEl.value = ha30;
+  if (aEl) aEl.value = hoje;
+  carregar();
+});
+
+/* ── ABAS ── */
+function switchTab(aba) {
+  I.abaSelecionada = aba;
+  ['estoque','historico','alertas'].forEach(a => {
+    document.getElementById(`tab-${a}`).classList.toggle('active', a===aba);
+    document.getElementById(`painel-${a}`).style.display = a===aba ? '' : 'none';
+    const fb = document.getElementById(`filter-bar-${a}`);
+    if (fb) fb.style.display = a===aba ? '' : 'none';
+  });
+  const fbE = document.getElementById('filter-bar-estoque');
+  if (fbE) fbE.style.display = aba==='estoque' ? '' : 'none';
+  if (aba==='alertas') renderAlertas();
+  if (aba==='historico') loadHistorico();
+}
+
+/* ── CARREGAR INSUMOS ── */
+async function carregar() {
+  document.getElementById('estoque-content').innerHTML =
+    `<div class="state-box loading"><i class="fas fa-spinner"></i><p>Carregando insumos...</p></div>`;
+  try {
+    const r = await fetch('tables/insumos?limit=500');
+    if (r.status===422||r.status===404) { I.insumos=[]; renderEstoque(); return; }
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    const j = await r.json();
+    I.insumos = j.data || [];
+    I.cats = [...new Set(I.insumos.map(x=>x.categoria).filter(Boolean))].sort();
+    _popularCatSelects();
+    renderEstoque();
+    renderAlertBar();
+  } catch(e) {
+    document.getElementById('estoque-content').innerHTML =
+      `<div class="state-box"><i class="fas fa-exclamation-triangle" style="color:var(--red);opacity:1"></i><p>Erro: ${e.message}</p></div>`;
+  }
+}
+
+function _popularCatSelects() {
+  const sel = document.getElementById('sel-cat');
+  if (sel) {
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Todas</option>' +
+      I.cats.map(c=>`<option value="${c}"${c===cur?' selected':''}>${_catIcon(c)} ${c}</option>`).join('');
+  }
+  /* Preenche datalists */
+  ['ni-cat-list','ed-cat-list'].forEach(lid => {
+    const dl = document.getElementById(lid);
+    if (dl) dl.innerHTML = I.cats.map(c=>`<option value="${c}">`).join('');
+  });
+}
+
+/* ── RENDERIZAR ESTOQUE ── */
+function renderEstoque() {
+  const cont = document.getElementById('estoque-content');
+  const catFilt = document.getElementById('sel-cat').value;
+  let lista = catFilt ? I.insumos.filter(x=>x.categoria===catFilt) : I.insumos;
+  lista = lista.sort((a,b)=>((a.categoria||'').localeCompare(b.categoria||''))||((a.nome||'').localeCompare(b.nome||'')));
+
+  if (!lista.length) {
+    cont.innerHTML = `<div class="state-box"><i class="fas fa-inbox"></i><p>Nenhum insumo cadastrado. Clique em <strong>Novo Insumo</strong> para começar.</p></div>`;
+    return;
+  }
+
+  const por = {};
+  lista.forEach(x=>{ const c=x.categoria||'Geral'; if (!por[c]) por[c]=[]; por[c].push(x); });
+
+  cont.innerHTML = Object.entries(por).sort((a,b)=>a[0].localeCompare(b[0])).map(([cat,items])=>`
+    <div class="cat-section">
+      <div class="cat-hdr" onclick="_toggleCat(this)">
+        <div class="cat-icon">${_catIcon(cat)}</div>
+        <div class="cat-name">${cat}</div>
+        <div class="cat-cnt">${items.length} item${items.length!==1?'s':''}</div>
+        <i class="fas fa-chevron-down" style="color:var(--muted);font-size:12px;transition:transform .3s;margin-left:6px"></i>
+      </div>
+      <div class="cat-body">
+        <table class="ins-table">
+          <thead><tr>
+            <th>Item</th>
+            <th style="text-align:center">Estoque</th>
+            <th style="text-align:center">Mínimo</th>
+            <th style="text-align:center">Ideal</th>
+            <th style="text-align:center;width:200px">Movimentar</th>
+            <th style="text-align:center">Ações</th>
+          </tr></thead>
+          <tbody>
+            ${items.map(it=>`
+            <tr id="irow-${it.id}">
+              <td>
+                <div class="item-name">${it.nome||'—'}</div>
+                ${it.obs?`<div style="font-size:11px;color:var(--muted)">${it.obs}</div>`:''}
+              </td>
+              <td style="text-align:center">
+                <span class="estq-val ${_nivelClasse(it)}">${_fmt(it.estoque_atual||0)} <span class="item-unit">${it.unidade||''}</span></span>
+              </td>
+              <td style="text-align:center">
+                <span style="font-size:12px;color:var(--muted)">${_fmt(it.estoque_minimo||0)} ${it.unidade||''}</span>
+              </td>
+              <td style="text-align:center">
+                <span style="font-size:12px;color:var(--muted)">${_fmt(it.estoque_ideal||0)} ${it.unidade||''}</span>
+              </td>
+              <td>
+                <div class="qty-ctrl">
+                  <button class="qty-btn minus" onclick="movRapido('${it.id}',-1,'${(it.unidade||'').replace(/'/g,"\\'")}')">−</button>
+                  <button class="qty-btn minus" onclick="movRapido('${it.id}',-5,'${(it.unidade||'').replace(/'/g,"\\'")}')">−5</button>
+                  <input  class="qty-inp" type="number" id="qm-${it.id}" value="1" min="0.1" step="0.1"/>
+                  <button class="qty-btn plus"  onclick="movRapido('${it.id}',5,'${(it.unidade||'').replace(/'/g,"\\'")}')">+5</button>
+                  <button class="qty-btn plus"  onclick="movRapido('${it.id}',1,'${(it.unidade||'').replace(/'/g,"\\'")}')">+</button>
+                </div>
+              </td>
+              <td>
+                <div class="row-actions">
+                  <button class="btn-save-row" onclick="abrirModalMov('${it.id}')">
+                    <i class="fas fa-exchange-alt"></i> Mover
+                  </button>
+                  <button class="btn-hist" onclick="abrirHistItem('${it.id}','${(it.nome||'').replace(/'/g,"\\'")}')">
+                    <i class="fas fa-history"></i>
+                  </button>
+                  <button class="btn-del" onclick="editarInsumo('${it.id}')">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn-del" onclick="excluirInsumo('${it.id}','${(it.nome||'').replace(/'/g,"\\'")}')">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`).join('');
+}
+
+function _toggleCat(hdr) {
+  const body = hdr.nextElementSibling;
+  const ico  = hdr.querySelector('i.fas');
+  body.classList.toggle('collapsed');
+  if (ico) ico.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
+}
+
+function _nivelClasse(it) {
+  const e = Number(it.estoque_atual)||0;
+  const m = Number(it.estoque_minimo)||0;
+  if (e === 0) return 'estq-zerado';
+  if (m>0 && e<=m*0.5) return 'estq-critico';
+  if (m>0 && e<=m) return 'estq-baixo';
+  return 'estq-ok';
+}
+
+function _fmt(v) {
+  const n = Number(v)||0;
+  return n % 1 === 0 ? String(n) : n.toFixed(1);
+}
+
+/* ── ALERT BAR ── */
+function renderAlertBar() {
+  const bar = document.getElementById('alert-bar-estoque');
+  const ok       = I.insumos.filter(x=>{ const e=Number(x.estoque_atual||0),m=Number(x.estoque_minimo||0); return m===0||e>m; }).length;
+  const baixo    = I.insumos.filter(x=>{ const e=Number(x.estoque_atual||0),m=Number(x.estoque_minimo||0); return m>0&&e<=m&&e>m*0.5&&e>0; }).length;
+  const critico  = I.insumos.filter(x=>{ const e=Number(x.estoque_atual||0),m=Number(x.estoque_minimo||0); return m>0&&e<=m*0.5&&e>0; }).length;
+  const zerado   = I.insumos.filter(x=>Number(x.estoque_atual||0)===0).length;
+  if (!bar) return;
+  bar.style.display = 'flex';
+  bar.innerHTML =
+    `<div class="alert-chip chip-ok"><i class="fas fa-check-circle"></i> ${ok} OK</div>` +
+    (baixo   ? `<div class="alert-chip chip-baixo"><i class="fas fa-exclamation-triangle"></i> ${baixo} Estoque baixo</div>` : '') +
+    (critico ? `<div class="alert-chip chip-critico"><i class="fas fa-fire"></i> ${critico} Crítico</div>` : '') +
+    (zerado  ? `<div class="alert-chip chip-zerado"><i class="fas fa-times-circle"></i> ${zerado} Zerado</div>` : '');
+}
+
+/* ── MOVIMENTAÇÃO RÁPIDA ── */
+async function movRapido(id, delta, unit) {
+  const inp = document.getElementById(`qm-${id}`);
+  const qtd = inp ? Number(inp.value)||1 : 1;
+  const insumo = I.insumos.find(x=>x.id===id);
+  if (!insumo) return;
+  const novoEst = Math.max(0, (Number(insumo.estoque_atual)||0) + (delta>0?qtd:-qtd));
+  try {
+    const r = await fetch(`tables/insumos/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({estoque_atual:novoEst})});
+    if (!r.ok) throw new Error();
+    insumo.estoque_atual = novoEst;
+    /* Salva movimentação */
+    const tipo = delta>0?'entrada':'saida';
+    await fetch('tables/movimentacoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      insumo_id:id, insumo_nome:insumo.nome,
+      tipo, quantidade:qtd, estoque_anterior:novoEst+(delta>0?-qtd:qtd),
+      estoque_novo:novoEst, data:new Date().toISOString().slice(0,10),
+      hora:new Date().toLocaleTimeString('pt-BR'), obs:'Movimentação rápida',
+    })});
+    /* Atualiza célula sem re-renderizar tudo */
+    const row = document.getElementById(`irow-${id}`);
+    if (row) {
+      const estEl = row.querySelector('.estq-val');
+      if (estEl) {
+        estEl.className='estq-val '+_nivelClasse(insumo);
+        estEl.innerHTML=`${_fmt(novoEst)} <span class="item-unit">${unit}</span>`;
+      }
+    }
+    renderAlertBar();
+    showToastI(delta>0?`⬆️ +${qtd} ${unit} adicionado`:`⬇️ -${qtd} ${unit} retirado`);
+  } catch(e){ showToastI('❌ Erro ao movimentar'); }
+}
+
+/* ── MODAL MOVIMENTAR ── */
+let _movTipo='entrada';
+function abrirModalMov(id) {
+  const ins = I.insumos.find(x=>x.id===id);
+  if (!ins) return;
+  document.getElementById('mov-insumo-id').value = id;
+  document.getElementById('mov-item-nome').textContent = ins.nome||'—';
+  document.getElementById('mov-estoque-atual').textContent = `Estoque atual: ${_fmt(ins.estoque_atual||0)} ${ins.unidade||''}`;
+  document.getElementById('mov-qtd').value = 1;
+  document.getElementById('mov-resp').value = '';
+  document.getElementById('mov-obs').value = '';
+  setTipoMov('entrada');
+  document.getElementById('modal-mov').classList.remove('hidden');
+}
+function fecharModalMov() { document.getElementById('modal-mov').classList.add('hidden'); }
+
+function setTipoMov(tipo) {
+  _movTipo = tipo;
+  document.getElementById('mov-tipo').value = tipo;
+  ['entrada','saida','ajuste'].forEach(t => {
+    const btn = document.getElementById(`mov-btn-${t}`);
+    if (btn) btn.style.fontWeight = t===tipo ? '900' : '700';
+    if (btn) btn.style.boxShadow = t===tipo ? '0 0 0 3px rgba(0,0,0,.15)' : 'none';
+  });
+}
+
+async function confirmarMov() {
+  const id    = document.getElementById('mov-insumo-id').value;
+  const tipo  = document.getElementById('mov-tipo').value || _movTipo;
+  const qtd   = Number(document.getElementById('mov-qtd').value)||0;
+  const resp  = document.getElementById('mov-resp').value.trim();
+  const obs   = document.getElementById('mov-obs').value.trim();
+  if (!qtd || qtd<=0) { showToastI('⚠️ Informe a quantidade!'); return; }
+  const ins = I.insumos.find(x=>x.id===id);
+  if (!ins) return;
+  const estAnterior = Number(ins.estoque_atual)||0;
+  let novoEst;
+  if (tipo==='ajuste') novoEst = qtd;
+  else if (tipo==='entrada') novoEst = estAnterior + qtd;
+  else novoEst = Math.max(0, estAnterior - qtd);
+
+  const btn = document.getElementById('btn-confirmar-mov');
+  if (btn) { btn.disabled=true; btn.innerHTML='⏳'; }
+  try {
+    await fetch(`tables/insumos/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({estoque_atual:novoEst})});
+    await fetch('tables/movimentacoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      insumo_id:id, insumo_nome:ins.nome,
+      tipo, quantidade:qtd, estoque_anterior:estAnterior, estoque_novo:novoEst,
+      data:new Date().toISOString().slice(0,10),
+      hora:new Date().toLocaleTimeString('pt-BR'),
+      responsavel:resp, obs,
+    })});
+    ins.estoque_atual = novoEst;
+    fecharModalMov();
+    renderEstoque();
+    renderAlertBar();
+    const emoji = tipo==='entrada'?'⬆️':tipo==='saida'?'⬇️':'🔧';
+    showToastI(`${emoji} Movimentação registrada!`);
+  } catch(e){ showToastI('❌ Erro: '+e.message); }
+  finally { if (btn) { btn.disabled=false; btn.innerHTML='<i class="fas fa-check"></i> Confirmar'; } }
+}
+
+/* ── MODAL NOVO INSUMO ── */
+function abrirModalNovo() {
+  document.getElementById('ni-nome').value='';
+  document.getElementById('ni-cat').value='';
+  document.getElementById('ni-unidade').value='un';
+  document.getElementById('ni-estoque').value=0;
+  document.getElementById('ni-minimo').value=0;
+  document.getElementById('ni-ideal').value=0;
+  document.getElementById('ni-obs').value='';
+  document.getElementById('modal-novo-title').textContent='➕ Novo Insumo';
+  document.getElementById('modal-novo').classList.remove('hidden');
+}
+function fecharModalNovo() { document.getElementById('modal-novo').classList.add('hidden'); }
+
+async function salvarNovoInsumo() {
+  const nome = document.getElementById('ni-nome').value.trim();
+  if (!nome) { showToastI('⚠️ Informe o nome do insumo!'); return; }
+  const payload = {
+    nome, categoria:document.getElementById('ni-cat').value.trim()||'Geral',
+    unidade:document.getElementById('ni-unidade').value,
+    estoque_atual:Number(document.getElementById('ni-estoque').value)||0,
+    estoque_minimo:Number(document.getElementById('ni-minimo').value)||0,
+    estoque_ideal:Number(document.getElementById('ni-ideal').value)||0,
+    obs:document.getElementById('ni-obs').value.trim(),
+    criado_em:new Date().toISOString().slice(0,10),
+  };
+  try {
+    const r = await fetch('tables/insumos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    fecharModalNovo();
+    showToastI('✅ Insumo cadastrado!');
+    await carregar();
+  } catch(e){ showToastI('❌ Erro: '+e.message); }
+}
+
+/* ── EDITAR INSUMO ── */
+function editarInsumo(id) {
+  const ins = I.insumos.find(x=>x.id===id);
+  if (!ins) return;
+  document.getElementById('ed-id').value = id;
+  document.getElementById('ed-nome').value = ins.nome||'';
+  document.getElementById('ed-cat').value = ins.categoria||'';
+  document.getElementById('ed-unidade').value = ins.unidade||'un';
+  document.getElementById('ed-estoque').value = ins.estoque_atual||0;
+  document.getElementById('ed-minimo').value = ins.estoque_minimo||0;
+  document.getElementById('ed-ideal').value = ins.estoque_ideal||0;
+  document.getElementById('ed-obs').value = ins.obs||'';
+  document.getElementById('modal-editar').classList.remove('hidden');
+}
+function fecharModalEditar() { document.getElementById('modal-editar').classList.add('hidden'); }
+
+async function confirmarEditar() {
+  const id = document.getElementById('ed-id').value;
+  const payload = {
+    nome:document.getElementById('ed-nome').value.trim(),
+    categoria:document.getElementById('ed-cat').value.trim()||'Geral',
+    unidade:document.getElementById('ed-unidade').value,
+    estoque_atual:Number(document.getElementById('ed-estoque').value)||0,
+    estoque_minimo:Number(document.getElementById('ed-minimo').value)||0,
+    estoque_ideal:Number(document.getElementById('ed-ideal').value)||0,
+    obs:document.getElementById('ed-obs').value.trim(),
+  };
+  if (!payload.nome) { showToastI('⚠️ Nome obrigatório!'); return; }
+  try {
+    const r=await fetch(`tables/insumos/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!r.ok) throw new Error();
+    const ins=I.insumos.find(x=>x.id===id);
+    if(ins) Object.assign(ins,payload);
+    fecharModalEditar();
+    renderEstoque();
+    renderAlertBar();
+    showToastI('✅ Insumo atualizado!');
+  } catch(e){ showToastI('❌ Erro: '+e.message); }
+}
+
+/* ── EXCLUIR INSUMO ── */
+async function excluirInsumo(id, nome) {
+  if (!confirm(`Excluir o insumo "${nome}"?\nEsta ação não pode ser desfeita.`)) return;
+  try {
+    const r = await fetch(`tables/insumos/${id}`,{method:'DELETE'});
+    if (!r.ok && r.status!==204) throw new Error();
+    I.insumos = I.insumos.filter(x=>x.id!==id);
+    renderEstoque();
+    renderAlertBar();
+    showToastI('🗑️ Insumo excluído!');
+  } catch(e){ showToastI('❌ Erro ao excluir'); }
+}
+
+/* ── HISTÓRICO ── */
+async function loadHistorico() {
+  const cont = document.getElementById('historico-content');
+  cont.innerHTML = `<div class="state-box loading"><i class="fas fa-spinner"></i><p>Carregando histórico...</p></div>`;
+  const de  = document.getElementById('hist-de').value;
+  const ate = document.getElementById('hist-ate').value;
+  try {
+    const r = await fetch('tables/movimentacoes?limit=500&sort=created_at');
+    if (r.status===422||r.status===404) { cont.innerHTML=`<div class="state-box"><i class="fas fa-inbox"></i><p>Nenhuma movimentação registrada.</p></div>`; return; }
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    const j = await r.json();
+    let movs = (j.data||[]).filter(m => (!de||m.data>=de) && (!ate||m.data<=ate));
+    movs = movs.sort((a,b)=>b.created_at-a.created_at);
+    if (!movs.length) {
+      cont.innerHTML=`<div class="state-box"><i class="fas fa-inbox"></i><p>Nenhuma movimentação no período selecionado.</p></div>`;
+      return;
+    }
+    const icons={entrada:'⬆️',saida:'⬇️',ajuste:'🔧'};
+    const labels={entrada:'Entrada',saida:'Saída',ajuste:'Ajuste'};
+    cont.innerHTML = `<div class="hist-card">` +
+      movs.map(m=>`
+        <div class="hist-row">
+          <div class="hist-icon">${icons[m.tipo]||'📦'}</div>
+          <div class="hist-info">
+            <div class="hist-item">${m.insumo_nome||m.insumo_id||'—'}</div>
+            <div class="hist-meta">
+              ${labels[m.tipo]||m.tipo} · ${m.data||'—'} ${m.hora||''} ${m.responsavel?'· 👤 '+m.responsavel:''}
+              ${m.obs?' · 💬 '+m.obs:''}
+            </div>
+          </div>
+          <div class="hist-delta ${m.tipo==='entrada'?'plus':'minus'}">
+            ${m.tipo==='entrada'?'+':''}${m.tipo==='saida'?'-':''}${_fmt(m.quantidade)} 
+            <small style="font-size:10px;color:var(--muted)">
+              (${_fmt(m.estoque_anterior||0)} → ${_fmt(m.estoque_novo||0)})
+            </small>
+          </div>
+        </div>`).join('') + `</div>`;
+  } catch(e) {
+    cont.innerHTML=`<div class="state-box"><i class="fas fa-exclamation-triangle" style="color:var(--red)"></i><p>Erro: ${e.message}</p></div>`;
+  }
+}
+
+/* ── HISTÓRICO POR ITEM ── */
+async function abrirHistItem(id, nome) {
+  switchTab('historico');
+  const cont = document.getElementById('historico-content');
+  cont.innerHTML=`<div class="state-box loading"><i class="fas fa-spinner"></i><p>Carregando histórico de "${nome}"...</p></div>`;
+  try {
+    const r=await fetch('tables/movimentacoes?limit=500');
+    if (!r.ok) throw new Error();
+    const j=await r.json();
+    const movs=(j.data||[]).filter(m=>m.insumo_id===id).sort((a,b)=>b.created_at-a.created_at);
+    if (!movs.length) { cont.innerHTML=`<div class="state-box"><i class="fas fa-inbox"></i><p>Nenhuma movimentação para "${nome}".</p></div>`; return; }
+    const icons={entrada:'⬆️',saida:'⬇️',ajuste:'🔧'};
+    cont.innerHTML=`<div style="font-weight:800;padding:10px 0 6px">📜 Histórico: ${nome}</div>` +
+      `<div class="hist-card">` +
+      movs.map(m=>`<div class="hist-row">
+        <div class="hist-icon">${icons[m.tipo]||'📦'}</div>
+        <div class="hist-info">
+          <div class="hist-item">${m.data||'—'} ${m.hora||''}</div>
+          <div class="hist-meta">${m.tipo==='entrada'?'Entrada':m.tipo==='saida'?'Saída':'Ajuste'} ${m.responsavel?'· 👤 '+m.responsavel:''} ${m.obs?' · '+m.obs:''}</div>
+        </div>
+        <div class="hist-delta ${m.tipo==='entrada'?'plus':'minus'}">
+          ${m.tipo==='entrada'?'+':m.tipo==='saida'?'-':''}${_fmt(m.quantidade)}
+          <small style="font-size:10px;color:var(--muted)">(${_fmt(m.estoque_anterior||0)}→${_fmt(m.estoque_novo||0)})</small>
+        </div>
+      </div>`).join('') + `</div>`;
+  } catch(e){ cont.innerHTML=`<div class="state-box"><i class="fas fa-times-circle" style="color:var(--red)"></i><p>Erro</p></div>`; }
+}
+
+/* ── ABA ALERTAS ── */
+function renderAlertas() {
+  const cont = document.getElementById('alertas-content');
+  if (!I.insumos.length) {
+    cont.innerHTML=`<div class="state-box"><i class="fas fa-box-open"></i><p>Nenhum insumo cadastrado.</p></div>`;
+    return;
+  }
+  const criticos = I.insumos.filter(x=>{ const e=Number(x.estoque_atual||0),m=Number(x.estoque_minimo||0); return m>0&&e<=m*0.5&&e>0; });
+  const baixo    = I.insumos.filter(x=>{ const e=Number(x.estoque_atual||0),m=Number(x.estoque_minimo||0); return m>0&&e<=m&&e>m*0.5&&e>0; });
+  const zerado   = I.insumos.filter(x=>Number(x.estoque_atual||0)===0);
+
+  if (!criticos.length && !baixo.length && !zerado.length) {
+    cont.innerHTML=`<div class="state-box" style="color:var(--green)"><i class="fas fa-check-circle" style="opacity:.8"></i><p style="color:var(--green);font-weight:800">✅ Tudo OK! Todos os insumos estão com estoque adequado.</p></div>`;
+    return;
+  }
+  const secao = (titulo, cor, items) => `
+    <div style="margin-bottom:16px">
+      <div style="font-weight:900;font-size:14px;color:${cor};margin-bottom:8px">${titulo}</div>
+      <div class="cat-section">
+        ${items.map(it=>`
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid #f0f4ff">
+            <div style="flex:1;font-weight:800">${_catIcon(it.categoria)} ${it.nome||'—'}</div>
+            <div style="font-size:12px;color:var(--muted)">${it.categoria||'Geral'}</div>
+            <span class="estq-val ${_nivelClasse(it)}">${_fmt(it.estoque_atual||0)} ${it.unidade||''}</span>
+            <div style="font-size:11px;color:var(--muted)">mín: ${_fmt(it.estoque_minimo||0)}</div>
+            <button class="btn-save-row" onclick="abrirModalMov('${it.id}')"><i class="fas fa-plus"></i> Repor</button>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  cont.innerHTML =
+    (zerado.length ? secao('🔴 Estoque Zerado','#dc2626',zerado) : '') +
+    (criticos.length ? secao('🔥 Crítico (≤50% do mínimo)','#c2410c',criticos) : '') +
+    (baixo.length ? secao('⚠️ Estoque Baixo (≤100% do mínimo)','#d97706',baixo) : '');
+}
+
+/* ── TOAST ── */
+let _toastT=null;
+function showToastI(msg) {
+  const t=document.getElementById('toast-ins');
+  if(!t) return;
+  t.textContent=msg; t.classList.add('show');
+  if(_toastT) clearTimeout(_toastT);
+  _toastT=setTimeout(()=>t.classList.remove('show'),2800);
+}
+</script>
+</body>
+</html>
