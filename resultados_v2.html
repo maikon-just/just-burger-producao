@@ -27,6 +27,8 @@
       background: var(--bg); color: var(--dark);
       min-height: 100vh; -webkit-font-smoothing: antialiased;
     }
+
+    /* ── HEADER ── */
     .res-header {
       background: linear-gradient(135deg, var(--brand), var(--brand2));
       color: #fff; padding: 16px 20px;
@@ -51,6 +53,8 @@
       transition: background .2s;
     }
     .btn-reload:hover { background: rgba(255,255,255,.35); }
+
+    /* ── FILTROS ── */
     .filter-bar {
       background: var(--card); padding: 14px 16px;
       border-bottom: 1px solid #e8ecf4;
@@ -67,6 +71,7 @@
     }
     .filter-group input[type="date"]:focus,
     .filter-group select:focus { border-color: var(--brand); }
+
     .btn-turno-group { display: flex; gap: 6px; flex-wrap: wrap; }
     .btn-turno {
       padding: 7px 14px; border-radius: 20px; border: 2px solid #e2e6f0;
@@ -74,6 +79,7 @@
       cursor: pointer; color: #888; transition: all .2s;
     }
     .btn-turno.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+
     .btn-dia-group { display: flex; gap: 4px; flex-wrap: wrap; }
     .btn-dia {
       padding: 6px 10px; border-radius: 16px; border: 2px solid #e2e6f0;
@@ -81,6 +87,8 @@
       cursor: pointer; color: #888; transition: all .2s;
     }
     .btn-dia.active { background: var(--dark); border-color: var(--dark); color: #fff; }
+
+    /* ── SUMMARY ── */
     .summary-bar {
       display: flex; gap: 8px; padding: 12px 16px;
       flex-wrap: wrap; overflow-x: auto;
@@ -97,13 +105,17 @@
     .sum-card.sc-red    { border-color: #ef4444; }
     .sum-val { font-size: 22px; font-weight: 900; }
     .sum-lbl { font-size: 10px; font-weight: 700; color: #888; text-align: center; margin-top: 2px; }
+
+    /* ── LISTA ── */
     .res-list { padding: 0 16px 30px; }
+
     .collab-card {
       background: var(--card); border-radius: var(--radius);
       box-shadow: var(--shadow); margin-bottom: 12px;
       overflow: hidden; border: 2px solid transparent; transition: border-color .3s;
     }
     .collab-card.all-ciente { border-color: #22c55e; }
+
     .collab-card-header {
       display: flex; align-items: center; gap: 10px;
       padding: 14px 16px; cursor: pointer;
@@ -114,15 +126,20 @@
     .collab-info { flex: 1; min-width: 0; }
     .collab-name { font-size: 15px; font-weight: 900; }
     .collab-meta { font-size: 12px; color: #888; margin-top: 2px; }
+
     .pills-row { display: flex; gap: 6px; flex-wrap: wrap; }
     .pill { padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 800; }
     .pill-orange { background: #fff7ed; color: #c2410c; }
     .pill-red    { background: #fef2f2; color: #dc2626; }
     .pill-green  { background: #f0fdf4; color: #16a34a; }
+
     .chevron { color: #aaa; font-size: 14px; transition: transform .3s; flex-shrink: 0; }
     .chevron.open { transform: rotate(180deg); }
+
+    /* ── TAREFAS ── */
     .tasks-list { display: none; padding: 0 14px 12px; }
     .tasks-list.open { display: block; }
+
     .task-item {
       display: flex; align-items: flex-start; gap: 10px;
       padding: 10px 0; border-bottom: 1px solid #f0f4ff;
@@ -138,6 +155,7 @@
     .qtd-prog    { background: #dbeafe; color: #1d4ed8; }
     .qtd-feito   { background: #dcfce7; color: #16a34a; }
     .qtd-rest    { background: #fee2e2; color: #dc2626; }
+
     .btn-ciente {
       background: linear-gradient(135deg,#22c55e,#16a34a);
       color: #fff; border: none; padding: 7px 12px; border-radius: 10px;
@@ -151,14 +169,19 @@
       font-size: 12px; font-weight: 800; display: flex; align-items: center; gap: 5px;
       white-space: nowrap; flex-shrink: 0;
     }
+
+    /* ── ESTADOS ── */
     .empty-state { text-align: center; padding: 50px 20px; color: #aaa; }
     .empty-state .es-icon { font-size: 52px; margin-bottom: 14px; }
     .empty-state strong   { display: block; font-size: 16px; color: #555; margin-bottom: 6px; }
     .empty-state small    { font-size: 13px; }
+
     .loading-state { text-align: center; padding: 40px 20px; color: #888; }
     .loading-state .ls-icon { font-size: 36px; animation: spin 1s linear infinite; display: inline-block; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .error-state { padding: 20px; color: #dc3545; text-align: center; font-weight: 700; }
+
+    /* ── TOAST ── */
     .toast {
       position: fixed; bottom: 20px; left: 50%;
       transform: translateX(-50%) translateY(60px);
@@ -176,7 +199,7 @@
 
 <!-- HEADER -->
 <header class="res-header">
-  <a href="index_v2.html" class="res-header-back" title="Voltar">
+  <a href="index.html" class="res-header-back" title="Voltar">
     <i class="fas fa-arrow-left"></i>
   </a>
   <div style="flex:1">
@@ -204,7 +227,9 @@
   </div>
   <div class="filter-group" style="min-width:260px">
     <span class="filter-label">📆 Dia da semana</span>
-    <div class="btn-dia-group" id="dias-btn-group"></div>
+    <div class="btn-dia-group" id="dias-btn-group">
+      <!-- preenchido pelo JS -->
+    </div>
     <input type="hidden" id="res-dia" value="segunda"/>
   </div>
 </div>
@@ -221,6 +246,12 @@
 </div>
 
 <script>
+/* ═══════════════════════════════════════════════════════════
+   JUST BURGER 🍔 — resultados_v2.html
+   Script autocontido — Firebase Config + lógica de resultados
+═══════════════════════════════════════════════════════════ */
+
+/* ── FIREBASE CONFIG ───────────────────────────────────── */
 const fbConfig = {
   apiKey:            "AIzaSyDt1yzxGGzuT2cSdten1bFuXG7yeDQ90Po",
   authDomain:        "justburger-producao-e9b27.firebaseapp.com",
@@ -234,6 +265,7 @@ const fbConfig = {
 if (!firebase.apps.length) firebase.initializeApp(fbConfig);
 const DB = firebase.database();
 
+/* ── DADOS ESTÁTICOS ────────────────────────────────── */
 const DIAS_LIST = [
   { key:'segunda', short:'SEG' }, { key:'terca',  short:'TER' },
   { key:'quarta',  short:'QUA' }, { key:'quinta', short:'QUI' },
@@ -250,11 +282,14 @@ const COLLAB_EMOJI_MAP = {
   'NOITE - MONTADOR':'🧊','NOITE - FRITADEIRA':'🍟',
 };
 
+/* ── INIT ────────────────────────────────────────────── */
 window.addEventListener('DOMContentLoaded', () => {
   const hoje   = new Date().toISOString().slice(0, 10);
   const diaKey = DIA_JS_MAP[new Date().getDay()];
+
   document.getElementById('res-data').value = hoje;
   document.getElementById('res-dia').value  = diaKey;
+
   renderDiasBtns(diaKey);
   loadResultados();
 });
@@ -267,6 +302,7 @@ function renderDiasBtns(activeKey) {
   ).join('');
 }
 
+/* ── FILTROS ─────────────────────────────────────────── */
 function setResTurno(turno) {
   document.getElementById('res-turno').value = turno;
   document.getElementById('resbtn-dia').classList.toggle('active',   turno === 'dia');
@@ -282,6 +318,7 @@ function setResDia(dia) {
   loadResultados();
 }
 
+/* ── FIREBASE CRUD ───────────────────────────────────── */
 async function fbGetAll(col) {
   const snap = await DB.ref(col).once('value');
   const val  = snap.val();
@@ -293,6 +330,7 @@ async function fbPatch(col, id, data) {
   await DB.ref(col + '/' + id).update({ ...data, updated_at: Date.now() });
 }
 
+/* ── CARREGAR RESULTADOS ────────────────────────────── */
 async function loadResultados() {
   const container = document.getElementById('res-lista');
   const summBar   = document.getElementById('summary-bar');
@@ -317,13 +355,14 @@ async function loadResultados() {
       s.data === data && s.turno === turno && s.dia_semana === dia
     );
 
-    const pendAtivos    = pends.filter(p => !p.vistoriado || p.vistoriado == 0);
-    const collabNomes   = [...new Set([
+    const pendAtivos = pends.filter(p => !p.vistoriado || p.vistoriado == 0);
+    const collabNomes = [...new Set([
       ...sess.map(s => s.colaborador_nome || s.colaborador_card).filter(Boolean),
       ...pends.map(p => p.colaborador).filter(Boolean),
     ])];
     const collabSemPend = collabNomes.filter(n => !pends.find(p => p.colaborador === n)).length;
 
+    /* Summary */
     if (summBar) {
       summBar.innerHTML = `
         <div class="sum-card sc-blue"><span class="sum-val">${collabNomes.length}</span><span class="sum-lbl">Colaboradores</span></div>
@@ -332,6 +371,7 @@ async function loadResultados() {
         <div class="sum-card sc-red"><span class="sum-val">${pendAtivos.length}</span><span class="sum-lbl">Aguard. Ciência</span></div>`;
     }
 
+    /* Sem pendências */
     if (!pends.length) {
       container.innerHTML = sess.length
         ? `<div class="empty-state"><div class="es-icon">✅</div><strong>Tudo finalizado 100%!</strong><small>Nenhuma pendência para este turno/dia.</small></div>`
@@ -339,6 +379,7 @@ async function loadResultados() {
       return;
     }
 
+    /* Agrupa por colaborador */
     const porColab = {};
     pends.forEach(p => {
       const nome = p.colaborador || '?';
@@ -347,13 +388,13 @@ async function loadResultados() {
     });
 
     container.innerHTML = Object.keys(porColab).sort().map(nome => {
-      const itens      = porColab[nome];
-      const nParcial   = itens.filter(i => i.status === 'parcial').length;
-      const nNao       = itens.filter(i => i.status === 'nao_finalizado').length;
-      const nCiente    = itens.filter(i => i.vistoriado == 1).length;
-      const todoCiente = nCiente === itens.length;
-      const slug       = _slug(nome);
-      const em         = COLLAB_EMOJI_MAP[nome] || _emojiFor(nome);
+      const itens     = porColab[nome];
+      const nParcial  = itens.filter(i => i.status === 'parcial').length;
+      const nNao      = itens.filter(i => i.status === 'nao_finalizado').length;
+      const nCiente   = itens.filter(i => i.vistoriado == 1).length;
+      const todoCiente= nCiente === itens.length;
+      const slug      = _slug(nome);
+      const em        = COLLAB_EMOJI_MAP[nome] || _emojiFor(nome);
 
       return `
       <div class="collab-card${todoCiente ? ' all-ciente' : ''}" id="rcc-${slug}">
@@ -382,6 +423,7 @@ async function loadResultados() {
   }
 }
 
+/* ── RENDER TAREFAS ─────────────────────────────────── */
 function _renderTasks(itens, slug) {
   return itens.map(item => {
     const isVist    = item.vistoriado == 1;
@@ -419,6 +461,7 @@ function _renderTasks(itens, slug) {
   }).join('');
 }
 
+/* ── TOGGLE / CIENTE ────────────────────────────────── */
 function _toggle(slug) {
   const tl  = document.getElementById(`tl-${slug}`);
   const chv = document.getElementById(`chv-${slug}`);
@@ -448,12 +491,13 @@ function _verificaVazio(slug) {
   const cb = document.getElementById(`rcc-${slug}`);
   if (!tl || !cb) return;
   if (tl.querySelectorAll('.task-item').length === 0) {
-    cb.classList.add('all-ciente');
-    const meta = cb.querySelector('.collab-meta');
-    if (meta) meta.textContent = '✅ Todos os itens com ciência';
+    cb.style.transition = 'opacity 0.4s';
+    cb.style.opacity = '0';
+    setTimeout(() => { cb.remove(); }, 400);
   }
 }
 
+/* ── UTILS ──────────────────────────────────────────── */
 function _slug(str) {
   return (str || '').toLowerCase().normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '-');
