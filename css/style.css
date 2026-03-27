@@ -286,7 +286,7 @@ body {
   display:flex; flex-direction:column; align-items:center;
   gap:6px; cursor:pointer; transition:all .2s;
   font-family:inherit; box-shadow:var(--shadow);
-  width:100%; position:relative; overflow:hidden;
+  width:100%; position:relative; overflow:visible;
 }
 .collab-card-wrap:not(:has(.collab-status-badge)) .collab-card {
   border-radius:var(--radius);
@@ -307,18 +307,19 @@ body {
 .csb-andamento{ background:#dbeafe; color:#1d4ed8; border:2px solid #93c5fd; border-top:none; }
 .csb-falta-nj { background:#fee2e2; color:#dc2626; border:2px solid #fca5a5; border-top:none; }
 .csb-falta-j  { background:#fef3c7; color:#d97706; border:2px solid #fde68a; border-top:none; }
+/* Cards com falta ficam com opacidade reduzida via classe no wrap */
+.collab-card-wrap.wrap-falta .collab-card  { opacity:.6; filter:grayscale(.4); }
+.collab-card-wrap.wrap-falta .collab-status-badge { opacity:.7; }
 
 .collab-done-overlay {
-  position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  font-size:13px; font-weight:900; border-radius:var(--radius);
+  display:none; /* overlay absoluto desativado — status fica no badge externo */
 }
-.done-100       { background:rgba(34,197,94,.18);  color:#16a34a; }
-.done-parcial   { background:rgba(249,115,22,.18);  color:#c2410c; }
-.done-andamento { background:rgba(249,115,22,.10);  color:#c2410c; }
-.done-falta-nj  { background:rgba(220,38,38,.18);   color:#dc2626; }
-.done-falta-j   { background:rgba(234,179,8,.18);   color:#a16207; }
-.done-etapa1    { background:rgba(59,130,246,.18);  color:#1d4ed8; }
+.done-100       { display:none; }
+.done-parcial   { display:none; }
+.done-andamento { display:none; }
+.done-falta-nj  { display:none; }
+.done-falta-j   { display:none; }
+.done-etapa1    { display:none; }
 .collab-etapa1  { border:2px solid #3b82f6 !important; }
 .collab-emoji { font-size:32px; }
 .collab-name  { font-size:13px; font-weight:900; text-align:center; line-height:1.3; }
