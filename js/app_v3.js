@@ -403,29 +403,33 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
     const jaFinaliz=sessStatus==='completo'||sessStatus==='parcial';
     const isCompleto=sessStatus==='completo';
     const tipoFalta=faltaMap[nome];
-    let overlay='';
+    /* Status badge exibido ABAIXO do card — SEM overlay sobreposto ao texto */
+    let statusBadge='';
+    let wrapClass='collab-card-wrap';
     if (tipoFalta) {
       const isNJ=tipoFalta==='nao_justificada';
-      overlay=`<div class="collab-done-overlay ${isNJ?'done-falta-nj':'done-falta-j'}" style="pointer-events:none">${isNJ?'🚫 Falta N/J':'📋 Falta Just.'}</div>`;
+      wrapClass+=' wrap-falta';
+      statusBadge=`<div class="collab-status-badge ${isNJ?'csb-falta-nj':'csb-falta-j'}">${isNJ?'🚫 Falta N/J':'📋 Falta Justif.'}</div>`;
     } else if (isEtapa1Ok) {
-      overlay=`<div class="collab-done-overlay done-etapa1" style="pointer-events:none">▶️ Em Produção</div>`;
+      statusBadge=`<div class="collab-status-badge csb-andamento">▶️ Em Produção</div>`;
     } else if (jaFinaliz) {
-      overlay=`<div class="collab-done-overlay ${isCompleto?'done-100':'done-parcial'}" style="pointer-events:none">${isCompleto?'✅ Finalizado 100%':'⚠️ Parcial'}</div>`;
+      statusBadge=`<div class="collab-status-badge ${isCompleto?'csb-100':'csb-parcial'}">${isCompleto?'✅ Finalizado 100%':'⚠️ Parcial / Pendências'}</div>`;
     }
     let acao;
     if (tipoFalta&&S.leaderOk)  acao=`_gerenciarFalta('${ne}','${tipoFalta}','remover')`;
     else if (jaFinaliz)          acao=`_clickColab('${ne}','__reabrir__')`;
     else                         acao=`_clickColab('${ne}','__selecionar__')`;
     const btnFalta=(S.leaderOk&&!tipoFalta&&!jaFinaliz)
-      ?`<button class="btn-falta-card" onclick="event.stopPropagation();_abrirModalFalta('${ne}')">🚫 Falta</button>`:'';
-    return `<div class="collab-card-wrap">
+      ?`<div class="collab-falta-row"><button class="btn-falta-card" onclick="event.stopPropagation();_abrirModalFalta('${ne}')">🚫 Registrar Falta</button></div>`:'';
+    return `<div class="${wrapClass}">
       <button class="collab-card ${cor}${jaFinaliz?' collab-done':''}${isEtapa1Ok?' collab-etapa1':''}${tipoFalta?' collab-falta':''}" onclick="${acao}">
         <div class="collab-emoji">${em}</div>
         <span class="collab-name">${nome}</span>
         ${setor?`<span class="collab-setor">${setor}</span>`:''}
         <span class="collab-count">📋 ${cnt} tarefa${cnt!==1?'s':''}</span>
-        ${overlay}
-      </button>${btnFalta}</div>`;
+      </button>
+      ${statusBadge}
+      ${btnFalta}</div>`;
   }).join('');
 }
 
@@ -477,13 +481,12 @@ function _abrirModalSenha(emoji,titulo,subtitulo,senhaEsperada,callback) {
 function _clickColab(nome,acao) {
   const pw=COLLAB_PASSWORDS[nome.toUpperCase()];
   if (acao==='__reabrir__') {
-    const reabrir=()=>{
-      const pw2=prompt('🔑 Confirme com a senha do líder:');
-      if (pw2===LEADER_PASSWORD) _reabrirTurnoColab(nome);
-      else if (pw2!==null) showToast('❌ Senha incorreta');
+    /* Usa modal bonito — NÃO usa prompt() nativo */
+    const confirmarReabrir=()=>{
+      _abrirModalSenha('🔑','Reabrir Turno','Senha do líder para confirmar',LEADER_PASSWORD,()=>_reabrirTurnoColab(nome));
     };
-    if (pw) _abrirModalSenha(COLLAB_EMOJI[nome.toUpperCase()]||'👤',nome,'Senha para continuar',pw,reabrir);
-    else reabrir();
+    if (pw) _abrirModalSenha(COLLAB_EMOJI[nome.toUpperCase()]||'👤',nome,'Sua senha para confirmar identidade',pw,confirmarReabrir);
+    else confirmarReabrir();
     return;
   }
   if (pw) _abrirModalSenha(COLLAB_EMOJI[nome.toUpperCase()]||'👤',nome,'Sua senha para acessar',pw,()=>selectColaborador(nome));
@@ -1175,6 +1178,10 @@ function _resRenderTasks(itens,slug) {
     const qRest=Math.max(0,qProg-qFeit);
     const icon   =isParcial?'⚠️':'❌';
     const stColor=isParcial?'#f97316':'#ef4444';
+    const nomeColab=(item.colaborador||'').replace(/'/g,"\\'");
+    const itemNome =(item.item||'').replace(/'/g,"\\'");
+    const catNome  =(item.categoria||'').replace(/'/g,"\\'");
+    const motNome  =(item.motivo||'').replace(/'/g,"\\'");
     return `<div class="res-task-item" id="rti-${item.id}">
       <div class="res-task-icon">${icon}</div>
       <div class="res-task-body">
@@ -1187,12 +1194,89 @@ function _resRenderTasks(itens,slug) {
           ${qRest>0?`<span class="res-qtd-badge res-qtd-rest">⬇️ ${qRest}</span>`:''}
         </div>
       </div>
-      <div class="res-task-actions">${isVist
-        ?`<span class="res-btn-done"><i class="fas fa-check"></i> Ciente</span>`
-        :`<button class="res-btn-ciente" onclick="_resCiente('${item.id}','${slug}')"><i class="fas fa-check"></i> Ciente</button>`
-      }</div>
+      <div class="res-task-actions" style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+        ${isVist
+          ?`<span class="res-btn-done"><i class="fas fa-check"></i> Ciente</span>`
+          :`<button class="res-btn-ciente" onclick="_resCiente('${item.id}','${slug}')"><i class="fas fa-check"></i> Ciente</button>`
+        }
+        <button class="res-btn-transferir" onclick="_resAbrirTransferir('${item.id}','${itemNome}','${nomeColab}','${catNome}','${motNome}',${qProg},${qFeit},'${item.tarefa_id||''}')">
+          <i class="fas fa-exchange-alt"></i> Transferir
+        </button>
+      </div>
     </div>`;
   }).join('');
+}
+
+/* ══ TRANSFERIR TAREFA (dentro do index.html) ═══════════════ */
+function _resAbrirTransferir(pendId,itemNome,origem,cat,motivo,qProg,qFeit,tarefaId) {
+  /* Cria modal dinamicamente se não existir */
+  let ov=document.getElementById('_modal_transferir_embutido');
+  if (!ov) {
+    ov=document.createElement('div');
+    ov.id='_modal_transferir_embutido';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+    document.body.appendChild(ov);
+  }
+  const qRest=Math.max(0,(qProg||0)-(qFeit||0));
+  const TODOS=['ALAN RICARDO','ALINE','ANTONIEL','DAVI','DESPACHO','DINA','FABIO','FERNANDO',
+    'GABRIEL KHALYL','GABRIEL LEITE','HENRIQUE','JOÃO','JOSÉ BRUNO','JHON','LOHAINE','LUCAS',
+    'MARCUS','MATEUS','NOITE - CHAPEIRO','NOITE - FRITADEIRA','NOITE - MONTADOR',
+    'PABLO','PEDRO','RHUAN','RODRIGO','SAMUEL','SANDRO'];
+  const opts=TODOS.filter(n=>n!==origem).map(n=>`<option value="${n}">${n}</option>`).join('');
+  ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:24px;width:100%;max-width:400px;
+    box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:inherit;max-height:90vh;overflow-y:auto">
+    <div style="font-size:17px;font-weight:900;margin-bottom:4px">🔄 Transferir Tarefa</div>
+    <div style="font-size:12px;color:#888;margin-bottom:14px">De: <strong>${origem}</strong></div>
+    <div style="background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:12px;margin-bottom:14px;font-size:13px">
+      <strong>${itemNome}</strong>
+      ${cat?`<div style="color:#888;font-size:11px;margin-top:4px">🏷️ ${cat}</div>`:''}
+      ${qProg>0?`<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+        <span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">📋 ${qProg}</span>
+        <span style="background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">✅ ${qFeit}</span>
+        ${qRest>0?`<span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">⬇️ falta ${qRest}</span>`:''}
+      </div>`:''}
+    </div>
+    <label style="font-size:11px;font-weight:800;color:#666;text-transform:uppercase;display:block;margin-bottom:5px">Transferir para</label>
+    <select id="_tr_destino" style="width:100%;padding:11px;border:2px solid #e2e6f0;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;margin-bottom:12px;outline:none">
+      <option value="">Selecione o destino...</option>${opts}
+    </select>
+    <label style="font-size:11px;font-weight:800;color:#666;text-transform:uppercase;display:block;margin-bottom:5px">Observação (opcional)</label>
+    <input type="text" id="_tr_obs" placeholder="Motivo da transferência..." style="width:100%;padding:11px;border:2px solid #e2e6f0;border-radius:12px;font-family:inherit;font-size:14px;margin-bottom:16px;outline:none"/>
+    <div style="display:flex;gap:10px">
+      <button onclick="document.getElementById('_modal_transferir_embutido').style.display='none'"
+        style="flex:1;padding:12px;border-radius:12px;border:2px solid #e2e6f0;background:#f9fafb;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">Cancelar</button>
+      <button onclick="_resConfirmarTransferir('${pendId}','${itemNome.replace(/'/g,"\\'")}','${origem.replace(/'/g,"\\'")}','${tarefaId}',${qProg},${qFeit})"
+        style="flex:2;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">
+        <i class="fas fa-exchange-alt"></i> Transferir
+      </button>
+    </div>
+  </div>`;
+  ov.style.display='flex';
+}
+
+async function _resConfirmarTransferir(pendId,itemNome,origem,tarefaId,qProg,qFeit) {
+  const destino=(document.getElementById('_tr_destino')||{}).value||'';
+  const obs    =(document.getElementById('_tr_obs')||{}).value.trim()||'';
+  if (!destino) { showToast('⚠️ Selecione o colaborador destino!'); return; }
+  const turno=(document.getElementById('res-turno')||{}).value||'dia';
+  const dia  =(document.getElementById('res-dia')||{}).value||'segunda';
+  const data =((document.getElementById('res-data')||{}).value)||today();
+  const qRest=Math.max(0,(qProg||0)-(qFeit||0));
+  try {
+    await _fbPatch('pendencias',pendId,{vistoriado:1,transferido_para:destino,obs_transferencia:obs});
+    await _fbPost('pendencias',{
+      data,turno,dia_semana:dia,colaborador:destino,
+      item:itemNome+(obs?` (transf. de ${origem}: ${obs})`:`(transferido de ${origem})`),
+      categoria:'',quantidade_programada:qRest>0?qRest:qProg,
+      quantidade_produzida:0,status:'nao_finalizado',
+      motivo:obs||`Transferido de ${origem}`,vistoriado:0,
+      origem_transferencia:origem,tarefa_id:tarefaId||'',
+    });
+    const ov=document.getElementById('_modal_transferir_embutido');
+    if (ov) ov.style.display='none';
+    showToast(`✅ Tarefa transferida para ${destino}!`);
+    setTimeout(()=>loadResultados(),600);
+  } catch(e) { showToast('❌ Erro ao transferir: '+e.message); }
 }
 
 function _resToggle(slug) {
