@@ -7,12 +7,14 @@
   <meta http-equiv="Pragma" content="no-cache"/>
   <meta http-equiv="Expires" content="0"/>
   <title>Just Burger 🍔 Produção</title>
-  <!-- ══ Firebase SDK v9 compat ══ -->
+  <!-- Firebase SDK v9 compat -->
   <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
+  <!-- Fontes e ícones -->
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
-  <link rel="stylesheet" href="css/style.css?v=20260330"/>
+  <!-- CSS principal -->
+  <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body>
 
@@ -65,6 +67,9 @@
         <p>Controle de Produção</p>
       </div>
     </div>
+    <button class="btn-leader-access" onclick="goToLeaderLogin()" title="Painel do Líder">
+      <i class="fas fa-user-shield"></i>
+    </button>
   </header>
   <main class="welcome-body">
     <div class="welcome-hero">
@@ -73,22 +78,19 @@
       <p>Confirme a data e selecione o turno</p>
     </div>
 
+    <!-- SELETOR DE DATA -->
     <div class="date-selector-wrap">
       <div class="date-selector-label">
         <i class="fas fa-calendar-day"></i>
         <span>Data de Trabalho</span>
       </div>
       <div class="date-selector-row">
-        <input
-          type="date"
-          id="work-date-input"
-          class="work-date-input"
-          onchange="onWorkDateChange()"
-        />
+        <input type="date" id="work-date-input" class="work-date-input" onchange="onWorkDateChange()"/>
         <div class="work-date-display" id="work-date-display"></div>
       </div>
     </div>
 
+    <!-- TURNO -->
     <div class="shift-grid">
       <button class="shift-btn shift-day" onclick="selectTurno('dia')">
         <div class="shift-badge">☀️</div>
@@ -106,29 +108,25 @@
   </main>
   <footer class="welcome-footer">
     <div class="footer-links-row">
-      <a href="resultados.html" class="footer-link-btn footer-link-blue" id="btn-resultados">
+      <button onclick="abrirResultados()" class="footer-link-btn footer-link-blue" id="btn-resultados">
         <i class="fas fa-chart-bar"></i>
         Resultados
         <span class="notif-badge" id="badge-pendencias" style="display:none">!</span>
+      </button>
+      <a href="resultados_v2.html" class="footer-link-btn footer-link-green">
+        <i class="fas fa-list-check"></i>
+        Pendências
       </a>
-      <a href="medias.html" class="footer-link-btn footer-link-green">
-        <i class="fas fa-list-ol"></i>
-        Médias
-      </a>
-      <a href="exportar.html" class="footer-link-btn footer-link-export">
-        <i class="fas fa-clipboard-list"></i>
-        Insumos
-      </a>
-      <a href="dashboard.html" class="footer-link-btn footer-link-dash">
-        <i class="fas fa-chart-pie"></i>
-        Dashboard
-      </a>
+      <button onclick="goToLeaderLogin()" class="footer-link-btn footer-link-export">
+        <i class="fas fa-user-shield"></i>
+        Líder
+      </button>
     </div>
   </footer>
 </div>
 
 <!-- ══════════════════════════════════════════
-     TELA — RESULTADOS / PENDÊNCIAS DO DIA
+     TELA — RESULTADOS / PENDÊNCIAS (embutida)
 ══════════════════════════════════════════ -->
 <div id="screen-resultados" class="screen hidden">
   <header class="nav-header">
@@ -137,6 +135,8 @@
       <span class="nav-chip">📋 Pendências do Dia</span>
     </div>
   </header>
+
+  <!-- Filtros -->
   <div class="res-filter-bar">
     <div class="res-filter-group">
       <label>⏰ Turno</label>
@@ -159,11 +159,18 @@
     </div>
     <div class="res-filter-group">
       <label>📅 Data</label>
-      <input type="date" id="res-data" onchange="loadResultados()" style="padding:7px 10px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:13px;font-weight:700"/>
+      <input type="date" id="res-data" onchange="loadResultados()"
+             style="padding:7px 10px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:13px;font-weight:700"/>
     </div>
   </div>
+
+  <!-- Resumo -->
   <div class="res-summary-bar" id="res-summary-bar"></div>
+
+  <!-- Lista -->
   <main class="tasks-scroll" id="res-lista" style="padding:12px 16px"></main>
+
+  <!-- Hidden state inputs -->
   <input type="hidden" id="res-turno" value="dia"/>
   <input type="hidden" id="res-dia"   value="segunda"/>
 </div>
@@ -224,7 +231,7 @@
 </div>
 
 <!-- ══════════════════════════════════════════
-     TELA 2.8 — CARDS DO SETOR
+     TELA 2.8 — CARDS DO SETOR (DINÂMICOS)
 ══════════════════════════════════════════ -->
 <div id="screen-setor" class="screen hidden">
   <header class="nav-header">
@@ -254,29 +261,7 @@
 </div>
 
 <!-- ══════════════════════════════════════════
-     TELA 3 — COLABORADOR / SETOR
-══════════════════════════════════════════ -->
-<div id="screen-collaborator" class="screen hidden">
-  <header class="nav-header">
-    <button class="btn-back-circle" onclick="goBack('screen-dept')"><i class="fas fa-arrow-left"></i></button>
-    <div class="nav-chips">
-      <span class="nav-chip" id="collab-turno-chip">☀️ Dia</span>
-      <span class="nav-chip chip-day" id="collab-day-chip">Segunda</span>
-      <span class="nav-chip" id="collab-dept-chip" style="background:#4f8ef7;color:#fff">🏭 Produção</span>
-    </div>
-  </header>
-  <main class="screen-body">
-    <div class="screen-intro">
-      <div class="screen-intro-emoji">👋</div>
-      <h2>Quem é você?</h2>
-      <p>Toque no seu card para ver suas tarefas</p>
-    </div>
-    <div class="collab-grid" id="collab-grid"></div>
-  </main>
-</div>
-
-<!-- ══════════════════════════════════════════
-     TELA DE PRODUÇÃO (etapa 1 + etapa 2)
+     TELA 3 — TELA DE PRODUÇÃO
 ══════════════════════════════════════════ -->
 <div id="screen-step1" class="screen hidden">
   <header class="nav-header">
@@ -331,21 +316,6 @@
 </div>
 
 <!-- ══════════════════════════════════════════
-     TELA 6 — AGRADECIMENTO
-══════════════════════════════════════════ -->
-<div id="screen-thanks" class="screen hidden">
-  <div class="thanks-wrap">
-    <div class="thanks-emoji" id="thanks-emoji">🎉</div>
-    <h2 id="thanks-msg">Turno concluído!</h2>
-    <div class="thanks-stats" id="thanks-stats"></div>
-    <p class="thanks-redirect-msg" id="thanks-redirect-msg">Voltando ao início em <span id="thanks-countdown">3</span>s…</p>
-    <button class="btn-home-thanks" onclick="goToWelcome()">
-      <i class="fas fa-home"></i> Voltar ao Início Agora
-    </button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
      TELA 7 — PAINEL DO LÍDER
 ══════════════════════════════════════════ -->
 <div id="screen-leader" class="screen hidden">
@@ -354,11 +324,11 @@
     <div class="nav-chips">
       <span class="nav-chip">📊 Painel do Líder</span>
     </div>
-    <a href="resultados.html" style="background:rgba(59,130,246,0.2);border:1px solid #3b82f6;color:#93c5fd;padding:7px 12px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px" title="Resultados">
+    <a href="resultados_v2.html"
+       style="background:rgba(59,130,246,0.2);border:1px solid #3b82f6;color:#93c5fd;padding:7px 12px;
+              border-radius:8px;text-decoration:none;font-size:12px;font-weight:700;
+              display:flex;align-items:center;gap:5px" title="Resultados">
       <i class="fas fa-chart-bar"></i> Resultados
-    </a>
-    <a href="medias.html" style="background:rgba(34,197,94,0.15);border:1px solid #22c55e;color:#86efac;padding:7px 12px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px" title="Médias">
-      <i class="fas fa-list-ol"></i> Médias
     </a>
     <button class="btn-print-header" onclick="printLeaderReport()" title="Imprimir relatório">
       <i class="fas fa-print"></i>
@@ -431,7 +401,7 @@
       </div>
     </div>
 
-    <!-- ABA REGISTROS -->
+    <!-- ABA: REGISTROS -->
     <div id="leader-panel-registros" class="leader-panel">
       <div class="leader-actions">
         <button class="btn-print-pending" onclick="printPendentes()">
@@ -446,8 +416,10 @@
         <div class="table-scroll">
           <table class="data-table">
             <thead>
-              <tr><th>Data</th><th>Turno</th><th>Dia</th><th>Colaborador</th>
-                  <th>Item</th><th>Programado</th><th>Produzido</th><th>Status</th><th>Motivo</th></tr>
+              <tr>
+                <th>Data</th><th>Turno</th><th>Dia</th><th>Colaborador</th>
+                <th>Item</th><th>Programado</th><th>Produzido</th><th>Status</th><th>Motivo</th>
+              </tr>
             </thead>
             <tbody id="leader-tbody">
               <tr><td colspan="9" class="empty-row">Clique em Filtrar para carregar</td></tr>
@@ -457,7 +429,7 @@
       </div>
     </div>
 
-    <!-- ABA COBRANÇAS -->
+    <!-- ABA: COBRANÇAS -->
     <div id="leader-panel-pendentes" class="leader-panel hidden">
       <div class="leader-actions" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -475,7 +447,7 @@
       </div>
     </div>
 
-    <!-- ABA ESPELHO -->
+    <!-- ABA: ESPELHO -->
     <div id="leader-panel-espelho" class="leader-panel hidden">
       <div class="leader-actions">
         <button class="btn-print-all-collab" onclick="printEspelho()">
@@ -487,7 +459,7 @@
       </div>
     </div>
 
-    <!-- ABA RELATÓRIO ANALÍTICO -->
+    <!-- ABA: RELATÓRIO -->
     <div id="leader-panel-relatorio" class="leader-panel hidden">
       <div class="rel-filters">
         <div class="filter-row" style="flex-wrap:wrap;gap:8px">
@@ -537,14 +509,10 @@
         </div>
       </div>
       <div class="summary-row" id="rel-summary-row" style="display:none"></div>
-      <div id="rel-causas-wrap" class="rel-causas-wrap" style="display:none">
-        <h4 style="margin:0 0 8px;font-size:14px;font-weight:800">📌 Causas de Não Conformidade</h4>
-        <div id="rel-causas-bars"></div>
-      </div>
       <div id="relatorio-list"></div>
     </div>
 
-    <!-- ABA TAREFAS -->
+    <!-- ABA: GESTÃO DE TAREFAS -->
     <div id="leader-panel-tarefas" class="leader-panel hidden">
       <div class="tar-filter-bar">
         <div class="tar-filter-group">
@@ -617,25 +585,30 @@
       </div>
       <div class="filter-group" style="width:100%">
         <label>🏷️ Categoria</label>
-        <input type="text" id="te-cat" placeholder="Ex: Pré-preparo" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
+        <input type="text" id="te-cat" placeholder="Ex: Pré-preparo"
+               style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
       </div>
       <div class="filter-group" style="width:100%">
         <label>📝 Item</label>
-        <input type="text" id="te-item" placeholder="Nome da tarefa" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
+        <input type="text" id="te-item" placeholder="Nome da tarefa"
+               style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
       </div>
       <div style="display:flex;gap:8px">
         <div class="filter-group" style="flex:1">
           <label>🔢 Qtd Padrão</label>
-          <input type="number" id="te-qty" placeholder="0" min="0" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
+          <input type="number" id="te-qty" placeholder="0" min="0"
+                 style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
         </div>
         <div class="filter-group" style="flex:1">
           <label>📏 Unidade</label>
-          <input type="text" id="te-unit" placeholder="kg, un, L..." style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
+          <input type="text" id="te-unit" placeholder="kg, un, L..."
+                 style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
         </div>
       </div>
       <div class="filter-group" style="width:100%">
         <label>🔢 Ordem</label>
-        <input type="number" id="te-ordem" placeholder="1" min="1" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
+        <input type="number" id="te-ordem" placeholder="1" min="1"
+               style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
       </div>
     </div>
     <div class="modal-footer">
@@ -678,8 +651,8 @@
           <button class="qty-btn plus" onclick="adjField('estoque',10)">+10</button>
           <button class="qty-btn plus" onclick="adjField('estoque',100)">+100</button>
         </div>
-        <span id="calc-padrao" style="display:none">—</span>
-        <span id="calc-estoque" style="display:none">0</span>
+        <span id="calc-padrao"   style="display:none">—</span>
+        <span id="calc-estoque"  style="display:none">0</span>
         <span id="modal-s1-prog" style="display:none">0</span>
         <span id="modal-s1-unit2" style="display:none"></span>
       </div>
@@ -709,15 +682,9 @@
       </div>
       <div class="field-label">📊 Como ficou?</div>
       <div class="status-btns">
-        <button class="sbtn sbtn-total" id="sbtn-total" onclick="selectStatus('total')">
-          ✅ Executado 100%
-        </button>
-        <button class="sbtn sbtn-parcial" id="sbtn-parcial" onclick="selectStatus('parcial')">
-          ⚠️ Parcial
-        </button>
-        <button class="sbtn sbtn-nao" id="sbtn-nao" onclick="selectStatus('nao_finalizado')">
-          ❌ Não Executado
-        </button>
+        <button class="sbtn sbtn-total"   data-status="total"          onclick="selectStatus('total')">✅ Executado 100%</button>
+        <button class="sbtn sbtn-parcial" data-status="parcial"        onclick="selectStatus('parcial')">⚠️ Parcial</button>
+        <button class="sbtn sbtn-nao"     data-status="nao_finalizado" onclick="selectStatus('nao_finalizado')">❌ Não Executado</button>
       </div>
       <div id="qty-prod-wrap" class="hidden">
         <div class="field-label">📦 Quantidade Produzida</div>
@@ -768,8 +735,9 @@
   </div>
 </div>
 
-<script src="js/data.js?v=20260329"></script>
-<script src="js/firebase_v2.js?v=20260327"></script>
-<script src="js/app_v2.js?v=20260327"></script>
+<!-- Scripts — ordem importa! -->
+<script src="js/data.js"></script>
+<script src="js/firebase_v2.js"></script>
+<script src="js/app_v3.js"></script>
 </body>
 </html>
