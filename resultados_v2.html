@@ -54,6 +54,21 @@
     }
     .btn-reload:hover { background: rgba(255,255,255,.35); }
 
+    /* ── ABAS ── */
+    .tabs-bar {
+      background: #fff; display: flex; gap: 0;
+      border-bottom: 2px solid #e8ecf4; overflow-x: auto;
+    }
+    .tab-btn {
+      flex: 1; min-width: 90px; padding: 12px 10px;
+      border: none; background: none; font-family: inherit;
+      font-size: 12px; font-weight: 800; color: #888; cursor: pointer;
+      border-bottom: 3px solid transparent; margin-bottom: -2px;
+      transition: all .2s; white-space: nowrap;
+    }
+    .tab-btn.active { color: var(--brand); border-bottom-color: var(--brand); }
+    .tab-btn:hover  { background: #fef9f7; }
+
     /* ── FILTROS ── */
     .filter-bar {
       background: var(--card); padding: 14px 16px;
@@ -156,6 +171,8 @@
     .qtd-feito   { background: #dcfce7; color: #16a34a; }
     .qtd-rest    { background: #fee2e2; color: #dc2626; }
 
+    .task-actions-col { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+
     .btn-ciente {
       background: linear-gradient(135deg,#22c55e,#16a34a);
       color: #fff; border: none; padding: 7px 12px; border-radius: 10px;
@@ -169,6 +186,67 @@
       font-size: 12px; font-weight: 800; display: flex; align-items: center; gap: 5px;
       white-space: nowrap; flex-shrink: 0;
     }
+    .btn-transferir {
+      background: linear-gradient(135deg,#3b82f6,#1d4ed8);
+      color: #fff; border: none; padding: 7px 10px; border-radius: 10px;
+      font-family: inherit; font-size: 11px; font-weight: 800; cursor: pointer;
+      display: flex; align-items: center; gap: 5px; flex-shrink: 0;
+      transition: opacity .2s; white-space: nowrap;
+    }
+    .btn-transferir:hover { opacity: .85; }
+
+    /* ── MODAL BASE ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.65);
+      z-index: 9999; display: flex; align-items: center; justify-content: center;
+      padding: 20px; animation: fadeIn .2s ease;
+    }
+    .modal-overlay.hidden { display: none !important; }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+    .modal-box {
+      background: #fff; border-radius: 20px; padding: 24px;
+      width: 100%; max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.4); font-family: inherit;
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal-title-h { font-size: 17px; font-weight: 900; margin-bottom: 4px; }
+    .modal-sub-h   { font-size: 12px; color: #888; margin-bottom: 18px; }
+    .modal-label   { font-size: 12px; font-weight: 800; color: #666; text-transform: uppercase; margin-bottom: 5px; display: block; }
+    .modal-input, .modal-select {
+      width: 100%; padding: 11px 13px; border: 2px solid #e2e6f0;
+      border-radius: 12px; font-family: inherit; font-size: 14px;
+      font-weight: 700; background: #f9fafb; outline: none; cursor: pointer;
+      margin-bottom: 14px; color: var(--dark); transition: border-color .2s;
+    }
+    .modal-input:focus, .modal-select:focus { border-color: #3b82f6; background: #fff; }
+    .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .modal-footer-row { display: flex; gap: 10px; margin-top: 6px; }
+    .modal-btn-cancel {
+      flex: 1; padding: 13px; border-radius: 12px; border: 2px solid #e2e6f0;
+      background: #f9fafb; font-family: inherit; font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: background .2s;
+    }
+    .modal-btn-cancel:hover { background: #e2e6f0; }
+    .modal-btn-confirm {
+      flex: 2; padding: 13px; border-radius: 12px; border: none;
+      background: linear-gradient(135deg,#3b82f6,#1d4ed8);
+      color: #fff; font-family: inherit; font-size: 14px; font-weight: 800;
+      cursor: pointer; transition: opacity .2s;
+    }
+    .modal-btn-confirm:hover { opacity: .9; }
+    .modal-btn-confirm.btn-green-confirm {
+      background: linear-gradient(135deg,#22c55e,#16a34a);
+    }
+    .modal-divider { border: none; border-top: 1px solid #e8ecf4; margin: 14px 0; }
+
+    /* seção "ou criar nova" no modal */
+    .or-section { text-align: center; margin: 4px 0 14px; color: #aaa; font-size: 12px; font-weight: 700; position: relative; }
+    .or-section::before, .or-section::after { content:''; position:absolute; top:50%; width:42%; height:1px; background:#e2e6f0; }
+    .or-section::before { left:0; } .or-section::after { right:0; }
+
+    /* ── NOVA TAREFA inline ── */
+    .new-task-form { background: #f0f9ff; border: 2px solid #bae6fd; border-radius: 14px; padding: 16px; margin-top: 4px; }
+    .new-task-form .modal-input, .new-task-form .modal-select { margin-bottom: 10px; border-color: #bae6fd; background: #fff; }
 
     /* ── ESTADOS ── */
     .empty-state { text-align: center; padding: 50px 20px; color: #aaa; }
@@ -187,9 +265,16 @@
       transform: translateX(-50%) translateY(60px);
       background: var(--dark); color: #fff; padding: 12px 20px; border-radius: 30px;
       font-size: 14px; font-weight: 700; opacity: 0; transition: all .3s;
-      z-index: 9999; pointer-events: none; white-space: nowrap; max-width: 90vw;
+      z-index: 99999; pointer-events: none; white-space: nowrap; max-width: 90vw;
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── PAGINAÇÃO / SECTION HEADER ── */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0 6px; font-size: 12px; font-weight: 800; color: #aaa;
+      text-transform: uppercase; letter-spacing: .04em;
+    }
   </style>
 </head>
 <body>
@@ -204,15 +289,22 @@
   </a>
   <div style="flex:1">
     <div class="res-header-title">📊 Resultados do Dia</div>
-    <div class="res-header-sub">Pendências e ciência por colaborador</div>
+    <div class="res-header-sub" id="header-sub">Pendências e ciência por colaborador</div>
   </div>
   <button class="btn-reload" onclick="loadResultados()">
     <i class="fas fa-sync-alt"></i> Atualizar
   </button>
 </header>
 
+<!-- ABAS -->
+<div class="tabs-bar">
+  <button class="tab-btn active" id="tab-pendencias" onclick="switchTab('pendencias')">⚠️ Pendências</button>
+  <button class="tab-btn" id="tab-historico"  onclick="switchTab('historico')">📋 Histórico</button>
+  <button class="tab-btn" id="tab-nova"        onclick="switchTab('nova')">➕ Nova Tarefa</button>
+</div>
+
 <!-- FILTROS -->
-<div class="filter-bar">
+<div class="filter-bar" id="filter-bar">
   <div class="filter-group">
     <span class="filter-label">📅 Data</span>
     <input type="date" id="res-data" onchange="loadResultados()"/>
@@ -227,9 +319,7 @@
   </div>
   <div class="filter-group" style="min-width:260px">
     <span class="filter-label">📆 Dia da semana</span>
-    <div class="btn-dia-group" id="dias-btn-group">
-      <!-- preenchido pelo JS -->
-    </div>
+    <div class="btn-dia-group" id="dias-btn-group"></div>
     <input type="hidden" id="res-dia" value="segunda"/>
   </div>
 </div>
@@ -237,21 +327,138 @@
 <!-- SUMMARY -->
 <div class="summary-bar" id="summary-bar"></div>
 
-<!-- LISTA -->
-<div class="res-list" id="res-lista">
-  <div class="loading-state">
-    <div class="ls-icon">⏳</div>
-    <p style="margin-top:10px">Carregando...</p>
+<!-- ── TAB: PENDÊNCIAS ── -->
+<div id="section-pendencias">
+  <div class="res-list" id="res-lista">
+    <div class="loading-state">
+      <div class="ls-icon">⏳</div>
+      <p style="margin-top:10px">Carregando...</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── TAB: HISTÓRICO ── -->
+<div id="section-historico" style="display:none; padding:16px">
+  <div class="filter-bar" style="padding:12px 0; background:transparent; border:none; flex-wrap:wrap">
+    <div class="filter-group">
+      <span class="filter-label">👤 Colaborador</span>
+      <select id="hist-colaborador" onchange="loadHistorico()" style="border:2px solid #e2e6f0;border-radius:10px;padding:7px 10px;font-family:inherit;font-size:13px;font-weight:700;background:#fff;outline:none">
+        <option value="">Todos</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">📊 Status</span>
+      <select id="hist-status" onchange="loadHistorico()" style="border:2px solid #e2e6f0;border-radius:10px;padding:7px 10px;font-family:inherit;font-size:13px;font-weight:700;background:#fff;outline:none">
+        <option value="">Todos</option>
+        <option value="total">✅ 100%</option>
+        <option value="parcial">⚠️ Parcial</option>
+        <option value="nao_finalizado">❌ Não feito</option>
+      </select>
+    </div>
+  </div>
+  <div id="historico-lista"></div>
+</div>
+
+<!-- ── TAB: NOVA TAREFA ── -->
+<div id="section-nova" style="display:none; padding:16px 16px 40px">
+  <div style="background:#fff;border-radius:16px;padding:20px;box-shadow:0 4px 24px rgba(0,0,0,.08);max-width:500px;margin:0 auto">
+    <div style="font-size:22px;font-weight:900;margin-bottom:4px">➕ Criar Nova Tarefa</div>
+    <div style="font-size:13px;color:#888;margin-bottom:20px">Adicione uma tarefa avulsa para qualquer colaborador</div>
+
+    <label class="modal-label">👤 Colaborador</label>
+    <select id="nt-colaborador" class="modal-input" style="margin-bottom:14px">
+      <option value="">Selecione o colaborador...</option>
+    </select>
+
+    <label class="modal-label">⏰ Turno</label>
+    <select id="nt-turno" class="modal-input">
+      <option value="dia">☀️ Dia</option>
+      <option value="noite">🌙 Noite</option>
+    </select>
+
+    <label class="modal-label">📅 Dia da Semana</label>
+    <select id="nt-dia" class="modal-input">
+      <option value="segunda">Segunda-feira</option>
+      <option value="terca">Terça-feira</option>
+      <option value="quarta">Quarta-feira</option>
+      <option value="quinta">Quinta-feira</option>
+      <option value="sexta">Sexta-feira</option>
+      <option value="sabado">Sábado</option>
+      <option value="domingo">Domingo</option>
+    </select>
+
+    <div class="modal-row">
+      <div>
+        <label class="modal-label">🏷️ Categoria</label>
+        <input type="text" id="nt-categoria" class="modal-input" placeholder="ex: Produção"/>
+      </div>
+      <div>
+        <label class="modal-label">📦 Item</label>
+        <input type="text" id="nt-item" class="modal-input" placeholder="Nome do item..."/>
+      </div>
+    </div>
+
+    <div class="modal-row">
+      <div>
+        <label class="modal-label">🔢 Quantidade</label>
+        <input type="number" id="nt-qtd" class="modal-input" placeholder="0" min="0" step="0.1"/>
+      </div>
+      <div>
+        <label class="modal-label">📏 Unidade</label>
+        <input type="text" id="nt-unidade" class="modal-input" placeholder="ex: kg, un, L"/>
+      </div>
+    </div>
+
+    <label class="modal-label">🔢 Ordem (posição na lista)</label>
+    <input type="number" id="nt-ordem" class="modal-input" value="99" min="1"/>
+
+    <button onclick="salvarNovaTarefa()" style="width:100%;padding:15px;border-radius:14px;border:none;background:linear-gradient(135deg,#e8590c,#ff7b2f);color:#fff;font-family:inherit;font-size:15px;font-weight:900;cursor:pointer;margin-top:4px;box-shadow:0 4px 12px rgba(232,89,12,.35);transition:opacity .2s">
+      💾 Salvar Tarefa
+    </button>
+  </div>
+</div>
+
+<!-- ══ MODAL TRANSFERIR TAREFA ══ -->
+<div class="modal-overlay hidden" id="modal-transferir">
+  <div class="modal-box">
+    <div class="modal-title-h">🔄 Transferir Tarefa</div>
+    <div class="modal-sub-h" id="modal-transferir-sub">Reatribuir tarefa para outro colaborador</div>
+
+    <input type="hidden" id="transferir-pend-id"/>
+    <input type="hidden" id="transferir-item-nome"/>
+    <input type="hidden" id="transferir-origem"/>
+    <input type="hidden" id="transferir-tarefa-id"/>
+
+    <!-- Detalhes da tarefa -->
+    <div id="transferir-detalhe" style="background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:12px;margin-bottom:16px;font-size:13px">
+      <!-- preenchido pelo JS -->
+    </div>
+
+    <label class="modal-label">👤 Transferir para</label>
+    <select id="transferir-destino" class="modal-select">
+      <option value="">Selecione o colaborador destino...</option>
+    </select>
+
+    <label class="modal-label">📝 Observação (opcional)</label>
+    <input type="text" id="transferir-obs" class="modal-input" placeholder="Ex: faltou matéria prima..."/>
+
+    <hr class="modal-divider"/>
+    <div class="modal-footer-row">
+      <button class="modal-btn-cancel" onclick="fecharModalTransferir()">Cancelar</button>
+      <button class="modal-btn-confirm" onclick="confirmarTransferencia()">
+        <i class="fas fa-exchange-alt"></i> Transferir
+      </button>
+    </div>
   </div>
 </div>
 
 <script>
 /* ═══════════════════════════════════════════════════════════
    JUST BURGER 🍔 — resultados_v2.html
-   Script autocontido — Firebase Config + lógica de resultados
+   ✅ Pendências + Histórico + Nova Tarefa + Transferir
 ═══════════════════════════════════════════════════════════ */
 
-/* ── FIREBASE CONFIG ───────────────────────────────────── */
+/* ── FIREBASE CONFIG ── */
 const fbConfig = {
   apiKey:            "AIzaSyDt1yzxGGzuT2cSdten1bFuXG7yeDQ90Po",
   authDomain:        "justburger-producao-e9b27.firebaseapp.com",
@@ -261,18 +468,30 @@ const fbConfig = {
   messagingSenderId: "387070713910",
   appId:             "1:387070713910:web:f156d3247a1715a58ab897"
 };
-
 if (!firebase.apps.length) firebase.initializeApp(fbConfig);
 const DB = firebase.database();
 
-/* ── DADOS ESTÁTICOS ────────────────────────────────── */
+/* ── DADOS ESTÁTICOS ── */
 const DIAS_LIST = [
-  { key:'segunda', short:'SEG' }, { key:'terca',  short:'TER' },
-  { key:'quarta',  short:'QUA' }, { key:'quinta', short:'QUI' },
-  { key:'sexta',   short:'SEX' }, { key:'sabado', short:'SAB' },
-  { key:'domingo', short:'DOM' },
+  { key:'segunda', short:'SEG', label:'Segunda-feira' },
+  { key:'terca',   short:'TER', label:'Terça-feira' },
+  { key:'quarta',  short:'QUA', label:'Quarta-feira' },
+  { key:'quinta',  short:'QUI', label:'Quinta-feira' },
+  { key:'sexta',   short:'SEX', label:'Sexta-feira' },
+  { key:'sabado',  short:'SAB', label:'Sábado' },
+  { key:'domingo', short:'DOM', label:'Domingo' },
 ];
 const DIA_JS_MAP = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
+
+const TODOS_COLABS = [
+  'ALAN RICARDO','ALINE','ALINE INICIO','ALINE FINALIZAÇÃO',
+  'ANTONIEL','ANTONIEL INICIO','ANTONIEL FINALIZAÇÃO',
+  'ATENDIMENTO / DESPACHO','DAVI','DESPACHO','DINA','FABIO','FERNANDO',
+  'GABRIEL KHALYL','GABRIEL LEITE','HENRIQUE','JOÃO','JOSÉ BRUNO','JHON',
+  'LOHAINE','LUCAS','MARCUS','MARCUS INICIO','MARCUS FINALIZAÇÃO',
+  'MATEUS','NOITE - CHAPEIRO','NOITE - FRITADEIRA',
+  'NOITE - MONTADOR','PABLO','PEDRO','RHUAN','RODRIGO','SAMUEL','SANDRO',
+];
 
 const COLLAB_EMOJI_MAP = {
   'DINA':'👩‍💼','SANDRO':'👨‍💼','PABLO':'🍗','MATEUS':'🥫','JOÃO':'🔪',
@@ -282,7 +501,26 @@ const COLLAB_EMOJI_MAP = {
   'NOITE - MONTADOR':'🧊','NOITE - FRITADEIRA':'🍟',
 };
 
-/* ── INIT ────────────────────────────────────────────── */
+/* ── ABA ATIVA ── */
+let _tabAtual = 'pendencias';
+
+function switchTab(tab) {
+  _tabAtual = tab;
+  ['pendencias','historico','nova'].forEach(t => {
+    const btn = document.getElementById(`tab-${t}`);
+    const sec = document.getElementById(`section-${t}`);
+    if (btn) btn.classList.toggle('active', t === tab);
+    if (sec) sec.style.display = (t === tab) ? '' : 'none';
+  });
+  const fb = document.getElementById('filter-bar');
+  const sb = document.getElementById('summary-bar');
+  if (fb) fb.style.display = (tab === 'nova') ? 'none' : '';
+  if (sb) sb.style.display = (tab === 'nova') ? 'none' : '';
+  if (tab === 'pendencias') loadResultados();
+  if (tab === 'historico')  loadHistorico();
+}
+
+/* ── INIT ── */
 window.addEventListener('DOMContentLoaded', () => {
   const hoje   = new Date().toISOString().slice(0, 10);
   const diaKey = DIA_JS_MAP[new Date().getDay()];
@@ -291,6 +529,7 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('res-dia').value  = diaKey;
 
   renderDiasBtns(diaKey);
+  preencherSelectColaboradores();
   loadResultados();
 });
 
@@ -302,12 +541,23 @@ function renderDiasBtns(activeKey) {
   ).join('');
 }
 
-/* ── FILTROS ─────────────────────────────────────────── */
+function preencherSelectColaboradores() {
+  const selects = ['transferir-destino','nt-colaborador','hist-colaborador'];
+  selects.forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const base = id === 'hist-colaborador' ? '<option value="">Todos</option>' : '<option value="">Selecione...</option>';
+    sel.innerHTML = base + TODOS_COLABS.map(n => `<option value="${n}">${COLLAB_EMOJI_MAP[n]||'👤'} ${n}</option>`).join('');
+  });
+}
+
+/* ── FILTROS ── */
 function setResTurno(turno) {
   document.getElementById('res-turno').value = turno;
   document.getElementById('resbtn-dia').classList.toggle('active',   turno === 'dia');
   document.getElementById('resbtn-noite').classList.toggle('active', turno === 'noite');
-  loadResultados();
+  if (_tabAtual === 'pendencias') loadResultados();
+  if (_tabAtual === 'historico')  loadHistorico();
 }
 
 function setResDia(dia) {
@@ -315,22 +565,33 @@ function setResDia(dia) {
   document.querySelectorAll('.btn-dia').forEach(b =>
     b.classList.toggle('active', b.textContent === DIAS_LIST.find(d => d.key === dia)?.short)
   );
-  loadResultados();
+  if (_tabAtual === 'pendencias') loadResultados();
+  if (_tabAtual === 'historico')  loadHistorico();
 }
 
-/* ── FIREBASE CRUD ───────────────────────────────────── */
+/* ── FIREBASE CRUD ── */
 async function fbGetAll(col) {
   const snap = await DB.ref(col).once('value');
   const val  = snap.val();
   if (!val) return [];
   return Object.entries(val).map(([id, obj]) => ({ id, ...obj }));
 }
-
+async function fbPost(col, data) {
+  const ref = DB.ref(col).push();
+  const obj = { ...data, created_at: Date.now(), updated_at: Date.now() };
+  await ref.set(obj);
+  return { id: ref.key, ...obj };
+}
 async function fbPatch(col, id, data) {
-  await DB.ref(col + '/' + id).update({ ...data, updated_at: Date.now() });
+  await DB.ref(`${col}/${id}`).update({ ...data, updated_at: Date.now() });
+}
+async function fbDelete(col, id) {
+  await DB.ref(`${col}/${id}`).remove();
 }
 
-/* ── CARREGAR RESULTADOS ────────────────────────────── */
+/* ══════════════════════════════════════════
+   TAB 1 — PENDÊNCIAS
+══════════════════════════════════════════ */
 async function loadResultados() {
   const container = document.getElementById('res-lista');
   const summBar   = document.getElementById('summary-bar');
@@ -352,11 +613,12 @@ async function loadResultados() {
       p.data === data && p.turno === turno && p.dia_semana === dia
     );
     const sess = sessoes.filter(s =>
-      s.data === data && s.turno === turno && s.dia_semana === dia
+      s.data === data && s.turno === turno && s.dia_semana === dia &&
+      (s.status_geral === 'completo' || s.status_geral === 'parcial')
     );
 
-    const pendAtivos = pends.filter(p => !p.vistoriado || p.vistoriado == 0);
-    const collabNomes = [...new Set([
+    const pendAtivos    = pends.filter(p => !p.vistoriado || p.vistoriado == 0);
+    const collabNomes   = [...new Set([
       ...sess.map(s => s.colaborador_nome || s.colaborador_card).filter(Boolean),
       ...pends.map(p => p.colaborador).filter(Boolean),
     ])];
@@ -375,7 +637,7 @@ async function loadResultados() {
     if (!pends.length) {
       container.innerHTML = sess.length
         ? `<div class="empty-state"><div class="es-icon">✅</div><strong>Tudo finalizado 100%!</strong><small>Nenhuma pendência para este turno/dia.</small></div>`
-        : `<div class="empty-state"><div class="es-icon">📭</div><strong>Nenhum dado encontrado</strong><small>Tente outro filtro ou aguarde os colaboradores finalizarem o turno.</small></div>`;
+        : `<div class="empty-state"><div class="es-icon">📭</div><strong>Nenhum dado encontrado</strong><small>Aguarde os colaboradores finalizarem o turno ou selecione outro filtro.</small></div>`;
       return;
     }
 
@@ -387,7 +649,7 @@ async function loadResultados() {
       porColab[nome].push(p);
     });
 
-    container.innerHTML = Object.keys(porColab).sort().map(nome => {
+    container.innerHTML = `<div style="padding:8px 0">` + Object.keys(porColab).sort().map(nome => {
       const itens     = porColab[nome];
       const nParcial  = itens.filter(i => i.status === 'parcial').length;
       const nNao      = itens.filter(i => i.status === 'nao_finalizado').length;
@@ -412,10 +674,10 @@ async function loadResultados() {
           <i class="fas fa-chevron-down chevron" id="chv-${slug}"></i>
         </div>
         <div class="tasks-list" id="tl-${slug}">
-          ${_renderTasks(itens, slug)}
+          ${_renderTasks(itens, slug, nome)}
         </div>
       </div>`;
-    }).join('');
+    }).join('') + `</div>`;
 
   } catch(e) {
     console.error(e);
@@ -423,8 +685,8 @@ async function loadResultados() {
   }
 }
 
-/* ── RENDER TAREFAS ─────────────────────────────────── */
-function _renderTasks(itens, slug) {
+/* ── RENDER TAREFAS (com botão Transferir) ── */
+function _renderTasks(itens, slug, nomeColab) {
   return itens.map(item => {
     const isVist    = item.vistoriado == 1;
     const isParcial = item.status === 'parcial';
@@ -434,6 +696,10 @@ function _renderTasks(itens, slug) {
     const icon    = isParcial ? '⚠️' : '❌';
     const stLabel = isParcial ? 'Parcial' : 'Não feito';
     const stColor = isParcial ? '#f97316' : '#ef4444';
+    const safeNome = (nomeColab||'').replace(/'/g,"\\'");
+    const safeItem = (item.item||'').replace(/'/g,"\\'");
+    const safeCat  = (item.categoria||'').replace(/'/g,"\\'");
+    const safeMot  = (item.motivo||'').replace(/'/g,"\\'");
 
     return `
     <div class="task-item" id="ti-${item.id}">
@@ -451,17 +717,21 @@ function _renderTasks(itens, slug) {
           ${qRest > 0 ? `<span class="qtd-badge qtd-rest">⬇️ ${qRest}</span>` : ''}
         </div>
       </div>
-      <div>
+      <div class="task-actions-col">
         ${isVist
           ? `<span class="btn-ciente-done"><i class="fas fa-check"></i> Ciente</span>`
           : `<button class="btn-ciente" onclick="_ciente('${item.id}','${slug}')"><i class="fas fa-check"></i> Ciente</button>`
         }
+        <button class="btn-transferir"
+          onclick="abrirModalTransferir('${item.id}','${safeItem}','${safeNome}','${safeCat}','${safeMot}',${qProg},${qFeit},'${item.tarefa_id||''}')">
+          <i class="fas fa-exchange-alt"></i> Transferir
+        </button>
       </div>
     </div>`;
   }).join('');
 }
 
-/* ── TOGGLE / CIENTE ────────────────────────────────── */
+/* ── TOGGLE / CIENTE ── */
 function _toggle(slug) {
   const tl  = document.getElementById(`tl-${slug}`);
   const chv = document.getElementById(`chv-${slug}`);
@@ -497,12 +767,299 @@ function _verificaVazio(slug) {
   }
 }
 
-/* ── UTILS ──────────────────────────────────────────── */
+/* ══════════════════════════════════════════
+   TRANSFERIR TAREFA
+══════════════════════════════════════════ */
+function abrirModalTransferir(pendId, itemNome, origem, categoria, motivo, qProg, qFeit, tarefaId) {
+  document.getElementById('transferir-pend-id').value   = pendId;
+  document.getElementById('transferir-item-nome').value = itemNome;
+  document.getElementById('transferir-origem').value    = origem;
+  document.getElementById('transferir-tarefa-id').value = tarefaId || '';
+  document.getElementById('transferir-obs').value       = '';
+
+  /* Popula select sem o colaborador origem */
+  const sel = document.getElementById('transferir-destino');
+  sel.innerHTML = '<option value="">Selecione o destino...</option>' +
+    TODOS_COLABS.filter(n => n !== origem).map(n =>
+      `<option value="${n}">${COLLAB_EMOJI_MAP[n]||'👤'} ${n}</option>`
+    ).join('');
+
+  /* Detalhe da tarefa */
+  const qRest = Math.max(0, qProg - qFeit);
+  document.getElementById('transferir-detalhe').innerHTML = `
+    <div style="font-weight:900;font-size:14px;margin-bottom:6px">📦 ${itemNome}</div>
+    <div style="font-size:12px;color:#888">
+      <span style="margin-right:12px">👤 <strong>${origem}</strong></span>
+      ${categoria ? `<span style="margin-right:12px">🏷️ ${categoria}</span>` : ''}
+    </div>
+    ${qProg > 0 ? `<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+      <span class="qtd-badge qtd-prog" style="padding:3px 10px">📋 Prog: ${qProg}</span>
+      <span class="qtd-badge qtd-feito" style="padding:3px 10px">✅ Feito: ${qFeit}</span>
+      ${qRest > 0 ? `<span class="qtd-badge qtd-rest" style="padding:3px 10px">⬇️ Falta: ${qRest}</span>` : ''}
+    </div>` : ''}
+    ${motivo ? `<div style="margin-top:6px;font-size:12px;color:#888">💬 Motivo: ${motivo}</div>` : ''}`;
+
+  document.getElementById('modal-sub-h') && (document.getElementById('modal-sub-h').textContent = `Transferindo "${itemNome}" de ${origem}`);
+  document.getElementById('modal-transferir-sub').textContent = `Transferindo: "${itemNome}" · de ${origem}`;
+  document.getElementById('modal-transferir').classList.remove('hidden');
+}
+
+function fecharModalTransferir() {
+  document.getElementById('modal-transferir').classList.add('hidden');
+}
+
+async function confirmarTransferencia() {
+  const pendId   = document.getElementById('transferir-pend-id').value;
+  const itemNome = document.getElementById('transferir-item-nome').value;
+  const origem   = document.getElementById('transferir-origem').value;
+  const destino  = document.getElementById('transferir-destino').value;
+  const obs      = document.getElementById('transferir-obs').value.trim();
+  const tarefaId = document.getElementById('transferir-tarefa-id').value;
+
+  if (!destino) { showToast('⚠️ Selecione o colaborador destino!'); return; }
+
+  const turno = document.getElementById('res-turno').value || 'dia';
+  const dia   = document.getElementById('res-dia').value   || 'segunda';
+  const data  = document.getElementById('res-data').value  || new Date().toISOString().slice(0, 10);
+
+  const btn = document.querySelector('#modal-transferir .modal-btn-confirm');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Transferindo...'; }
+
+  try {
+    /* 1. Busca dados da pendência original */
+    let pendOriginal = null;
+    try {
+      const snap = await DB.ref(`pendencias/${pendId}`).once('value');
+      pendOriginal = snap.val();
+    } catch(e) {}
+
+    const qProg = pendOriginal?.quantidade_programada || 0;
+    const qFeit = pendOriginal?.quantidade_produzida  || 0;
+    const qRest = Math.max(0, qProg - qFeit);
+
+    /* 2. Marca pendência original como vistoriada (transferida) */
+    await fbPatch('pendencias', pendId, {
+      vistoriado: 1,
+      transferido_para: destino,
+      obs_transferencia: obs || '',
+    });
+
+    /* 3. Cria nova pendência para o colaborador destino */
+    await fbPost('pendencias', {
+      data, turno, dia_semana: dia,
+      colaborador: destino,
+      item: itemNome + (obs ? ` (transf. de ${origem}: ${obs})` : ` (transferido de ${origem})`),
+      categoria: pendOriginal?.categoria || '',
+      quantidade_programada: qRest > 0 ? qRest : qProg,
+      quantidade_produzida: 0,
+      status: 'nao_finalizado',
+      motivo: obs || `Transferido de ${origem}`,
+      vistoriado: 0,
+      origem_transferencia: origem,
+      tarefa_id: tarefaId || '',
+    });
+
+    /* 4. Se existe tarefa original, cria cópia para o destino */
+    if (tarefaId) {
+      try {
+        const snapT = await DB.ref(`tarefas/${tarefaId}`).once('value');
+        const tarefaOriginal = snapT.val();
+        if (tarefaOriginal) {
+          await fbPost('tarefas', {
+            ...tarefaOriginal,
+            colaborador: destino,
+            item: tarefaOriginal.item + ` (transferido de ${origem})`,
+            origem_transferencia: origem,
+            transferida_em: data,
+          });
+        }
+      } catch(e) { console.warn('Erro ao copiar tarefa:', e); }
+    }
+
+    fecharModalTransferir();
+    showToast(`✅ Tarefa transferida para ${destino}!`);
+
+    /* Recarrega após 600ms */
+    setTimeout(() => loadResultados(), 600);
+
+  } catch(e) {
+    console.error(e);
+    showToast('❌ Erro ao transferir tarefa');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-exchange-alt"></i> Transferir'; }
+  }
+}
+
+/* ══════════════════════════════════════════
+   TAB 2 — HISTÓRICO
+══════════════════════════════════════════ */
+async function loadHistorico() {
+  const container = document.getElementById('historico-lista');
+  if (!container) return;
+  container.innerHTML = `<div class="loading-state"><div class="ls-icon">⏳</div><p style="margin-top:10px">Carregando...</p></div>`;
+
+  const turno  = document.getElementById('res-turno').value || 'dia';
+  const dia    = document.getElementById('res-dia').value   || 'segunda';
+  const data   = document.getElementById('res-data').value  || new Date().toISOString().slice(0, 10);
+  const colab  = (document.getElementById('hist-colaborador')||{}).value || '';
+  const status = (document.getElementById('hist-status')||{}).value || '';
+
+  try {
+    let registros = await fbGetAll('registros');
+    registros = registros.filter(r =>
+      r.data === data && r.turno === turno && r.dia_semana === dia
+    );
+    if (colab)  registros = registros.filter(r => r.colaborador_card === colab);
+    if (status) registros = registros.filter(r => r.status === status);
+
+    /* Popula select com colaboradores que têm registro nessa data/turno/dia */
+    const nomesHist = [...new Set(registros.map(r => r.colaborador_card).filter(Boolean))].sort();
+    const selH = document.getElementById('hist-colaborador');
+    if (selH) {
+      const cur = selH.value;
+      selH.innerHTML = '<option value="">Todos</option>' +
+        nomesHist.map(n => `<option value="${n}"${n===cur?' selected':''}>${COLLAB_EMOJI_MAP[n]||'👤'} ${n}</option>`).join('');
+    }
+
+    if (!registros.length) {
+      container.innerHTML = `<div class="empty-state"><div class="es-icon">📭</div><strong>Nenhum registro encontrado</strong><small>Tente alterar os filtros.</small></div>`;
+      return;
+    }
+
+    /* Estatísticas rápidas */
+    const tot = registros.length;
+    const ok  = registros.filter(r => r.status === 'total').length;
+    const par = registros.filter(r => r.status === 'parcial').length;
+    const nao = registros.filter(r => r.status === 'nao_finalizado').length;
+    const tx  = tot ? Math.round(ok/tot*100) : 0;
+    const txColor = tx === 100 ? '#16a34a' : tx >= 70 ? '#d97706' : '#dc2626';
+
+    /* Agrupa por colaborador */
+    const porColab = {};
+    registros.forEach(r => {
+      const n = r.colaborador_card || '?';
+      if (!porColab[n]) porColab[n] = [];
+      porColab[n].push(r);
+    });
+
+    const statusMap = {
+      total: '<span style="color:#16a34a;font-weight:900">✅ 100%</span>',
+      parcial: '<span style="color:#d97706;font-weight:900">⚠️ Parcial</span>',
+      nao_finalizado: '<span style="color:#dc2626;font-weight:900">❌ Não feito</span>',
+    };
+
+    container.innerHTML = `
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+        <div class="sum-card sc-blue" style="min-width:70px"><span class="sum-val">${tot}</span><span class="sum-lbl">Total</span></div>
+        <div class="sum-card sc-green"><span class="sum-val">${ok}</span><span class="sum-lbl">100%</span></div>
+        <div class="sum-card sc-orange"><span class="sum-val">${par}</span><span class="sum-lbl">Parcial</span></div>
+        <div class="sum-card sc-red"><span class="sum-val">${nao}</span><span class="sum-lbl">Não feito</span></div>
+        <div class="sum-card" style="border-top-color:${txColor}"><span class="sum-val" style="color:${txColor}">${tx}%</span><span class="sum-lbl">Conclusão</span></div>
+      </div>` +
+      Object.keys(porColab).sort().map(nome => {
+        const rows = porColab[nome];
+        const t2=rows.length, o2=rows.filter(r=>r.status==='total').length;
+        const p2=rows.filter(r=>r.status==='parcial').length, n2=rows.filter(r=>r.status==='nao_finalizado').length;
+        const tx2=t2?Math.round(o2/t2*100):0;
+        const em=COLLAB_EMOJI_MAP[nome]||_emojiFor(nome);
+        return `
+        <div class="collab-card" style="margin-bottom:12px">
+          <div class="collab-card-header" onclick="_toggleH('hist-${_slug(nome)}')">
+            <div class="collab-avatar">${em}</div>
+            <div class="collab-info">
+              <div class="collab-name">${nome}</div>
+              <div class="collab-meta">${rows.length} registro(s)</div>
+            </div>
+            <div class="pills-row" style="margin-right:8px">
+              ${o2>0?`<span class="pill pill-green">✅ ${o2}</span>`:''}
+              ${p2>0?`<span class="pill pill-orange">⚠️ ${p2}</span>`:''}
+              ${n2>0?`<span class="pill pill-red">❌ ${n2}</span>`:''}
+              <span class="pill" style="background:#ede9fe;color:#7c3aed">${tx2}%</span>
+            </div>
+            <i class="fas fa-chevron-down chevron" id="hist-${_slug(nome)}-chv"></i>
+          </div>
+          <div class="tasks-list" id="hist-${_slug(nome)}" style="padding-bottom:0">
+            ${rows.map(r => `
+            <div class="task-item">
+              <div class="task-icon">${r.status==='total'?'✅':r.status==='parcial'?'⚠️':'❌'}</div>
+              <div class="task-body">
+                <div class="task-name">${r.item||'—'}</div>
+                <div class="task-detail">
+                  ${r.categoria?`<strong>${r.categoria}</strong> · `:''}
+                  ${statusMap[r.status]||'⏳'}
+                  ${r.motivo?` · 💬 ${r.motivo}`:''}
+                </div>
+                <div class="task-qtds">
+                  ${r.quantidade_programada>0?`<span class="qtd-badge qtd-prog">📋 ${r.quantidade_programada}</span>`:''}
+                  ${r.quantidade_produzida>0?`<span class="qtd-badge qtd-feito">✅ ${r.quantidade_produzida}</span>`:''}
+                </div>
+              </div>
+            </div>`).join('')}
+          </div>
+        </div>`;
+      }).join('');
+
+  } catch(e) {
+    console.error(e);
+    container.innerHTML = `<div class="error-state">❌ Erro: ${e.message}</div>`;
+  }
+}
+
+function _toggleH(id) {
+  const tl  = document.getElementById(id);
+  const chv = document.getElementById(`${id}-chv`);
+  if (!tl) return;
+  tl.classList.toggle('open');
+  if (chv) chv.classList.toggle('open');
+}
+
+/* ══════════════════════════════════════════
+   TAB 3 — NOVA TAREFA
+══════════════════════════════════════════ */
+async function salvarNovaTarefa() {
+  const colaborador = document.getElementById('nt-colaborador').value.trim();
+  const turno       = document.getElementById('nt-turno').value;
+  const dia         = document.getElementById('nt-dia').value;
+  const categoria   = document.getElementById('nt-categoria').value.trim();
+  const item        = document.getElementById('nt-item').value.trim();
+  const qtd         = parseFloat(document.getElementById('nt-qtd').value) || 0;
+  const unidade     = document.getElementById('nt-unidade').value.trim();
+  const ordem       = parseInt(document.getElementById('nt-ordem').value) || 99;
+
+  if (!colaborador) { showToast('⚠️ Selecione o colaborador!'); return; }
+  if (!item)        { showToast('⚠️ Informe o nome do item!');  return; }
+
+  const btn = document.querySelector('#section-nova button');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando...'; }
+
+  try {
+    await fbPost('tarefas', {
+      colaborador, turno, dia_semana: dia,
+      categoria: categoria || 'Geral',
+      item, quantidade_padrao: qtd,
+      unidade: unidade || 'un',
+      ordem, ativa: 1,
+    });
+    showToast(`✅ Tarefa "${item}" criada para ${colaborador}!`);
+    /* Limpa formulário */
+    ['nt-colaborador','nt-categoria','nt-item','nt-qtd','nt-unidade'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    document.getElementById('nt-ordem').value = '99';
+  } catch(e) {
+    console.error(e);
+    showToast('❌ Erro ao salvar tarefa');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Salvar Tarefa'; }
+  }
+}
+
+/* ── UTILS ── */
 function _slug(str) {
   return (str || '').toLowerCase().normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '-');
 }
-
 function _emojiFor(nome) {
   const emojis = ['👨‍🍳','👩‍🍳','🧑‍🍳','😎','🙂','😊','🤩','👌','💪','🍔','⭐','🌟'];
   let s = 0;
@@ -519,6 +1076,8 @@ function showToast(msg) {
   clearTimeout(_toastT);
   _toastT = setTimeout(() => el.classList.remove('show'), 3000);
 }
+
+console.log('✅ resultados_v2.html carregado');
 </script>
 </body>
 </html>
