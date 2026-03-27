@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🍔 Just Burger — Seed de Tarefas</title>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',sans-serif;background:#0f0f0f;color:#f1f1f1;min-height:100vh;padding:24px 16px}
+    .wrap{max-width:700px;margin:0 auto}
+    h1{font-size:22px;font-weight:800;margin-bottom:4px;color:#facc15}
+    .sub{font-size:13px;color:#9ca3af;margin-bottom:24px}
+    .card{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:14px;padding:20px;margin-bottom:16px}
+    .card h2{font-size:14px;font-weight:700;color:#facc15;margin-bottom:12px}
+    .status-box{background:#111;border:1px solid #333;border-radius:10px;padding:14px;min-height:80px;font-size:12px;font-family:monospace;color:#86efac;white-space:pre-wrap;overflow-y:auto;max-height:320px}
+    .btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s;margin-top:12px}
+    .btn-seed{background:#facc15;color:#000}
+    .btn-seed:hover{background:#eab308}
+    .btn-seed:disabled{background:#555;color:#888;cursor:not-allowed}
+    .btn-clear{background:#ef4444;color:#fff;margin-top:8px}
+    .btn-clear:disabled{background:#555;color:#888;cursor:not-allowed}
+    .progress{background:#222;border-radius:8px;height:10px;margin-top:12px;overflow:hidden}
+    .progress-fill{height:100%;background:linear-gradient(90deg,#facc15,#f97316);border-radius:8px;transition:width .3s;width:0%}
+    .count{font-size:12px;color:#9ca3af;text-align:center;margin-top:6px}
+    .warn{background:#451a03;border:1px solid #92400e;border-radius:8px;padding:10px 14px;font-size:12px;color:#fcd34d;margin-bottom:16px}
+    .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#292524;color:#e7e5e4;margin:2px}
+    .section-title{font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px}
+    .collab-list{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🍔 Just Burger — Seed de Tarefas</h1>
+  <p class="sub">Popula o Firebase Realtime Database com todas as tarefas padrão da produção.</p>
+  <div class="warn">⚠️ <strong>USE APENAS UMA VEZ!</strong> Se já existirem tarefas, clique em <strong>"Limpar Tarefas"</strong> antes de rodar o seed.</div>
+  <div class="card">
+    <h2>🚀 Executar Seed</h2>
+    <div class="progress"><div class="progress-fill" id="prog-fill"></div></div>
+    <div class="count" id="count-txt">Aguardando...</div>
+    <div class="status-box" id="log">Clique em "Iniciar Seed" para começar...
+</div>
+    <button class="btn btn-seed" id="btn-seed" onclick="runSeed()">🚀 Iniciar Seed — Cadastrar Todas as Tarefas</button>
+    <button class="btn btn-clear" id="btn-clear" onclick="clearTarefas()">🗑️ Limpar Tarefas (apagar tudo antes de novo seed)</button>
+  </div>
+</div>
+<script>
+const firebaseConfig = {
+  apiKey:"AIzaSyDt1yzxGGzuT2cSdten1bFuXG7yeDQ90Po",
+  authDomain:"justburger-producao-e9b27.firebaseapp.com",
+  databaseURL:"https://justburger-producao-e9b27-default-rtdb.firebaseio.com",
+  projectId:"justburger-producao-e9b27",
+  storageBucket:"justburger-producao-e9b27.firebasestorage.app",
+  messagingSenderId:"387070713910",
+  appId:"1:387070713910:web:f156d3247a1715a58ab897"
+};
+if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+function log(msg){const el=document.getElementById('log');el.textContent+=msg+'\n';el.scrollTop=el.scrollHeight;}
+function setProgress(done,total){const pct=total?Math.round((done/total)*100):0;document.getElementById('prog-fill').style.width=pct+'%';document.getElementById('count-txt').textContent=`${done} / ${total} tarefas (${pct}%)`;}
+const DIAS=["segunda","terca","quarta","quinta","sexta","sabado","domingo"];
+function exp(dias,colab,turno,arr){const r=[];dias.forEach(d=>arr.forEach(t=>r.push({colaborador:colab,turno,dia_semana:d,...t})));return r;}
+const TODAS=[
+  ...exp(DIAS,'ALAN RICARDO','dia',[
+    {categoria:'Ilha quente / Chapeiro',item:'Hambúrguer 90g',quantidade_padrao:80,unidade:'un',ordem:1},
+    {categoria:'Ilha quente / Chapeiro',item:'Hambúrguer 120g',quantidade_padrao:50,unidade:'un',ordem:2},
+    {categoria:'Ilha quente / Chapeiro',item:'Frango grelhado',quantidade_padrao:30,unidade:'un',ordem:3},
+    {categoria:'Ilha quente / Chapeiro',item:'Bacon fatiado',quantidade_padrao:20,unidade:'un',ordem:4},
+    {categoria:'Ilha quente / Chapeiro',item:'Queijo grelhado',quantidade_padrao:30,unidade:'un',ordem:5},
+    {categoria:'Limpeza',item:'Limpar chapa',quantidade_padrao:0,unidade:'checklist',ordem:6},
+    {categoria:'Limpeza',item:'Organizar estação',quantidade_padrao:0,unidade:'checklist',ordem:7},
+  ]),
+  ...exp(['segunda','terca','quarta','quinta','sexta','domingo'],'SAMUEL','dia',[
+    {categoria:'Ilha fria / Montador',item:'Montar hambúrgueres padrão',quantidade_padrao:60,unidade:'un',ordem:1},
+    {categoria:'Ilha fria / Montador',item:'Montar hambúrgueres duplos',quantidade_padrao:30,unidade:'un',ordem:2},
+    {categoria:'Ilha fria / Montador',item:'Preparar alface',quantidade_padrao:2,unidade:'kg',ordem:3},
+    {categoria:'Ilha fria / Montador',item:'Preparar tomate fatiado',quantidade_padrao:3,unidade:'kg',ordem:4},
+    {categoria:'Ilha fria / Montador',item:'Preparar cebola fatiada',quantidade_padrao:2,unidade:'kg',ordem:5},
+    {categoria:'Limpeza',item:'Limpar estação de montagem',quantidade_padrao:0,unidade:'checklist',ordem:6},
+  ]),
+  ...exp(DIAS,'DINA','dia',[
+    {categoria:'Supervisão',item:'Conferir abertura da cozinha',quantidade_padrao:0,unidade:'checklist',ordem:1},
+    {categoria:'Supervisão',item:'Verificar temperatura das câmaras',quantidade_padrao:0,unidade:'checklist',ordem:2},
+    {categoria:'Supervisão',item:'Checklist de higiene e EPI',quantidade_padrao:0,unidade:'checklist',ordem:3},
+    {categoria:'Supervisão',item:'Conferir estoque de insumos críticos',quantidade_padrao:0,unidade:'checklist',ordem:4},
+    {categoria:'Supervisão',item:'Registrar ocorrências do turno',quantidade_padrao:0,unidade:'checklist',ordem:5},
+    {categoria:'Supervisão',item:'Encerramento e passagem de turno',quantidade_padrao:0,unidade:'checklist',ordem:6},
+  ]),
+  ...exp(['segunda','terca','quarta','quinta','sexta','domingo'],'LOHAINE','dia',[
+    {categoria:'Fritadeira',item:'Batata frita palito',quantidade_padrao:15,unidade:'kg',ordem:1},
+    {categoria:'Fritadeira',item:'Onion rings',quantidade_padrao:5,unidade:'kg',ordem:2},
+    {categoria:'Fritadeira',item:'Frango empanado',quantidade_padrao:8,unidade:'kg',ordem:3},
+    {categoria:'Fritadeira',item:'Nuggets',quantidade_padrao:5,unidade:'kg',ordem:4},
+    {categoria:'Fritadeira',item:'Trocar óleo da fritadeira',quantidade_padrao:0,unidade:'checklist',ordem:5},
+    {categoria:'Limpeza',item:'Limpar fritadeira',quantidade_padrao:0,unidade:'checklist',ordem:6},
+  ]),
+  ...exp(['sabado'],'RHUAN','dia',[
+    {categoria:'Fritadeira',item:'Batata frita palito',quantidade_padrao:18,unidade:'kg',ordem:1},
+    {categoria:'Fritadeira',item:'Onion rings',quantidade_padrao:6,unidade:'kg',ordem:2},
+    {categoria:'Fritadeira',item:'Frango empanado',quantidade_padrao:10,unidade:'kg',ordem:3},
+    {categoria:'Fritadeira',item:'Nuggets',quantidade_padrao:6,unidade:'kg',ordem:4},
+    {categoria:'Limpeza',item:'Limpar fritadeira',quantidade_padrao:0,unidade:'checklist',ordem:5},
+  ]),
+  ...exp(DIAS,'GABRIEL KHALYL','dia',[
+    {categoria:'Hambúrguer / Logística',item:'Modelar hambúrguer 90g',quantidade_padrao:100,unidade:'un',ordem:1},
+    {categoria:'Hambúrguer / Logística',item:'Modelar hambúrguer 120g',quantidade_padrao:60,unidade:'un',ordem:2},
+    {categoria:'Hambúrguer / Logística',item:'Separar carnes para descongelar',quantidade_padrao:10,unidade:'kg',ordem:3},
+    {categoria:'Hambúrguer / Logística',item:'Temperar carne moída',quantidade_padrao:8,unidade:'kg',ordem:4},
+    {categoria:'Hambúrguer / Logística',item:'Organizar câmara de carnes',quantidade_padrao:0,unidade:'checklist',ordem:5},
+    {categoria:'Limpeza',item:'Limpar bancada de modelagem',quantidade_padrao:0,unidade:'checklist',ordem:6},
+  ]),
+  ...exp(DIAS,'JOÃO','dia',[
+    {categoria:'Pré-preparo',item:'Descascar e cortar batata',quantidade_padrao:20,unidade:'kg',ordem:1},
+    {categoria:'Pré-preparo',item:'Preparar molho especial',quantidade_padrao:5,unidade:'kg',ordem:2},
+    {categoria:'Pré-preparo',item:'Preparar maionese caseira',quantidade_padrao:3,unidade:'kg',ordem:3},
+    {categoria:'Pré-preparo',item:'Preparar cheddar cremoso',quantidade_padrao:4,unidade:'kg',ordem:4},
+    {categoria:'Pré-preparo',item:'Preparar farofa',quantidade_padrao:2,unidade:'kg',ordem:5},
+    {categoria:'Pré-preparo',item:'Preparar bacon picado',quantidade_padrao:3,unidade:'kg',ordem:6},
+    {categoria:'Limpeza',item:'Limpar bancada e utensílios',quantidade_padrao:0,unidade:'checklist',ordem:7},
+  ]),
+  ...exp(DIAS,'PABLO','dia',[
+    {categoria:'Pré-preparo',item:'Descascar cebola e alho',quantidade_padrao:5,unidade:'kg',ordem:1},
+    {categoria:'Pré-preparo',item:'Fatiar salada verde',quantidade_padrao:3,unidade:'kg',ordem:2},
+    {categoria:'Pré-preparo',item:'Separar e pesar sachês',quantidade_padrao:50,unidade:'un',ordem:3},
+    {categoria:'Pré-preparo',item:'Abastecer estação de montagem',quantidade_padrao:0,unidade:'checklist',ordem:4},
+    {categoria:'Pré-preparo',item:'Organizar geladeira de serviço',quantidade_padrao:0,unidade:'checklist',ordem:5},
+    {categoria:'Limpeza',item:'Varrer e limpar área de trabalho',quantidade_padrao:0,unidade:'checklist',ordem:6},
+  ]),
+  ...exp(['segunda','terca','quarta','quinta','sexta'],'MATEUS','dia',[
+    {categoria:'Sachês',item:'Sachê de ketchup',quantidade_padrao:200,unidade:'un',ordem:1},
+    {categoria:'Sachês',item:'Sachê de mostarda',quantidade_padrao:150,unidade:'un',ordem:2},
+    {categoria:'Sachês',item:'Sachê de maionese',quantidade_padrao:200,unidade:'un',ordem:3},
+    {categoria:'Sachês',item:'Sachê de catchup picante',quantidade_padrao:100,unidade:'un',ordem:4},
+    {categoria:'Sachês',item:'Organizar estoque de sachês',quantidade_padrao:0,unidade:'checklist',ordem:5},
+    {categoria:'Produção',item:'Empacotar batata frita',quantidade_padrao:30,unidade:'un',ordem:6},
+    {categoria:'Produção',item:'Empacotar nuggets',quantidade_padrao:20,unidade:'un',ordem:7},
+    {categoria:'Limpeza',item:'Limpar área de sachês',quantidade_padrao:0,unidade:'checklist',ordem:8},
+  ]),
+  ...exp(['sabado'],'GABRIEL LEITE','dia',[
+    {categoria:'Ilha fria / Montador',item:'Montar hambúrgueres padrão',quantidade_padrao:80,unidade:'un',ordem:1},
+    {categoria:'Ilha fria / Montador',item:'Montar hambúrgueres duplos',quantidade_padrao:40,unidade:'un',ordem:2},
+    {categoria:'Ilha fria / Montador',item:'Preparar alface',quantidade_padrao:2,unidade:'kg',ordem:3},
+    {categoria:'Ilha fria / Montador',item:'Preparar tomate fatiado',quantidade_padrao:3,unidade:'kg',ordem:4},
+    {categoria:'Ilha fria / Montador',item:'Preparar cebola fatiada',quantidade_padrao:2,unidade:'kg',ordem:5},
+    {categoria:'Limpeza',item:'Limpar estação de montagem',quantidade_padrao:0,unidade:'checklist',ordem:6},
+  ]),
+  ...exp(DIAS,'SANDRO','noite',[
+    {categoria:'Supervisão',item:'Abertura do turno noite',quantidade_padrao:0,unidade:'checklist',ordem:1},
+    {categoria:'Supervisão',item:'Verificar estoque para o turno',quantidade_padrao:0,unidade:'checklist',ordem:2},
+    {categoria:'Supervisão',item:'Checklist de higiene equipe noite',quantidade_padrao:0,unidade:'checklist',ordem:3},
+    {categoria:'Supervisão',item:'Registrar ocorrências noite',quantidade_padrao:0,unidade:'checklist',ordem:4},
+    {categoria:'Supervisão',item:'Encerramento e limpeza geral',quantidade_padrao:0,unidade:'checklist',ordem:5},
+  ]),
+  ...exp(DIAS,'NOITE - CHAPEIRO','noite',[
+    {categoria:'Ilha quente / Chapeiro',item:'Hambúrguer 90g',quantidade_padrao:60,unidade:'un',ordem:1},
+    {categoria:'Ilha quente / Chapeiro',item:'Hambúrguer 120g',quantidade_padrao:40,unidade:'un',ordem:2},
+    {categoria:'Ilha quente / Chapeiro',item:'Frango grelhado',quantidade_padrao:20,unidade:'un',ordem:3},
+    {categoria:'Ilha quente / Chapeiro',item:'Bacon fatiado',quantidade_padrao:15,unidade:'un',ordem:4},
+    {categoria:'Limpeza',item:'Limpar chapa ao final',quantidade_padrao:0,unidade:'checklist',ordem:5},
+  ]),
+  ...exp(DIAS,'NOITE - MONTADOR','noite',[
+    {categoria:'Ilha fria / Montador',item:'Montar hambúrgueres padrão',quantidade_padrao:50,unidade:'un',ordem:1},
+    {categoria:'Ilha fria / Montador',item:'Montar hambúrgueres duplos',quantidade_padrao:25,unidade:'un',ordem:2},
+    {categoria:'Ilha fria / Montador',item:'Repor alface e tomate',quantidade_padrao:0,unidade:'checklist',ordem:3},
+    {categoria:'Limpeza',item:'Limpar estação ao final',quantidade_padrao:0,unidade:'checklist',ordem:4},
+  ]),
+  ...exp(DIAS,'NOITE - FRITADEIRA','noite',[
+    {categoria:'Fritadeira',item:'Batata frita palito',quantidade_padrao:12,unidade:'kg',ordem:1},
+    {categoria:'Fritadeira',item:'Frango empanado',quantidade_padrao:6,unidade:'kg',ordem:2},
+    {categoria:'Fritadeira',item:'Nuggets',quantidade_padrao:4,unidade:'kg',ordem:3},
+    {categoria:'Limpeza',item:'Limpar fritadeira ao final',quantidade_padrao:0,unidade:'checklist',ordem:4},
+  ]),
+];
+async function runSeed(){
+  const btn=document.getElementById('btn-seed');
+  const btnC=document.getElementById('btn-clear');
+  btn.disabled=true;btnC.disabled=true;
+  btn.textContent='⏳ Cadastrando...';
+  log('🚀 Iniciando seed com '+TODAS.length+' tarefas...');
+  log('────────────────────────');
+  let ok=0,err=0;
+  for(let i=0;i<TODAS.length;i++){
+    const t=TODAS[i];
+    try{
+      const ref=db.ref('tarefas').push();
+      await ref.set({...t,ativo:true,created_at:Date.now(),updated_at:Date.now()});
+      ok++;
+      if(ok%10===0||ok===TODAS.length) log('✅ '+ok+'/'+TODAS.length+' — '+t.colaborador+' | '+t.dia_semana+' | '+t.item);
+    }catch(e){err++;log('❌ ERRO: '+t.item+' — '+e.message);}
+    setProgress(i+1,TODAS.length);
+    if((i+1)%20===0) await new Promise(r=>setTimeout(r,300));
+  }
+  log('────────────────────────');
+  log('🎉 CONCLUÍDO! '+ok+' tarefas cadastradas.'+(err>0?' '+err+' erros.':' Sem erros!'));
+  log('✅ Volte ao app: https://maikon-just.github.io/just-burger-producao/');
+  btn.textContent='✅ Seed Concluído!';
+  btn.style.background='#22c55e';
+  btnC.disabled=false;
+}
+async function clearTarefas(){
+  if(!confirm('⚠️ Isso vai APAGAR TODAS as tarefas do Firebase.\n\nTem certeza?')) return;
+  const btn=document.getElementById('btn-clear');
+  const btnS=document.getElementById('btn-seed');
+  btn.disabled=true;btnS.disabled=true;
+  btn.textContent='⏳ Limpando...';
+  log('🗑️ Limpando todas as tarefas...');
+  try{
+    await db.ref('tarefas').remove();
+    log('✅ Todas as tarefas removidas!');
+    log('Agora clique em "Iniciar Seed" para recadastrar.');
+    document.getElementById('prog-fill').style.width='0%';
+    document.getElementById('count-txt').textContent='Banco limpo. Pronto para novo seed.';
+  }catch(e){log('❌ Erro: '+e.message);}
+  btn.disabled=false;btnS.disabled=false;
+  btn.textContent='🗑️ Limpar Tarefas';
+}
+</script>
+</body>
+</html>
