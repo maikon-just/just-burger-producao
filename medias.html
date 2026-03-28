@@ -3,1398 +3,1028 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Just Burger 🍔 Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <title>Just Burger — Médias / Quantidades Padrão</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    :root {
-      --black:#1a1d2e; --white:#fff; --gray-50:#f8f9fc; --gray-100:#f0f2f8;
-      --gray-200:#e2e6f0; --gray-400:#9ca3af; --gray-600:#4b5563;
-      --yellow:#e6a800; --yellow-light:#fff8e1;
-      --green:#16a34a;  --green-light:#dcfce7;
-      --red:#dc2626;    --red-light:#fee2e2;
-      --blue:#2563eb;   --blue-light:#dbeafe;
-      --orange:#ea580c; --orange-light:#ffedd5;
-      --purple:#7c3aed; --purple-light:#ede9fe;
-      --teal:#0d9488;   --teal-light:#ccfbf1;
-      --gold:#f59e0b;   --gold-light:#fef3c7;
-      --font:'Nunito',sans-serif;
-      --radius:14px; --radius-sm:8px; --radius-full:999px;
-      --shadow:0 2px 12px rgba(0,0,0,.08);
-      --shadow-lg:0 8px 32px rgba(0,0,0,.14);
+    :root{
+      --bg:#f4f6fa;--card:#ffffff;--card2:#f0f2f8;--border:#dde1ed;
+      --yellow:#e6a800;--yd:#c98f00;--green:#16a34a;--orange:#ea6f00;
+      --red:#dc2626;--blue:#2563eb;--text:#1a1d2e;--muted:#6b7280;
+      --r:12px;--sh:0 2px 12px rgba(0,0,0,0.07);
     }
-    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-    html, body { font-family:var(--font); background:var(--gray-50); color:var(--black); font-size:15px; }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
-    /* ── TOP BAR ── */
-    .top-bar {
-      position:sticky; top:0; z-index:100;
-      background:var(--black); color:#fff;
-      display:flex; align-items:center; gap:12px;
-      padding:12px 20px;
-      box-shadow:0 2px 10px rgba(0,0,0,.25);
+    .top-bar{
+      background:#fff;border-bottom:3px solid var(--yellow);
+      padding:13px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+      position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,0.07);
     }
-    .top-bar a.back-btn {
-      display:flex; align-items:center; justify-content:center;
-      width:34px; height:34px; border-radius:50%;
-      background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2);
-      color:#fff; text-decoration:none; font-size:15px; flex-shrink:0;
-      transition:.2s;
+    .logo{font-size:19px;font-weight:800;color:var(--yellow)}
+    .sub{font-size:12px;color:var(--muted);flex:1}
+    .top-bar a{
+      background:var(--card2);border:1px solid var(--border);color:var(--text);
+      padding:7px 13px;border-radius:8px;font-size:12px;font-family:inherit;
+      display:flex;align-items:center;gap:5px;transition:all .15s;text-decoration:none;
     }
-    .top-bar a.back-btn:hover { background:rgba(255,255,255,.22); }
-    .top-bar-brand { flex:1; }
-    .top-bar-brand .logo { font-size:17px; font-weight:900; }
-    .top-bar-brand .sub  { font-size:11px; color:rgba(255,255,255,.6); margin-top:1px; }
-    .top-bar-links { display:flex; gap:8px; }
-    .top-bar-links a {
-      font-size:12px; font-weight:700; color:rgba(255,255,255,.75);
-      text-decoration:none; padding:6px 12px; border-radius:var(--radius-full);
-      background:rgba(255,255,255,.08); transition:.2s;
-    }
-    .top-bar-links a:hover { background:rgba(255,255,255,.18); color:#fff; }
+    .top-bar a:hover{background:var(--border)}
 
-    /* ── FILTRO ── */
-    .filter-panel {
-      background:#fff; border-bottom:1px solid var(--gray-200);
-      padding:16px 20px; display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end;
+    .filter-bar{
+      background:#fff;border-bottom:1px solid var(--border);
+      padding:10px 16px;display:flex;gap:8px;flex-wrap:nowrap;align-items:center;
+      box-shadow:0 2px 8px rgba(0,0,0,0.07);
+      position:sticky;top:var(--tb-h,56px);z-index:90;
+      overflow-x:auto;-webkit-overflow-scrolling:touch;
     }
-    .filter-group { display:flex; flex-direction:column; gap:5px; }
-    .filter-label { font-size:11px; font-weight:800; color:var(--gray-600); text-transform:uppercase; letter-spacing:.5px; }
-    .filter-input {
-      height:38px; padding:0 12px; border:2px solid var(--gray-200); border-radius:var(--radius-sm);
-      font-family:var(--font); font-size:13px; color:var(--black); background:#fff; outline:none;
-      transition:.2s;
+    .filter-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+    .toggle-group,.dia-btns{display:flex;gap:4px;flex-wrap:nowrap;flex-shrink:0}
+    .tgl{
+      padding:6px 13px;border:1.5px solid var(--border);background:#fff;
+      color:var(--muted);border-radius:8px;cursor:pointer;font-size:12px;
+      font-weight:700;font-family:inherit;transition:all .15s;
     }
-    .filter-input:focus { border-color:var(--yellow); }
-    .btn-buscar {
-      height:38px; padding:0 22px; background:var(--yellow); color:#fff;
-      border:none; border-radius:var(--radius-sm); font-family:var(--font);
-      font-size:13px; font-weight:800; cursor:pointer; transition:.2s;
-      display:flex; align-items:center; gap:7px;
+    .tgl.active{background:var(--yellow);border-color:var(--yellow);color:#fff}
+    .dbtn{
+      padding:5px 10px;border:1.5px solid var(--border);background:#fff;
+      color:var(--muted);border-radius:7px;cursor:pointer;font-size:12px;
+      font-weight:700;font-family:inherit;transition:all .15s;
     }
-    .btn-buscar:hover { background:#cc9500; }
-    .btn-buscar:disabled { opacity:.5; cursor:not-allowed; }
-    .tgl-grp { display:flex; gap:4px; }
-    .tgl {
-      height:38px; padding:0 14px; border:2px solid var(--gray-200); border-radius:var(--radius-sm);
-      font-family:var(--font); font-size:12px; font-weight:700; cursor:pointer; background:#fff;
-      color:var(--gray-600); transition:.2s;
+    .dbtn.active{background:var(--yellow);border-color:var(--yellow);color:#fff}
+    .colab-sel{
+      background:#fff;border:1.5px solid var(--border);color:var(--text);
+      padding:7px 11px;border-radius:8px;font-size:13px;font-family:inherit;
+      outline:none;cursor:pointer;flex:1;min-width:150px;max-width:220px;
     }
-    .tgl.active { background:var(--black); border-color:var(--black); color:#fff; }
-    .tgl.active.dia   { background:var(--yellow); border-color:var(--yellow); }
-    .tgl.active.noite { background:#1e293b; border-color:#1e293b; }
+    .colab-sel:focus{border-color:var(--yellow)}
+    .btn-refresh{
+      background:var(--yellow);color:#fff;border:none;padding:7px 14px;
+      border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;
+      font-family:inherit;display:flex;align-items:center;gap:5px;
+    }
+    .btn-refresh:hover{background:var(--yd)}
+    .btn-nova{
+      background:var(--blue);color:#fff;border:none;padding:7px 14px;
+      border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;
+      font-family:inherit;display:flex;align-items:center;gap:5px;margin-left:auto;
+    }
+    .btn-nova:hover{background:#1d4ed8}
 
-    /* ── LOADING STATE ── */
-    #state-box {
-      display:none; flex-direction:column; align-items:center; justify-content:center;
-      gap:12px; padding:60px 20px; text-align:center;
+    .count-bar{
+      background:#fff;border-bottom:1px solid var(--border);
+      padding:7px 20px;font-size:12px;color:var(--muted);display:flex;
+      align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+      position:sticky;top:var(--fb-bottom,106px);z-index:89;
+      box-shadow:0 2px 6px rgba(0,0,0,0.05);
     }
-    #state-box .state-icon { font-size:52px; }
-    #state-box p { font-size:14px; font-weight:700; color:var(--gray-400); }
-    #state-box.show { display:flex; }
+    .count-bar strong{color:var(--text)}
+    .btn-save-all{
+      background:var(--green);color:#fff;border:none;padding:6px 14px;
+      border-radius:7px;font-weight:700;font-size:12px;cursor:pointer;
+      font-family:inherit;display:flex;align-items:center;gap:5px;
+    }
+    .btn-save-all:hover{background:#15803d}
 
-    /* ── PERÍODO INFO ── */
-    .periodo-bar {
-      display:none; align-items:center; justify-content:space-between;
-      background:var(--black); color:#fff;
-      padding:10px 20px; font-size:12px; font-weight:700; flex-wrap:wrap; gap:8px;
-    }
-    .periodo-bar.show { display:flex; }
-    .periodo-bar span { opacity:.7; }
-    .periodo-bar strong { opacity:1; }
+    .main{max-width:980px;margin:0 auto;padding:18px 16px 60px}
 
-    /* ── KPI CARDS ── */
-    .kpi-grid {
-      display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
-      gap:14px; padding:20px;
+    .collab-block{
+      background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+      margin-bottom:14px;overflow:hidden;box-shadow:var(--sh);
     }
-    .kpi-card {
-      background:#fff; border-radius:var(--radius); padding:18px 16px;
-      box-shadow:var(--shadow); border-left:4px solid var(--gray-200);
-      display:flex; flex-direction:column; gap:4px;
+    .collab-hdr{
+      background:linear-gradient(135deg,#fffbea,#fff8d6);
+      padding:11px 16px;display:flex;align-items:center;gap:10px;
+      border-bottom:1px solid #f0e090;
     }
-    .kpi-card.blue   { border-color:var(--blue); }
-    .kpi-card.green  { border-color:var(--green); }
-    .kpi-card.red    { border-color:var(--red); }
-    .kpi-card.orange { border-color:var(--orange); }
-    .kpi-card.purple { border-color:var(--purple); }
-    .kpi-card.gold   { border-color:var(--gold); }
-    .kpi-card.teal   { border-color:var(--teal); }
-    .kpi-icon { font-size:22px; }
-    .kpi-val  { font-size:28px; font-weight:900; line-height:1; }
-    .kpi-lbl  { font-size:11px; font-weight:700; color:var(--gray-600); }
-    .kpi-sub  { font-size:10px; color:var(--gray-400); margin-top:2px; }
+    .collab-avatar{
+      width:36px;height:36px;border-radius:50%;
+      background:linear-gradient(135deg,var(--yellow),var(--orange));
+      display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;
+    }
+    .collab-hdr-name{font-size:14px;font-weight:800;flex:1;color:var(--text)}
+    .collab-hdr-cnt{font-size:11px;color:var(--muted)}
 
-    /* ── SEÇÃO ── */
-    .section { padding:0 20px 24px; }
-    .section-hdr {
-      display:flex; align-items:center; gap:10px;
-      margin-bottom:16px; padding-top:4px;
+    .med-table{width:100%;border-collapse:collapse}
+    .med-table thead th{
+      background:#f8f9fc;padding:8px 12px;font-size:11px;font-weight:700;
+      color:var(--muted);text-transform:uppercase;letter-spacing:.4px;
+      text-align:left;border-bottom:1px solid var(--border);
     }
-    .section-hdr h2 { font-size:16px; font-weight:900; }
-    .section-hdr .badge {
-      font-size:10px; font-weight:800; padding:3px 9px;
-      border-radius:var(--radius-full); background:var(--gray-100); color:var(--gray-600);
+    .med-table tbody tr:hover{background:#fafbff}
+    .med-table td{
+      padding:9px 12px;border-bottom:1px solid #eef0f6;
+      vertical-align:middle;font-size:13px;
     }
-    .section-hdr .line { flex:1; height:1px; background:var(--gray-200); }
+    .med-table tr:last-child td{border-bottom:none}
+    .cat-chip{
+      display:inline-block;padding:2px 8px;border-radius:6px;
+      background:rgba(37,99,235,0.1);color:var(--blue);
+      font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;
+    }
+    .item-name{font-weight:600;color:var(--text)}
 
-    /* ── CHART CONTAINER ── */
-    .chart-card {
-      background:#fff; border-radius:var(--radius); padding:20px;
-      box-shadow:var(--shadow); margin-bottom:16px;
+    .qty-ctrl{display:flex;align-items:center;gap:5px;justify-content:center}
+    .qty-btn{
+      width:28px;height:28px;border:1.5px solid var(--border);background:#fff;
+      color:var(--text);border-radius:6px;cursor:pointer;font-size:14px;font-weight:700;
+      display:flex;align-items:center;justify-content:center;transition:all .12s;
     }
-    .chart-card h3 { font-size:13px; font-weight:800; color:var(--gray-600); margin-bottom:14px; text-transform:uppercase; letter-spacing:.4px; }
-    .chart-wrap { position:relative; height:320px; }
-    .chart-wrap.tall { height:420px; }
-    .chart-wrap.short { height:220px; }
-    .charts-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-    @media(max-width:700px) { .charts-row { grid-template-columns:1fr; } }
+    .qty-btn:hover{background:var(--border)}
+    .qty-btn.minus:hover{background:#fee2e2;border-color:var(--red);color:var(--red)}
+    .qty-btn.plus:hover{background:#dcfce7;border-color:var(--green);color:var(--green)}
+    .qty-inp{
+      width:56px;text-align:center;background:#fff;border:1.5px solid var(--border);
+      color:var(--text);padding:4px;border-radius:6px;font-size:13px;font-weight:700;
+      font-family:inherit;outline:none;
+    }
+    .qty-inp:focus{border-color:var(--yellow)}
+    .unit-lbl{font-size:11px;color:var(--muted)}
 
-    /* ── RANKING / TABELA ── */
-    .ranking-list { display:flex; flex-direction:column; gap:10px; }
-    .ranking-item {
-      display:flex; align-items:center; gap:12px;
-      background:#fff; border-radius:var(--radius-sm); padding:12px 16px;
-      box-shadow:var(--shadow);
+    /* botões de ação por linha */
+    .row-actions{display:flex;gap:5px;justify-content:center;flex-wrap:nowrap}
+    .btn-save-row{
+      background:none;border:1.5px solid var(--green);color:var(--green);
+      border-radius:6px;padding:4px 9px;font-size:11px;font-weight:700;
+      cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:3px;
+      white-space:nowrap;transition:all .15s;
     }
-    .rank-pos {
-      width:28px; height:28px; border-radius:50%;
-      display:flex; align-items:center; justify-content:center;
-      font-size:13px; font-weight:900; flex-shrink:0;
+    .btn-save-row:hover{background:var(--green);color:#fff}
+    .btn-save-row.saved{background:#dcfce7;border-color:var(--green)}
+    .btn-trocar{
+      background:none;border:1.5px solid var(--blue);color:var(--blue);
+      border-radius:6px;padding:4px 9px;font-size:11px;font-weight:700;
+      cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:3px;
+      white-space:nowrap;transition:all .15s;
     }
-    .rank-pos.gold   { background:#fef3c7; color:#92400e; }
-    .rank-pos.silver { background:#f1f5f9; color:#475569; }
-    .rank-pos.bronze { background:#fef9c3; color:#78350f; }
-    .rank-pos.other  { background:var(--gray-100); color:var(--gray-600); }
-    .rank-emoji { font-size:22px; flex-shrink:0; }
-    .rank-info  { flex:1; min-width:0; }
-    .rank-name  { font-size:13px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .rank-sub   { font-size:11px; color:var(--gray-400); }
-    .rank-score { text-align:right; flex-shrink:0; }
-    .rank-score .score-val { font-size:20px; font-weight:900; color:var(--black); }
-    .rank-score .score-lbl { font-size:10px; color:var(--gray-400); font-weight:700; }
-    .rank-bar-wrap { width:100%; height:5px; background:var(--gray-100); border-radius:3px; margin-top:6px; }
-    .rank-bar      { height:5px; border-radius:3px; background:var(--green); transition:.6s; }
+    .btn-trocar:hover{background:var(--blue);color:#fff}
+    .btn-del{
+      background:none;border:1.5px solid var(--red);color:var(--red);
+      border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;
+      cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:3px;
+      white-space:nowrap;transition:all .15s;
+    }
+    .btn-del:hover{background:var(--red);color:#fff}
 
-    /* ── TROFÉU / PREMIAÇÃO ── */
-    .award-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; }
-    .award-card {
-      background:#fff; border-radius:var(--radius); padding:20px;
-      box-shadow:var(--shadow); text-align:center;
-      border-top:4px solid var(--gray-200);
-      transition:.2s;
-    }
-    .award-card:hover { box-shadow:var(--shadow-lg); transform:translateY(-2px); }
-    .award-card.gold   { border-color:var(--gold); }
-    .award-card.silver { border-color:#94a3b8; }
-    .award-card.bronze { border-color:#b45309; }
-    .award-card.green  { border-color:var(--green); }
-    .award-card.blue   { border-color:var(--blue); }
-    .award-card.purple { border-color:var(--purple); }
-    .award-trophy { font-size:40px; margin-bottom:8px; }
-    .award-title  { font-size:12px; font-weight:900; color:var(--gray-600); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
-    .award-winner { font-size:16px; font-weight:900; color:var(--black); margin-bottom:4px; }
-    .award-stat   { font-size:12px; color:var(--gray-400); font-weight:700; }
-    .award-desc   { font-size:11px; color:var(--gray-600); margin-top:8px; padding-top:8px; border-top:1px solid var(--gray-100); }
-    .award-empty  { font-size:12px; color:var(--gray-400); font-style:italic; }
+    .state-box{text-align:center;padding:56px 20px;color:var(--muted)}
+    .state-box i{font-size:38px;margin-bottom:12px;display:block;opacity:.35}
+    .state-box.loading i{animation:spin 1s linear infinite;opacity:.6}
+    @keyframes spin{to{transform:rotate(360deg)}}
 
-    /* ── MOTIVO TABLE ── */
-    .motivo-table { width:100%; border-collapse:collapse; font-size:13px; }
-    .motivo-table th {
-      text-align:left; padding:8px 12px; font-size:11px; font-weight:800;
-      color:var(--gray-600); text-transform:uppercase; border-bottom:2px solid var(--gray-200);
+    /* ── MODAL ── */
+    .modal-overlay{
+      position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;
+      display:flex;align-items:center;justify-content:center;padding:16px;
     }
-    .motivo-table td { padding:10px 12px; border-bottom:1px solid var(--gray-100); }
-    .motivo-table tr:last-child td { border-bottom:none; }
-    .motivo-table tr:hover td { background:var(--gray-50); }
-    .motivo-pill {
-      display:inline-block; padding:3px 10px; border-radius:var(--radius-full);
-      font-size:11px; font-weight:800;
+    .modal-overlay.hidden{display:none}
+    .modal-box{
+      background:#fff;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,0.2);
+      width:100%;max-width:480px;max-height:90vh;overflow-y:auto;
     }
-    .motivo-pill.falta_tempo  { background:#fee2e2; color:#991b1b; }
-    .motivo-pill.equipamento  { background:#ffedd5; color:#9a3412; }
-    .motivo-pill.insumo       { background:#fef9c3; color:#92400e; }
-    .motivo-pill.outro        { background:#f0f2f8; color:#4b5563; }
+    .modal-hdr{
+      padding:16px 20px;border-bottom:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;
+    }
+    .modal-hdr h3{font-size:16px;font-weight:800;color:var(--text)}
+    .modal-close{
+      background:none;border:none;font-size:20px;cursor:pointer;
+      color:var(--muted);line-height:1;padding:2px 6px;border-radius:6px;
+    }
+    .modal-close:hover{background:var(--card2)}
+    .modal-body{padding:20px}
+    .form-group{margin-bottom:14px}
+    .form-group label{display:block;font-size:12px;font-weight:700;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+    .form-group input,.form-group select{
+      width:100%;background:#fff;border:1.5px solid var(--border);color:var(--text);
+      padding:9px 12px;border-radius:8px;font-size:13px;font-family:inherit;outline:none;
+    }
+    .form-group input:focus,.form-group select:focus{border-color:var(--yellow)}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .modal-footer{
+      padding:14px 20px;border-top:1px solid var(--border);
+      display:flex;gap:8px;justify-content:flex-end;
+    }
+    .btn-cancel{
+      background:var(--card2);border:1px solid var(--border);color:var(--muted);
+      padding:9px 18px;border-radius:8px;font-weight:700;font-size:13px;
+      cursor:pointer;font-family:inherit;
+    }
+    .btn-confirm{
+      background:var(--blue);color:#fff;border:none;
+      padding:9px 22px;border-radius:8px;font-weight:700;font-size:13px;
+      cursor:pointer;font-family:inherit;
+    }
+    .btn-confirm:hover{background:#1d4ed8}
+    .btn-confirm.green{background:var(--green)}
+    .btn-confirm.green:hover{background:#15803d}
 
-    /* ── CONSISTÊNCIA ── */
-    .consist-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
-    .consist-card {
-      background:#fff; border-radius:var(--radius-sm); padding:14px 16px;
-      box-shadow:var(--shadow); display:flex; align-items:center; gap:12px;
+    #toast-med{
+      position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+      background:#1e293b;color:#fff;padding:10px 22px;border-radius:30px;
+      font-size:13px;font-weight:600;z-index:9999;transition:transform .3s;pointer-events:none;
+      white-space:nowrap;box-shadow:0 6px 24px rgba(0,0,0,0.2);
     }
-    .consist-emoji { font-size:28px; flex-shrink:0; }
-    .consist-info  { flex:1; min-width:0; }
-    .consist-name  { font-size:13px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .consist-days  { font-size:11px; color:var(--gray-400); margin-top:2px; }
-    .consist-pct   { font-size:18px; font-weight:900; flex-shrink:0; }
-    .consist-pct.excelente { color:var(--green); }
-    .consist-pct.bom       { color:var(--yellow); }
-    .consist-pct.regular   { color:var(--orange); }
-    .consist-pct.baixo     { color:var(--red); }
-
-    /* ── EMPTY ── */
-    .empty-msg {
-      text-align:center; padding:30px; font-size:13px;
-      color:var(--gray-400); font-weight:700;
-    }
-
-    /* ── TOAST ── */
-    #toast {
-      position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
-      background:var(--black); color:#fff; padding:12px 22px; border-radius:var(--radius-full);
-      font-size:13px; font-weight:700; z-index:9999; opacity:0; transition:.3s; pointer-events:none;
-    }
-    #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-
-    /* ── PASSWORD OVERLAY ── */
-    #pw-overlay {
-      position:fixed; inset:0; background:var(--black);
-      display:flex; align-items:center; justify-content:center; z-index:99999;
-    }
-    .pw-box {
-      background:#fff; border-radius:20px; padding:36px 28px;
-      width:100%; max-width:340px; text-align:center;
-      box-shadow:0 20px 60px rgba(0,0,0,.4);
-    }
-    .pw-box .lock { font-size:48px; margin-bottom:10px; }
-    .pw-box h2 { font-size:20px; font-weight:900; margin-bottom:6px; }
-    .pw-box p  { font-size:13px; color:var(--gray-600); margin-bottom:20px; }
-    .pw-input-wrap { position:relative; margin-bottom:10px; }
-    .pw-input-wrap input {
-      width:100%; padding:13px 44px 13px 16px;
-      border:2px solid var(--gray-200); border-radius:10px;
-      font-family:var(--font); font-size:15px; outline:none;
-    }
-    .pw-input-wrap input:focus { border-color:var(--yellow); }
-    .pw-eye {
-      position:absolute; right:12px; top:50%; transform:translateY(-50%);
-      background:none; border:none; cursor:pointer; font-size:16px; color:var(--gray-400);
-    }
-    .pw-err { color:var(--red); font-size:12px; font-weight:700; margin-bottom:10px; display:none; }
-    .pw-btn {
-      width:100%; background:var(--yellow); color:#fff; border:none;
-      padding:13px; border-radius:10px; font-family:var(--font);
-      font-size:15px; font-weight:800; cursor:pointer; margin-bottom:10px;
-    }
-    .pw-back { font-size:12px; color:var(--gray-400); text-decoration:none; font-weight:700; }
-    .pw-back:hover { color:var(--black); }
-
-    /* ── FALTA KPI ── */
-    .kpi-card.crimson { border-color:#9f1239; }
-
-    /* ── FILTROS MOTIVO ── */
-    .motivo-filtros {
-      display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; align-items:center;
-    }
-    .motivo-filtros span { font-size:11px; font-weight:800; color:var(--gray-600); margin-right:4px; }
-    .btn-mf {
-      padding:5px 14px; border-radius:var(--radius-full); border:2px solid var(--gray-200);
-      background:#fff; font-family:var(--font); font-size:12px; font-weight:700;
-      cursor:pointer; color:var(--gray-600); transition:.15s;
-    }
-    .btn-mf.active { background:var(--black); border-color:var(--black); color:#fff; }
-    .btn-mf.ft  { border-color:#dc2626; }
-    .btn-mf.ft.active  { background:#dc2626; border-color:#dc2626; }
-    .btn-mf.eq  { border-color:#ea580c; }
-    .btn-mf.eq.active  { background:#ea580c; border-color:#ea580c; }
-    .btn-mf.ins { border-color:#d97706; }
-    .btn-mf.ins.active { background:#d97706; border-color:#d97706; }
-    .btn-mf.out { border-color:#7c3aed; }
-    .btn-mf.out.active { background:#7c3aed; border-color:#7c3aed; }
-
-    /* ── BOTÃO EXPORTAR PDF ── */
-    .btn-pdf {
-      display:inline-flex; align-items:center; gap:8px;
-      padding:10px 22px; background:#dc2626; color:#fff;
-      border:none; border-radius:var(--radius-sm); font-family:var(--font);
-      font-size:13px; font-weight:800; cursor:pointer; transition:.2s;
-      text-decoration:none;
-    }
-    .btn-pdf:hover { background:#b91c1c; }
-    .btn-pdf:disabled { opacity:.5; cursor:not-allowed; }
-    .pdf-bar {
-      display:none; align-items:center; justify-content:flex-end;
-      padding:12px 20px; gap:12px; background:#fff;
-      border-bottom:1px solid var(--gray-200);
-    }
-    .pdf-bar.show { display:flex; }
-    .pdf-bar p { font-size:12px; color:var(--gray-600); font-weight:700; }
-
-    /* ── IMPRESSÃO PAISAGEM ── */
-    @media print {
-      @page { size: A4 landscape; margin: 15mm 12mm; }
-      body { background:#fff !important; font-size:11px !important; }
-      .top-bar, .filter-panel, .periodo-bar, #state-box, .pdf-bar,
-      #pw-overlay, #toast, .no-print { display:none !important; }
-      .section { padding:0 0 16px !important; }
-      .kpi-grid { grid-template-columns: repeat(4,1fr) !important; gap:8px !important; padding:8px 0 !important; }
-      .kpi-card  { padding:10px 12px !important; }
-      .kpi-val   { font-size:20px !important; }
-      .chart-card { box-shadow:none !important; border:1px solid #e2e6f0 !important; break-inside:avoid; page-break-inside:avoid; }
-      .chart-wrap { height:200px !important; }
-      .chart-wrap.tall { height:260px !important; }
-      .chart-wrap.short { height:160px !important; }
-      .charts-row { grid-template-columns:1fr 1fr !important; }
-      .award-grid { grid-template-columns:repeat(3,1fr) !important; }
-      .consist-grid { grid-template-columns:repeat(3,1fr) !important; }
-      .ranking-item { padding:8px 10px !important; }
-      .motivo-filtros { display:none !important; }
-      h2 { font-size:13px !important; }
-      h3 { font-size:11px !important; }
+    #toast-med.show{transform:translateX(-50%) translateY(0)}
+    @media(max-width:600px){
+      .filter-bar{flex-direction:column;align-items:flex-start}
+      .colab-sel{max-width:100%;width:100%}
+      .form-row{grid-template-columns:1fr}
+      .row-actions{flex-wrap:wrap}
     }
   </style>
 </head>
 <body>
 
-<!-- PASSWORD OVERLAY -->
-<div id="pw-overlay">
-  <div class="pw-box">
-    <div class="lock">📊</div>
-    <h2>Dashboard</h2>
-    <p>Área restrita ao líder.<br>Digite a senha para continuar.</p>
-    <form onsubmit="event.preventDefault();pwEnter();" autocomplete="off">
+<!-- ══ OVERLAY DE SENHA ══ -->
+<div id="pw-overlay" style="
+  position:fixed;inset:0;background:linear-gradient(135deg,#1a1d2e,#2d3250);
+  z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:18px;padding:36px 32px;width:100%;max-width:360px;
+              box-shadow:0 20px 60px rgba(0,0,0,0.4);text-align:center;">
+    <div style="font-size:48px;margin-bottom:8px">🔐</div>
+    <h2 style="font-size:20px;font-weight:900;color:#1a1d2e;margin-bottom:4px">Área Restrita</h2>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:24px">Digite a senha para continuar</p>
+    <form onsubmit="event.preventDefault();_pwEnter()">
       <input type="text" name="username" value="lider" autocomplete="username" style="display:none" aria-hidden="true"/>
-      <div class="pw-input-wrap">
-        <input type="password" id="pw-input" placeholder="Senha do líder..." autocomplete="current-password"/>
-        <button type="button" class="pw-eye" onclick="pwToggle()">👁️</button>
+      <div style="position:relative;margin-bottom:14px">
+        <input id="pw-input" type="password" name="password" placeholder="Senha..."
+          autocomplete="current-password"
+          style="width:100%;padding:12px 44px 12px 16px;border:2px solid #dde1ed;border-radius:10px;
+                 font-size:15px;font-family:inherit;outline:none;box-sizing:border-box;"
+          onfocus="this.style.borderColor='#e6a800'" onblur="this.style.borderColor='#dde1ed'"/>
+        <button type="button" onclick="_pwToggle()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);
+          background:none;border:none;cursor:pointer;font-size:16px;color:#6b7280">👁️</button>
       </div>
+      <p id="pw-err" style="color:#dc2626;font-size:12px;font-weight:700;margin-bottom:10px;min-height:16px;"></p>
+      <button type="submit" style="width:100%;background:#e6a800;color:#fff;border:none;
+        padding:13px;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">
+        🚀 Entrar
+      </button>
     </form>
-    <p class="pw-err" id="pw-err">❌ Senha incorreta!</p>
-    <button class="pw-btn" onclick="pwEnter()">🚀 Entrar</button>
-    <br><a href="index.html" class="pw-back">← Voltar ao App</a>
+    <a href="index.html" style="display:block;margin-top:14px;font-size:13px;color:#6b7280;text-decoration:none">← Voltar ao App</a>
   </div>
 </div>
+<script>
+(function(){
+  function _pwEnter(){
+    const v=document.getElementById('pw-input').value;
+    const senhasValidas=['lider123*'];
+    if(senhasValidas.includes(v)){
+      document.getElementById('pw-overlay').style.display='none';
+    } else {
+      const e=document.getElementById('pw-err');
+      e.textContent='❌ Senha incorreta!';
+      document.getElementById('pw-input').style.borderColor='#dc2626';
+      setTimeout(()=>{e.textContent='';document.getElementById('pw-input').style.borderColor='#dde1ed';},2500);
+    }
+  }
+  function _pwToggle(){const i=document.getElementById('pw-input');i.type=i.type==='password'?'text':'password';}
+  window._pwEnter=_pwEnter;window._pwToggle=_pwToggle;
+})();
+</script>
 
-<!-- TOAST -->
-<div id="toast"></div>
-
-<!-- TOP BAR -->
-<div class="top-bar no-print">
-  <a href="index.html" class="back-btn" title="Voltar"><i class="fas fa-arrow-left"></i></a>
-  <div class="top-bar-brand">
+<div class="top-bar">
+  <a href="index.html" style="display:flex;align-items:center;justify-content:center;
+     width:34px;height:34px;border-radius:50%;background:#f0f2f8;border:1px solid #dde1ed;
+     color:#1a1d2e;text-decoration:none;font-size:15px;flex-shrink:0" title="Voltar ao App">
+    <i class="fas fa-arrow-left"></i>
+  </a>
+  <div style="flex:1">
     <div class="logo">🍔 Just Burger</div>
-    <div class="sub">Dashboard de Produtividade</div>
+    <div class="sub">Médias — Quantidades Padrão por Turno e Dia</div>
   </div>
-  <div class="top-bar-links">
-    <a href="resultados_v2.html"><i class="fas fa-chart-bar"></i> Resultados</a>
-    <a href="medias.html"><i class="fas fa-list-ol"></i> Médias</a>
-    <a href="insumos.html"><i class="fas fa-boxes"></i> Insumos</a>
-  </div>
+  <a href="resultados_v2.html"><i class="fas fa-chart-bar"></i> Resultados</a>
+  <a href="insumos.html"><i class="fas fa-boxes"></i> Insumos</a>
+  <a href="dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
 </div>
 
-<!-- FILTROS -->
-<div class="filter-panel">
-  <div class="filter-group">
-    <span class="filter-label">📅 Data Início</span>
-    <input type="date" id="f-de" class="filter-input"/>
+<div class="filter-bar">
+  <span class="filter-label">Turno</span>
+  <div class="toggle-group">
+    <button class="tgl active" id="btn-dia"   onclick="setTurno('dia')">☀️ Dia</button>
+    <button class="tgl"        id="btn-noite" onclick="setTurno('noite')">🌙 Noite</button>
   </div>
-  <div class="filter-group">
-    <span class="filter-label">📅 Data Fim</span>
-    <input type="date" id="f-ate" class="filter-input"/>
+  <span class="filter-label">Dia</span>
+  <div class="dia-btns">
+    <button class="dbtn active" data-d="segunda" onclick="setDia('segunda')">SEG</button>
+    <button class="dbtn" data-d="terca"   onclick="setDia('terca')">TER</button>
+    <button class="dbtn" data-d="quarta"  onclick="setDia('quarta')">QUA</button>
+    <button class="dbtn" data-d="quinta"  onclick="setDia('quinta')">QUI</button>
+    <button class="dbtn" data-d="sexta"   onclick="setDia('sexta')">SEX</button>
+    <button class="dbtn" data-d="sabado"  onclick="setDia('sabado')">SAB</button>
+    <button class="dbtn" data-d="domingo" onclick="setDia('domingo')">DOM</button>
   </div>
-  <div class="filter-group">
-    <span class="filter-label">⏰ Turno</span>
-    <div class="tgl-grp">
-      <button class="tgl active" id="tgl-todos" onclick="setTurno('todos')">Todos</button>
-      <button class="tgl dia"    id="tgl-dia"   onclick="setTurno('dia')">☀️ Dia</button>
-      <button class="tgl noite"  id="tgl-noite" onclick="setTurno('noite')">🌙 Noite</button>
+  <span class="filter-label">Colab.</span>
+  <select class="colab-sel" id="sel-colab" onchange="renderTabela()">
+    <option value="">Todos</option>
+  </select>
+  <button class="btn-refresh" onclick="carregar()"><i class="fas fa-sync-alt"></i> Atualizar</button>
+  <button class="btn-nova"    onclick="abrirModalNova()"><i class="fas fa-plus"></i> Nova Tarefa</button>
+  <button class="btn-nova" style="background:var(--blue);border-color:var(--blue);color:#fff" onclick="abrirModalRenomear()"><i class="fas fa-user-edit"></i> Renomear Colab.</button>
+</div>
+
+<div class="count-bar" id="count-bar">
+  <span id="count-txt">Selecione filtros acima</span>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <!-- Barra de seleção em lote — aparece quando há selecionados -->
+    <div id="lote-bar" style="display:none;align-items:center;gap:8px;background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.2);border-radius:8px;padding:5px 12px">
+      <span id="lote-cnt" style="font-size:12px;font-weight:800;color:#dc2626"></span>
+      <button onclick="excluirLote()" style="background:#dc2626;color:#fff;border:none;padding:5px 14px;border-radius:7px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">
+        <i class="fas fa-trash"></i> Excluir selecionadas
+      </button>
+      <button onclick="limparSelecao()" style="background:none;border:1px solid #dde1ed;color:var(--muted);padding:5px 10px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">
+        Desmarcar tudo
+      </button>
     </div>
-  </div>
-  <div class="filter-group">
-    <span class="filter-label" style="opacity:0">.</span>
-    <button class="btn-buscar" id="btn-buscar" onclick="buscar()">
-      <i class="fas fa-search"></i> Gerar Relatório
-    </button>
+    <button class="btn-save-all" onclick="salvarTodos()"><i class="fas fa-save"></i> Salvar Tudo</button>
   </div>
 </div>
 
-<!-- BARRA EXPORTAR PDF -->
-<div class="pdf-bar no-print" id="pdf-bar">
-  <p>📄 Relatório gerado! Clique para exportar em PDF paisagem (A4)</p>
-  <button class="btn-pdf" id="btn-pdf" onclick="exportarPDF()">
-    <i class="fas fa-file-pdf"></i> Exportar PDF
-  </button>
+<div class="main" id="main-content">
+  <div class="state-box">
+    <i class="fas fa-list-alt"></i>
+    <p>Use os filtros acima e clique em <strong>Atualizar</strong></p>
+  </div>
 </div>
 
-<!-- PERÍODO INFO -->
-<div class="periodo-bar" id="periodo-bar">
-  <div>📅 Período: <strong id="lbl-periodo">—</strong></div>
-  <div>⏰ Turno: <strong id="lbl-turno">—</strong></div>
-  <div>📋 Total de sessões: <strong id="lbl-sessoes">—</strong></div>
-</div>
-
-<!-- STATE BOX -->
-<div id="state-box" class="show">
-  <div class="state-icon">📊</div>
-  <p>Selecione o período e clique em<br><strong>Gerar Relatório</strong></p>
-</div>
-
-<!-- CONTEÚDO PRINCIPAL -->
-<div id="dash-content" style="display:none">
-
-  <!-- KPIs -->
-  <div class="kpi-grid" id="kpi-grid"></div>
-
-  <!-- SEÇÃO: PRODUTIVIDADE -->
-  <div class="section">
-    <div class="section-hdr">
-      <h2>📈 Produtividade por Colaborador</h2>
-      <div class="line"></div>
-      <div class="badge" id="badge-colab">0 colaboradores</div>
+<!-- MODAL RENOMEAR COLABORADOR -->
+<div class="modal-overlay hidden" id="modal-renomear">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3>✏️ Renomear Colaborador</h3>
+      <button class="modal-close" onclick="fecharModalRenomear()">✕</button>
     </div>
-
-    <div class="chart-card">
-      <h3>Taxa de Conclusão (%) — Tarefas 100% feitas</h3>
-      <div class="chart-wrap tall">
-        <canvas id="chart-conclusao"></canvas>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
+        Altera o nome do colaborador em <strong>todas</strong> as tarefas (todos os turnos e dias).
+      </p>
+      <div class="form-group">
+        <label>Colaborador atual</label>
+        <select id="ren-atual"></select>
       </div>
+      <div class="form-group">
+        <label>Novo nome</label>
+        <input type="text" id="ren-novo" placeholder="Nome completo do colaborador"/>
+      </div>
+      <div id="ren-preview" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
     </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fecharModalRenomear()">Cancelar</button>
+      <button class="btn-confirm" id="btn-confirmar-ren" onclick="confirmarRenomear()"><i class="fas fa-check"></i> Renomear em Tudo</button>
+    </div>
+  </div>
+</div>
 
-    <div class="charts-row">
-      <div class="chart-card">
-        <h3>Turnos trabalhados por colaborador</h3>
-        <div class="chart-wrap">
-          <canvas id="chart-turnos"></canvas>
+<!-- MODAL NOVA TAREFA -->
+<div class="modal-overlay hidden" id="modal-nova">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3 id="modal-nova-titulo">➕ Nova Tarefa</h3>
+      <button class="modal-close" onclick="fecharModalNova()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Colaborador / Departamento</label>
+        <input type="text" id="nt-colab" list="nt-colab-list" placeholder="Digite ou selecione…"/>
+        <datalist id="nt-colab-list"></datalist>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Turno</label>
+          <select id="nt-turno">
+            <option value="dia">☀️ Dia</option>
+            <option value="noite">🌙 Noite</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Dia da Semana</label>
+          <select id="nt-dia">
+            <option value="segunda">Segunda-feira</option>
+            <option value="terca">Terça-feira</option>
+            <option value="quarta">Quarta-feira</option>
+            <option value="quinta">Quinta-feira</option>
+            <option value="sexta">Sexta-feira</option>
+            <option value="sabado">Sábado</option>
+            <option value="domingo">Domingo</option>
+          </select>
         </div>
       </div>
-      <div class="chart-card">
-        <h3>Distribuição de status das tarefas</h3>
-        <div class="chart-wrap">
-          <canvas id="chart-status-pizza"></canvas>
+      <div class="form-group">
+        <label>Categoria</label>
+        <select id="nt-cat">
+          <option value="">-- Selecione ou adicione --</option>
+        </select>
+        <input type="text" id="nt-cat-nova" placeholder="Nova categoria…" style="margin-top:6px;display:none"/>
+        <label style="margin-top:4px;font-size:11px;cursor:pointer">
+          <input type="checkbox" id="nt-cat-chk" onchange="toggleNovaCategoria()"/> Nova categoria
+        </label>
+      </div>
+      <div class="form-group">
+        <label>Item / Tarefa *</label>
+        <input type="text" id="nt-item" placeholder="Nome do item a produzir"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Quantidade Padrão</label>
+          <input type="number" id="nt-qty" value="0" min="0"/>
+        </div>
+        <div class="form-group">
+          <label>Unidade</label>
+          <select id="nt-unidade">
+            <option value="un">un — Unidades</option>
+            <option value="kg">kg — Quilogramas</option>
+            <option value="g">g — Gramas</option>
+            <option value="L">L — Litros</option>
+            <option value="ml">ml — Mililitros</option>
+            <option value="pct">pct — Pacotes</option>
+            <option value="cx">cx — Caixas</option>
+            <option value="band">band — Bandejas</option>
+            <option value="porção">porção — Porções</option>
+            <option value="checklist">checklist — Execução (sem qtd)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Ordem de exibição <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none">(menor número aparece primeiro na lista)</span></label>
+        <input type="number" id="nt-ordem" value="99" min="1" placeholder="Ex: 1 = primeiro, 99 = último"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fecharModalNova()">Cancelar</button>
+      <button class="btn-confirm green" onclick="salvarNovaTarefa()"><i class="fas fa-save"></i> Criar Tarefa</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TROCAR COLABORADOR -->
+<div class="modal-overlay hidden" id="modal-trocar">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3>🔄 Mover Tarefa</h3>
+      <button class="modal-close" onclick="fecharModalTrocar()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
+        Tarefa: <strong id="trocar-item-nome"></strong>
+      </p>
+      <div class="form-group">
+        <label>Novo Colaborador / Departamento</label>
+        <select id="trocar-colab"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Turno</label>
+          <select id="trocar-turno">
+            <option value="dia">☀️ Dia</option>
+            <option value="noite">🌙 Noite</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Dia da Semana</label>
+          <select id="trocar-dia">
+            <option value="segunda">Segunda-feira</option>
+            <option value="terca">Terça-feira</option>
+            <option value="quarta">Quarta-feira</option>
+            <option value="quinta">Quinta-feira</option>
+            <option value="sexta">Sexta-feira</option>
+            <option value="sabado">Sábado</option>
+            <option value="domingo">Domingo</option>
+          </select>
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- SEÇÃO: RANKING & PREMIAÇÃO -->
-  <div class="section">
-    <div class="section-hdr">
-      <h2>🏆 Ranking & Premiação</h2>
-      <div class="line"></div>
-    </div>
-
-    <!-- Troféus automáticos -->
-    <div class="award-grid" id="award-grid" style="margin-bottom:20px"></div>
-
-    <!-- Ranking geral -->
-    <div class="chart-card">
-      <h3>🥇 Ranking Geral de Produtividade</h3>
-      <div class="ranking-list" id="ranking-list"></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fecharModalTrocar()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmarTrocar()"><i class="fas fa-exchange-alt"></i> Mover Tarefa</button>
     </div>
   </div>
+</div>
 
-  <!-- SEÇÃO: PENDÊNCIAS & MOTIVOS -->
-  <div class="section">
-    <div class="section-hdr">
-      <h2>⚠️ Tarefas Não Concluídas — Análise de Motivos</h2>
-      <div class="line"></div>
-    </div>
-
-    <div class="charts-row">
-      <div class="chart-card">
-        <h3>Motivos de não conclusão</h3>
-        <div class="chart-wrap short">
-          <canvas id="chart-motivos"></canvas>
-        </div>
-      </div>
-      <div class="chart-card">
-        <h3>Pendências por categoria</h3>
-        <div class="chart-wrap short">
-          <canvas id="chart-cat-pend"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <div class="chart-card">
-      <h3>📋 Detalhamento de tarefas não concluídas por motivo</h3>
-      <div class="motivo-filtros no-print" id="motivo-filtros">
-        <span>Filtrar:</span>
-        <button class="btn-mf active" id="mf-todos" onclick="filtrarMotivo('todos')">Todos</button>
-        <button class="btn-mf ft"    id="mf-ft"    onclick="filtrarMotivo('ft')">⏱️ Falta de Tempo</button>
-        <button class="btn-mf eq"    id="mf-eq"    onclick="filtrarMotivo('eq')">🔧 Equipamento</button>
-        <button class="btn-mf ins"   id="mf-ins"   onclick="filtrarMotivo('ins')">🥩 Insumo</button>
-        <button class="btn-mf out"   id="mf-out"   onclick="filtrarMotivo('out')">📝 Outro</button>
-      </div>
-      <div id="motivo-table-wrap"></div>
-    </div>
-  </div>
-
-  <!-- SEÇÃO: CONSISTÊNCIA -->
-  <div class="section">
-    <div class="section-hdr">
-      <h2>📅 Consistência — Dias Trabalhados</h2>
-      <div class="line"></div>
-    </div>
-    <div class="chart-card">
-      <h3>Frequência e aproveitamento por colaborador no período</h3>
-      <div class="consist-grid" id="consist-grid"></div>
-    </div>
-  </div>
-
-  <!-- SEÇÃO: EVOLUÇÃO TEMPORAL -->
-  <div class="section">
-    <div class="section-hdr">
-      <h2>📆 Evolução Diária da Produtividade</h2>
-      <div class="line"></div>
-    </div>
-    <div class="chart-card">
-      <h3>Taxa média de conclusão por dia no período</h3>
-      <div class="chart-wrap">
-        <canvas id="chart-evolucao"></canvas>
-      </div>
-    </div>
-  </div>
-
-</div><!-- /dash-content -->
+<div id="toast-med"></div>
 
 <script>
-/* ══════════════════════════════════════════════════════════
-   SENHA
-══════════════════════════════════════════════════════════ */
-const SENHA_LIDER = 'lider123*';
-function pwToggle(){
-  const i = document.getElementById('pw-input');
-  i.type = i.type === 'password' ? 'text' : 'password';
+/* ══════════════════════════════════════════
+   MÉDIAS — Just Burger (tema claro)
+══════════════════════════════════════════ */
+let M = { turno:'dia', dia:'segunda', tarefas:[], colabs:[], todos:[] };
+let _trocarId = null;
+
+window.addEventListener('DOMContentLoaded', () => {
+  const dias = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
+  setDia(dias[new Date().getDay()], false);
+  carregar();
+  /* ── sticky offset: mede top-bar e filter-bar ── */
+  const _fixSticky = () => {
+    const tb = document.querySelector('.top-bar');
+    const fb = document.querySelector('.filter-bar');
+    if (tb) document.documentElement.style.setProperty('--tb-h', tb.offsetHeight + 'px');
+    if (tb && fb) document.documentElement.style.setProperty('--fb-bottom', (tb.offsetHeight + fb.offsetHeight) + 'px');
+  };
+  _fixSticky();
+  window.addEventListener('resize', _fixSticky);
+});
+
+/* ── Filtros ── */
+function setTurno(t) {
+  M.turno = t;
+  document.getElementById('btn-dia').classList.toggle('active', t==='dia');
+  document.getElementById('btn-noite').classList.toggle('active', t==='noite');
+  carregar();
 }
-function pwEnter(){
-  const v = document.getElementById('pw-input').value;
-  const err = document.getElementById('pw-err');
-  if(v === SENHA_LIDER){
-    document.getElementById('pw-overlay').style.display = 'none';
-  } else {
-    err.style.display = 'block';
-    setTimeout(()=>{ err.style.display='none'; }, 2000);
-  }
-}
-/* Enter já tratado pelo onsubmit do form */
-
-/* ══════════════════════════════════════════════════════════
-   EMOJIS
-══════════════════════════════════════════════════════════ */
-const EMOJI = {
-  'ALAN RICARDO':'👨‍🍳','ATENDIMENTO / DESPACHO':'🛎️','DAVI':'👨‍🍳','DINA':'👩‍💼',
-  'FABIO':'👨‍🔧','FERNANDO':'🧑‍🍳','GABRIEL KHALYL':'👨‍🍳','GABRIEL LEITE':'👨‍🍳',
-  'HENRIQUE':'👨‍🍳','JOÃO':'🔪','JOSÉ BRUNO':'👨‍🍳','JHON':'👨‍🍳',
-  'LOHAINE':'👩‍🍳','LUCAS':'👨‍🍳','MATEUS':'🥫','PABLO':'🍗',
-  'PEDRO':'👨‍🍳','RHUAN':'👨‍🍳','RODRIGO':'👨‍🍳','SAMUEL':'🧊','SANDRO':'👨‍💼'
-};
-function emoji(n){ return EMOJI[n?.toUpperCase?.()] || '👤'; }
-
-/* ══════════════════════════════════════════════════════════
-   ESTADO
-══════════════════════════════════════════════════════════ */
-let _turno = 'todos';
-let _charts = {};
-
-function setTurno(t){
-  _turno = t;
-  ['todos','dia','noite'].forEach(x => {
-    document.getElementById('tgl-'+x).classList.toggle('active', x===t);
-  });
+function setDia(d, doLoad=true) {
+  M.dia = d;
+  document.querySelectorAll('.dbtn').forEach(b => b.classList.toggle('active', b.dataset.d===d));
+  if (doLoad) carregar();
 }
 
-/* ── Datas padrão: últimos 7 dias ── */
-(function initDates(){
-  const hoje = new Date();
-  const ini  = new Date(hoje); ini.setDate(ini.getDate()-6);
-  document.getElementById('f-ate').value = hoje.toISOString().slice(0,10);
-  document.getElementById('f-de').value  = ini.toISOString().slice(0,10);
-})();
-
-/* ══════════════════════════════════════════════════════════
-   TOAST
-══════════════════════════════════════════════════════════ */
-function toast(msg){
-  const el = document.getElementById('toast');
-  el.textContent = msg; el.classList.add('show');
-  setTimeout(()=> el.classList.remove('show'), 3000);
-}
-
-/* ══════════════════════════════════════════════════════════
-   FETCH PAGINADO
-══════════════════════════════════════════════════════════ */
-async function fetchAll(table){
-  let rows=[], pg=1;
-  while(true){
-    try {
-      const r = await fetch(`tables/${table}?limit=500&page=${pg}`);
-      if(!r.ok){
-        if(r.status===404||r.status===422) break; // Tabela vazia ou não encontrada
-        throw new Error(`HTTP ${r.status} ao buscar ${table}`);
-      }
-      const j = await r.json();
-      const d = Array.isArray(j.data) ? j.data : [];
-      rows = rows.concat(d);
-      if(d.length < 500) break;
-      pg++;
-    } catch(e){
-      console.warn(`fetchAll(${table}) p${pg}:`, e.message);
-      break;
-    }
-  }
-  return rows;
-}
-
-/* ══════════════════════════════════════════════════════════
-   BUSCAR
-══════════════════════════════════════════════════════════ */
-async function buscar(){
-  const de  = document.getElementById('f-de').value;
-  const ate = document.getElementById('f-ate').value;
-  if(!de || !ate){ toast('⚠️ Selecione as duas datas!'); return; }
-  if(de > ate){ toast('⚠️ Data início maior que fim!'); return; }
-
-  const btn = document.getElementById('btn-buscar');
-  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Carregando...';
-
-  setState('loading');
-
+/* ── Carregar ── */
+async function carregar() {
+  const cont = document.getElementById('main-content');
+  cont.innerHTML = `<div class="state-box loading"><i class="fas fa-spinner"></i><p>Carregando...</p></div>`;
   try {
-    /* Busca paralela incluindo faltas */
-    const [sessoes, pendencias, faltas] = await Promise.all([
-      fetchAll('sessoes'),
-      fetchAll('pendencias'),
-      fetchAll('faltas')
-    ]);
-
-    /* Filtra pelo período */
-    const filtraSess = sessoes.filter(s => {
-      const ok = s.data >= de && s.data <= ate;
-      if(!ok) return false;
-      if(_turno === 'todos') return true;
-      return s.turno === _turno;
-    });
-    const filtraPend = pendencias.filter(p => {
-      const ok = p.data >= de && p.data <= ate;
-      if(!ok) return false;
-      if(_turno === 'todos') return true;
-      return p.turno === _turno;
-    });
-    const filtraFaltas = faltas.filter(f => {
-      const ok = f.data >= de && f.data <= ate;
-      if(!ok) return false;
-      if(_turno === 'todos') return true;
-      return f.turno === _turno;
-    });
-
-    if(filtraSess.length === 0 && filtraFaltas.length === 0){
-      setState('empty');
-      toast('⚠️ Nenhum dado para o período. Registre turnos primeiro.');
-      return;
-    }
-
-    renderDash(filtraSess, filtraPend, filtraFaltas, de, ate);
-
-  } catch(e){
-    console.error('Dashboard buscar error:', e);
-    toast('❌ Erro ao carregar: ' + (e.message||'Tente novamente'));
-    setState('empty');
-  } finally {
-    btn.disabled = false; btn.innerHTML = '<i class="fas fa-search"></i> Gerar Relatório';
+    const r = await fetch('tables/tarefas?limit=1000');
+    if (r.status===422||r.status===404){ M.tarefas=[]; M.colabs=[]; M.todos=[]; renderTabela(); return; }
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    const j = await r.json();
+    M.todos   = j.data || [];
+    M.tarefas = M.todos.filter(t => t.turno===M.turno && t.dia_semana===M.dia);
+    M.colabs  = [...new Set(M.tarefas.map(t=>t.colaborador).filter(Boolean))].sort();
+    const sel = document.getElementById('sel-colab');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Todos</option>' +
+      M.colabs.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
+    renderTabela();
+  } catch(e) {
+    cont.innerHTML = `<div class="state-box"><i class="fas fa-exclamation-triangle" style="color:var(--red);opacity:1"></i><p>Erro: ${e.message}</p></div>`;
   }
 }
 
-function setState(s){
-  const sb = document.getElementById('state-box');
-  const dc = document.getElementById('dash-content');
-  if(s === 'loading'){
-    sb.classList.add('show');
-    sb.querySelector('.state-icon').textContent = '⏳';
-    sb.querySelector('p').innerHTML = '<strong>Carregando dados...</strong><br>Isso pode levar alguns segundos.';
-    dc.style.display = 'none';
-  } else if(s === 'empty'){
-    sb.classList.add('show');
-    sb.querySelector('.state-icon').textContent = '🔍';
-    sb.querySelector('p').innerHTML = 'Nenhum dado encontrado.<br>Tente outro período.';
-    dc.style.display = 'none';
-  } else if(s === 'data'){
-    sb.classList.remove('show');
-    dc.style.display = 'block';
-  }
-}
+/* ── Renderizar tabela ── */
+function renderTabela() {
+  const cont  = document.getElementById('main-content');
+  const colab = document.getElementById('sel-colab').value;
+  const lista = colab ? M.tarefas.filter(t=>t.colaborador===colab) : M.tarefas;
 
-/* ══════════════════════════════════════════════════════════
-   DESTRUIR CHARTS ANTIGOS
-══════════════════════════════════════════════════════════ */
-function destroyChart(id){
-  if(_charts[id]){ _charts[id].destroy(); delete _charts[id]; }
-}
+  document.getElementById('count-txt').innerHTML =
+    `<strong>${lista.length}</strong> tarefa${lista.length!==1?'s':''} · <strong>${M.colabs.length}</strong> colaborador${M.colabs.length!==1?'es':''}`;
 
-/* ══════════════════════════════════════════════════════════
-   RENDER PRINCIPAL
-══════════════════════════════════════════════════════════ */
-/* ── Variável global para filtro de motivo ── */
-let _allPendencias = [];
-
-function renderDash(sessoes, pendencias, faltas, de, ate){
-
-  /* ── Período bar ── */
-  const pb = document.getElementById('periodo-bar');
-  pb.classList.add('show');
-  document.getElementById('lbl-periodo').textContent =
-    fmtData(de) + ' → ' + fmtData(ate);
-  document.getElementById('lbl-turno').textContent =
-    _turno === 'todos' ? 'Todos' : (_turno === 'dia' ? '☀️ Dia' : '🌙 Noite');
-  document.getElementById('lbl-sessoes').textContent = sessoes.length;
-
-  /* ── Agrega por colaborador ── */
-  const colabs = {};
-  sessoes.forEach(s => {
-    const nome = s.colaborador_card || s.colaborador_nome || 'Desconhecido';
-    if(!colabs[nome]) colabs[nome] = { sessoes:[], pend:[] };
-    colabs[nome].sessoes.push(s);
-  });
-  pendencias.forEach(p => {
-    const nome = p.colaborador || 'Desconhecido';
-    if(colabs[nome]) colabs[nome].pend.push(p);
-    // ignora pendências de colaboradores sem sessão no período
-  });
-
-  /* ── Mapa de faltas por colaborador ── */
-  const faltaMap = {};
-  faltas.forEach(f=>{
-    const n = f.colaborador;
-    if(!faltaMap[n]) faltaMap[n]={ nj:0, j:0 };
-    if(f.tipo==='nao_justificada') faltaMap[n].nj++;
-    else faltaMap[n].j++;
-  });
-
-  /* ── Métricas por colaborador ── */
-  const metricas = Object.entries(colabs).map(([nome, d]) => {
-    const totalSess    = d.sessoes.length;
-    const totalTarefas = d.sessoes.reduce((a,s)=> a+(s.total_tarefas||0), 0);
-    const concluidas   = d.sessoes.reduce((a,s)=> a+(s.tarefas_concluidas||0), 0);
-    const pctConclusao = totalTarefas ? Math.round(concluidas/totalTarefas*100) : 0;
-    const naoFeitas    = d.pend.filter(p=> p.status==='nao_finalizado').length;
-    const parciais     = d.pend.filter(p=> p.status==='parcial').length;
-    const turnos100    = d.sessoes.filter(s=> s.status_geral==='completo').length;
-    const pctTurnos100 = totalSess ? Math.round(turnos100/totalSess*100) : 0;
-    const fNJ = faltaMap[nome]?.nj || 0;
-    const fJ  = faltaMap[nome]?.j  || 0;
-    /* Penalidade: falta NJ desconta 15 pts, falta J desconta 7 pts */
-    const penalidade = Math.min(80, fNJ*15 + fJ*7);
-    const scoreBase  = Math.round(pctConclusao*0.6 + pctTurnos100*0.4);
-    const score      = Math.max(0, scoreBase - penalidade);
-    return { nome, totalSess, totalTarefas, concluidas, pctConclusao,
-             naoFeitas, parciais, turnos100, pctTurnos100, score, scoreBase,
-             penalidade, fNJ, fJ, pend:d.pend };
-  }).sort((a,b)=> b.score - a.score);
-
-  /* ── KPIs globais ── */
-  const totalSess   = sessoes.length;
-  const totalTarefas= sessoes.reduce((a,s)=>a+(s.total_tarefas||0),0);
-  const totalConclui= sessoes.reduce((a,s)=>a+(s.tarefas_concluidas||0),0);
-  const pctGlobal   = totalTarefas ? Math.round(totalConclui/totalTarefas*100) : 0;
-  const totalPend    = pendencias.length;
-  const totalNaoFeit = pendencias.filter(p=>p.status==='nao_finalizado').length;
-  const totalParc    = pendencias.filter(p=>p.status==='parcial').length;
-  const nColabs      = metricas.length;
-  const totalFaltasNJ= faltas.filter(f=>f.tipo==='nao_justificada').length;
-  const totalFaltasJ = faltas.filter(f=>f.tipo==='justificada').length;
-
-  _allPendencias = pendencias;
-  _motivoFiltro  = 'todos';
-  ['todos','ft','eq','ins','out'].forEach(x=>{
-    document.getElementById('mf-'+x)?.classList.toggle('active', x==='todos');
-  });
-
-  document.getElementById('badge-colab').textContent = nColabs + ' colaboradores';
-
-  renderKPIs({ totalSess, totalTarefas, totalConclui, pctGlobal, totalPend,
-               totalNaoFeit, totalParc, nColabs, totalFaltasNJ, totalFaltasJ });
-  renderChartConclusao(metricas);
-  renderChartTurnos(metricas);
-  renderChartStatusPizza(totalConclui, totalParc, totalNaoFeit);
-  renderRanking(metricas);
-  renderAwards(metricas, faltas);
-  renderMotivos(pendencias);
-  renderCatPend(pendencias);
-  renderMotivoTable(pendencias, 'todos');
-  renderConsistencia(metricas);
-  renderEvolucao(sessoes, de, ate);
-
-  document.getElementById('pdf-bar').classList.add('show');
-  setState('data');
-}
-
-/* ══════════════════════════════════════════════════════════
-   KPIs
-══════════════════════════════════════════════════════════ */
-function renderKPIs(d){
-  const g = document.getElementById('kpi-grid');
-  const estrela = d.pctGlobal >= 90 ? '🌟' : d.pctGlobal >= 75 ? '✅' : d.pctGlobal >= 50 ? '⚠️' : '❌';
-  g.innerHTML = `
-    <div class="kpi-card blue">
-      <div class="kpi-icon">📋</div>
-      <div class="kpi-val">${d.totalTarefas}</div>
-      <div class="kpi-lbl">Tarefas Programadas</div>
-      <div class="kpi-sub">${d.totalSess} sessões no período</div>
-    </div>
-    <div class="kpi-card green">
-      <div class="kpi-icon">✅</div>
-      <div class="kpi-val">${d.totalConclui}</div>
-      <div class="kpi-lbl">Tarefas Concluídas</div>
-      <div class="kpi-sub">100% finalizadas</div>
-    </div>
-    <div class="kpi-card ${d.pctGlobal>=80?'green':d.pctGlobal>=60?'orange':'red'}">
-      <div class="kpi-icon">${estrela}</div>
-      <div class="kpi-val">${d.pctGlobal}%</div>
-      <div class="kpi-lbl">Taxa de Conclusão Global</div>
-      <div class="kpi-sub">Meta ideal: ≥ 90%</div>
-    </div>
-    <div class="kpi-card red">
-      <div class="kpi-icon">❌</div>
-      <div class="kpi-val">${d.totalNaoFeit}</div>
-      <div class="kpi-lbl">Não Executadas</div>
-      <div class="kpi-sub">Tarefas com 0 produção</div>
-    </div>
-    <div class="kpi-card orange">
-      <div class="kpi-icon">⚠️</div>
-      <div class="kpi-val">${d.totalParc}</div>
-      <div class="kpi-lbl">Parcialmente Feitas</div>
-      <div class="kpi-sub">Produção incompleta</div>
-    </div>
-    <div class="kpi-card purple">
-      <div class="kpi-icon">👥</div>
-      <div class="kpi-val">${d.nColabs}</div>
-      <div class="kpi-lbl">Colaboradores Ativos</div>
-      <div class="kpi-sub">No período selecionado</div>
-    </div>
-    <div class="kpi-card gold">
-      <div class="kpi-icon">⏰</div>
-      <div class="kpi-val">${d.totalSess}</div>
-      <div class="kpi-lbl">Turnos Registrados</div>
-      <div class="kpi-sub">Total de sessões</div>
-    </div>
-    <div class="kpi-card teal">
-      <div class="kpi-icon">📉</div>
-      <div class="kpi-val">${d.totalPend}</div>
-      <div class="kpi-lbl">Pendências Geradas</div>
-      <div class="kpi-sub">Parciais + Não feitas</div>
-    </div>
-    <div class="kpi-card crimson">
-      <div class="kpi-icon">🚫</div>
-      <div class="kpi-val">${d.totalFaltasNJ||0}</div>
-      <div class="kpi-lbl">Faltas N/Justificadas</div>
-      <div class="kpi-sub">Peso 2× no score</div>
-    </div>
-    <div class="kpi-card purple">
-      <div class="kpi-icon">📋</div>
-      <div class="kpi-val">${d.totalFaltasJ||0}</div>
-      <div class="kpi-lbl">Faltas Justificadas</div>
-      <div class="kpi-sub">Peso 1× no score</div>
-    </div>
-  `;
-}
-
-/* ══════════════════════════════════════════════════════════
-   CHART: TAXA DE CONCLUSÃO
-══════════════════════════════════════════════════════════ */
-function renderChartConclusao(metricas){
-  destroyChart('conclusao');
-  const ctx = document.getElementById('chart-conclusao').getContext('2d');
-  const labels = metricas.map(m => m.nome);
-  const data   = metricas.map(m => m.pctConclusao);
-  const colors = data.map(v => v>=90?'#16a34a':v>=75?'#e6a800':v>=50?'#ea580c':'#dc2626');
-  _charts.conclusao = new Chart(ctx,{
-    type:'bar',
-    data:{
-      labels,
-      datasets:[{
-        label:'Taxa de conclusão (%)',
-        data,
-        backgroundColor: colors,
-        borderRadius:6,
-        borderSkipped:false,
-      }]
-    },
-    options:{
-      indexAxis:'y',
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{
-          callbacks:{
-            label: ctx => ` ${ctx.parsed.x}% de conclusão`
-          }
-        }
-      },
-      scales:{
-        x:{ min:0, max:100, grid:{color:'#f0f2f8'}, ticks:{
-          callback: v => v+'%', font:{family:'Nunito',weight:'700'}
-        }},
-        y:{ grid:{display:false}, ticks:{ font:{family:'Nunito',weight:'800'}, color:'#1a1d2e' }}
-      }
-    }
-  });
-}
-
-/* ══════════════════════════════════════════════════════════
-   CHART: TURNOS TRABALHADOS
-══════════════════════════════════════════════════════════ */
-function renderChartTurnos(metricas){
-  destroyChart('turnos');
-  const ctx = document.getElementById('chart-turnos').getContext('2d');
-  const top = metricas.slice(0,12);
-  _charts.turnos = new Chart(ctx,{
-    type:'bar',
-    data:{
-      labels: top.map(m=>m.nome),
-      datasets:[
-        { label:'Turnos 100%', data: top.map(m=>m.turnos100), backgroundColor:'#16a34a', borderRadius:4 },
-        { label:'Outros turnos', data: top.map(m=>m.totalSess-m.turnos100), backgroundColor:'#e2e6f0', borderRadius:4 }
-      ]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:'bottom', labels:{ font:{family:'Nunito',weight:'700'} }} },
-      scales:{
-        x:{ stacked:true, grid:{display:false}, ticks:{ font:{family:'Nunito',size:10}, maxRotation:35 }},
-        y:{ stacked:true, grid:{color:'#f0f2f8'}, ticks:{ font:{family:'Nunito',weight:'700'}, stepSize:1 }}
-      }
-    }
-  });
-}
-
-/* ══════════════════════════════════════════════════════════
-   CHART: STATUS PIZZA
-══════════════════════════════════════════════════════════ */
-function renderChartStatusPizza(total, parcial, nao){
-  destroyChart('statusPizza');
-  const ctx = document.getElementById('chart-status-pizza').getContext('2d');
-  _charts.statusPizza = new Chart(ctx,{
-    type:'doughnut',
-    data:{
-      labels:['✅ Concluídas','⚠️ Parciais','❌ Não feitas'],
-      datasets:[{
-        data:[total,parcial,nao],
-        backgroundColor:['#16a34a','#e6a800','#dc2626'],
-        borderWidth:3, borderColor:'#fff',
-        hoverOffset:8
-      }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{ position:'bottom', labels:{ font:{family:'Nunito',weight:'700'}, padding:14 }},
-        tooltip:{ callbacks:{ label: ctx => ` ${ctx.label}: ${ctx.parsed}` }}
-      },
-      cutout:'65%'
-    }
-  });
-}
-
-/* ══════════════════════════════════════════════════════════
-   RANKING
-══════════════════════════════════════════════════════════ */
-function renderRanking(metricas){
-  const el = document.getElementById('ranking-list');
-  const maxScore = metricas[0]?.score || 100;
-  const medalhas = ['🥇','🥈','🥉'];
-  const posClass  = ['gold','silver','bronze'];
-  el.innerHTML = metricas.map((m,i) => {
-    const pct = Math.round(m.score/maxScore*100);
-    const cls  = i < 3 ? posClass[i] : 'other';
-    const stars = m.score>=90?'⭐⭐⭐':m.score>=75?'⭐⭐':m.score>=50?'⭐':'';
-    const faltaInfo = (m.fNJ||m.fJ) ?
-      ` · 🚫 ${m.fNJ} NJ${m.fJ?` · 📋 ${m.fJ} J`:''} (−${m.penalidade}pts)` : '';
-    return `
-      <div class="ranking-item">
-        <div class="rank-pos ${cls}">${i<3?medalhas[i]:i+1}</div>
-        <div class="rank-emoji">${emoji(m.nome)}</div>
-        <div class="rank-info">
-          <div class="rank-name">${m.nome} ${stars}</div>
-          <div class="rank-sub">${m.totalSess} turnos · ${m.pctConclusao}% conclusão · ${m.naoFeitas} não feitas${faltaInfo}</div>
-          <div class="rank-bar-wrap">
-            <div class="rank-bar" style="width:${pct}%;background:${m.score>=80?'#16a34a':m.score>=60?'#e6a800':'#dc2626'}"></div>
-          </div>
-        </div>
-        <div class="rank-score">
-          <div class="score-val">${m.score}</div>
-          <div class="score-lbl">pontos</div>
-        </div>
-      </div>`;
-  }).join('');
-}
-
-/* ══════════════════════════════════════════════════════════
-   AWARDS / PREMIAÇÃO
-══════════════════════════════════════════════════════════ */
-function renderAwards(metricas, faltas){
-  faltas = faltas || [];
-  const el = document.getElementById('award-grid');
-  if(metricas.length === 0){ el.innerHTML='<div class="empty-msg">Sem dados para prêmios.</div>'; return; }
-
-  const awards = [];
-
-  /* 🥇 MVP — maior score geral */
-  const mvp = metricas[0];
-  awards.push({
-    trophy:'🏆', title:'MVP do Período', color:'gold',
-    winner: mvp.nome,
-    stat: `Score ${mvp.score} pts · ${mvp.pctConclusao}% conclusão`,
-    desc: 'Melhor desempenho geral ponderando conclusão de tarefas e turnos 100% completos.'
-  });
-
-  /* 🎯 100% Club — todos os turnos concluídos 100% */
-  const perfeitos = metricas.filter(m=>m.pctTurnos100===100 && m.totalSess>=2);
-  if(perfeitos.length>0){
-    awards.push({
-      trophy:'🎯', title:'Clube dos 100%', color:'green',
-      winner: perfeitos.map(m=>m.nome).join(', '),
-      stat: `${perfeitos.length} colaborador${perfeitos.length>1?'es':''} com todos os turnos completos`,
-      desc: 'Finalizou TODOS os turnos do período com 100% das tarefas concluídas.'
-    });
-  }
-
-  /* 🔥 Mais Presente — mais turnos trabalhados */
-  const maisPresente = [...metricas].sort((a,b)=>b.totalSess-a.totalSess)[0];
-  awards.push({
-    trophy:'🔥', title:'Mais Presente', color:'blue',
-    winner: maisPresente.nome,
-    stat: `${maisPresente.totalSess} turno${maisPresente.totalSess!==1?'s':''} trabalhado${maisPresente.totalSess!==1?'s':''}`,
-    desc: 'Maior número de turnos registrados no período — comprometimento e frequência exemplares.'
-  });
-
-  /* ⚡ Mais Produtivo — maior total de tarefas concluídas */
-  const maisProd = [...metricas].sort((a,b)=>b.concluidas-a.concluidas)[0];
-  awards.push({
-    trophy:'⚡', title:'Mais Produtivo', color:'purple',
-    winner: maisProd.nome,
-    stat: `${maisProd.concluidas} tarefas concluídas no período`,
-    desc: 'Maior volume absoluto de tarefas finalizadas — alta capacidade de execução.'
-  });
-
-  /* 🌱 Melhor Recuperação — melhor nota entre quem tem mais pendências */
-  const comPend = metricas.filter(m=>m.totalPend > 0 || m.naoFeitas>0);
-  if(comPend.length>1){
-    const melhorRecup = [...comPend].sort((a,b)=>b.pctConclusao-a.pctConclusao)[0];
-    awards.push({
-      trophy:'🌱', title:'Melhor Equilíbrio', color:'silver',
-      winner: melhorRecup.nome,
-      stat: `${melhorRecup.pctConclusao}% mesmo com ${melhorRecup.naoFeitas} pendência${melhorRecup.naoFeitas!==1?'s':''}`,
-      desc: 'Manteve alta taxa de conclusão mesmo enfrentando desafios no período.'
-    });
-  }
-
-  /* 🛡️ Mais Consistente — menor variação / sem não-feitas */
-  const semNaoFeitas = metricas.filter(m=>m.naoFeitas===0 && m.totalSess>=2);
-  if(semNaoFeitas.length>0){
-    const maisConsis = semNaoFeitas.sort((a,b)=>b.pctConclusao-a.pctConclusao)[0];
-    awards.push({
-      trophy:'🛡️', title:'Mais Consistente', color:'silver',
-      winner: maisConsis.nome,
-      stat: `0 tarefas não feitas · ${maisConsis.pctConclusao}% conclusão`,
-      desc: 'Nunca deixou uma tarefa sem pelo menos iniciar. Consistência é a chave!'
-    });
-  }
-
-  el.innerHTML = awards.map(a=>`
-    <div class="award-card ${a.color}">
-      <div class="award-trophy">${a.trophy}</div>
-      <div class="award-title">${a.title}</div>
-      <div class="award-winner">${emoji(a.winner.split(',')[0].trim())} ${a.winner}</div>
-      <div class="award-stat">${a.stat}</div>
-      <div class="award-desc">${a.desc}</div>
-    </div>`).join('');
-}
-
-/* ══════════════════════════════════════════════════════════
-   CHART: MOTIVOS
-══════════════════════════════════════════════════════════ */
-const MOTIVO_LABELS = {
-  'falta de tempo'       : 'Falta de Tempo',
-  'falta_tempo'          : 'Falta de Tempo',
-  'faltou tempo'         : 'Falta de Tempo',
-  'sem tempo'            : 'Falta de Tempo',
-  'nao teve tempo'       : 'Falta de Tempo',
-  'não teve tempo'       : 'Falta de Tempo',
-  'tempo insuficiente'   : 'Falta de Tempo',
-  'pouco tempo'          : 'Falta de Tempo',
-  'tempo'                : 'Falta de Tempo',
-  'falta de equipamento' : 'Equipamento',
-  'equipamento quebrado' : 'Equipamento',
-  'equipamento'          : 'Equipamento',
-  'maquina'              : 'Equipamento',
-  'máquina'              : 'Equipamento',
-  'falta de insumo'      : 'Insumo/Ingrediente',
-  'falta de ingrediente' : 'Insumo/Ingrediente',
-  'sem insumo'           : 'Insumo/Ingrediente',
-  'ingrediente'          : 'Insumo/Ingrediente',
-  'insumos'              : 'Insumo/Ingrediente',
-  'insumo'               : 'Insumo/Ingrediente',
-};
-function normMotivo(m){
-  if(!m) return 'Não informado';
-  /* Remove acentos para comparação robusta */
-  const low = m.toLowerCase().trim()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  const lowOrig = m.toLowerCase().trim();
-  /* Testa chave com e sem acento */
-  for(const [k,v] of Object.entries(MOTIVO_LABELS)){
-    const kn = k.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    if(low.includes(kn) || lowOrig.includes(k)) return v;
-  }
-  return 'Outro';
-}
-
-function renderChartMotivos(pendencias){
-  destroyChart('motivos');
-  const ctx = document.getElementById('chart-motivos').getContext('2d');
-  const counts = {};
-  pendencias.forEach(p=>{
-    const m = normMotivo(p.motivo);
-    counts[m]=(counts[m]||0)+1;
-  });
-  const labels = Object.keys(counts);
-  const data   = Object.values(counts);
-  const palette = ['#dc2626','#ea580c','#e6a800','#7c3aed','#0d9488','#4b5563'];
-  _charts.motivos = new Chart(ctx,{
-    type:'bar',
-    data:{
-      labels,
-      datasets:[{
-        label:'Ocorrências',
-        data,
-        backgroundColor: labels.map((_,i)=>palette[i%palette.length]),
-        borderRadius:6, borderSkipped:false,
-      }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false} },
-      scales:{
-        x:{ grid:{display:false}, ticks:{font:{family:'Nunito',size:11}} },
-        y:{ grid:{color:'#f0f2f8'}, ticks:{font:{family:'Nunito',weight:'700'},stepSize:1} }
-      }
-    }
-  });
-}
-
-function renderMotivos(pendencias){
-  renderChartMotivos(pendencias);
-}
-
-/* ══════════════════════════════════════════════════════════
-   CHART: CATEGORIAS COM PENDÊNCIAS
-══════════════════════════════════════════════════════════ */
-function renderCatPend(pendencias){
-  destroyChart('catPend');
-  const ctx = document.getElementById('chart-cat-pend').getContext('2d');
-  const counts = {};
-  pendencias.forEach(p=>{
-    const c = (p.categoria||'Geral').replace(/^TRANSF:/,'');
-    counts[c]=(counts[c]||0)+1;
-  });
-  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  const palette = ['#2563eb','#7c3aed','#0d9488','#e6a800','#dc2626','#ea580c','#16a34a','#4b5563'];
-  _charts.catPend = new Chart(ctx,{
-    type:'doughnut',
-    data:{
-      labels: sorted.map(([k])=>k),
-      datasets:[{
-        data: sorted.map(([,v])=>v),
-        backgroundColor: palette,
-        borderWidth:2, borderColor:'#fff', hoverOffset:6
-      }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{ position:'right', labels:{ font:{family:'Nunito',size:11}, padding:8 }},
-      },
-      cutout:'55%'
-    }
-  });
-}
-
-/* ══════════════════════════════════════════════════════════
-   TABELA DE MOTIVOS DETALHADA
-══════════════════════════════════════════════════════════ */
-let _motivoFiltro = 'todos';
-
-function filtrarMotivo(f){
-  _motivoFiltro = f;
-  ['todos','ft','eq','ins','out'].forEach(x=>{
-    document.getElementById('mf-'+x)?.classList.toggle('active', x===f);
-  });
-  renderMotivoTable(_allPendencias, f);
-}
-
-function renderMotivoTable(pendencias, filtro){
-  filtro = filtro || _motivoFiltro || 'todos';
-  const wrap = document.getElementById('motivo-table-wrap');
-
-  let pends = pendencias;
-  if(filtro !== 'todos'){
-    pends = pendencias.filter(p=>{
-      const m = normMotivo(p.motivo);
-      if(filtro==='ft')  return m==='Falta de Tempo';
-      if(filtro==='eq')  return m==='Equipamento';
-      if(filtro==='ins') return m==='Insumo/Ingrediente';
-      if(filtro==='out') return m==='Outro' || m==='Não informado';
-      return true;
-    });
-  }
-
-  if(pends.length===0){
-    wrap.innerHTML='<div class="empty-msg">'+(filtro==='todos'?'Sem pendências no período. 🎉':'Nenhuma pendência com esse motivo. ✅')+'</div>';
+  if (!lista.length) {
+    cont.innerHTML=`<div class="state-box"><i class="fas fa-inbox"></i><p>Nenhuma tarefa para ${M.turno==='dia'?'☀️ Dia':'🌙 Noite'} — ${M.dia}</p></div>`;
     return;
   }
 
-  const ordemMotivo = {'Falta de Tempo':1,'Equipamento':2,'Insumo/Ingrediente':3,'Outro':4,'Não informado':5};
-  const pillClass = (m)=>{
-    if(m==='Falta de Tempo') return 'falta_tempo';
-    if(m==='Equipamento')    return 'equipamento';
-    if(m.includes('Insumo')) return 'insumo';
-    return 'outro';
+  const por = {};
+  lista.forEach(t=>{ if(!por[t.colaborador]) por[t.colaborador]=[]; por[t.colaborador].push(t); });
+
+  cont.innerHTML = Object.entries(por).sort((a,b)=>a[0].localeCompare(b[0])).map(([col,tasks])=>`
+    <div class="collab-block">
+      <div class="collab-hdr">
+        <div class="collab-avatar">${_emoji(col)}</div>
+        <div class="collab-hdr-name">${col}</div>
+        <div class="collab-hdr-cnt">${tasks.length} tarefa${tasks.length!==1?'s':''}</div>
+      </div>
+      <table class="med-table">
+        <thead><tr>
+          <th style="width:34px;text-align:center">
+            <input type="checkbox" title="Selecionar todos deste colaborador"
+              style="width:15px;height:15px;accent-color:#dc2626;cursor:pointer"
+              onchange="_selTodos('${col}',this.checked)"/>
+          </th>
+          <th style="width:18%">Categoria</th>
+          <th>Item</th>
+          <th style="width:195px;text-align:center">Qtd Padrão</th>
+          <th style="width:44px;text-align:center">Un</th>
+          <th style="width:210px;text-align:center">Ações</th>
+        </tr></thead>
+        <tbody>
+          ${tasks.sort((a,b)=>(a.ordem||0)-(b.ordem||0)).map(t=>`
+          <tr id="row-${t.id}">
+            <td style="text-align:center">
+              <input type="checkbox" class="row-chk" data-id="${t.id}"
+                style="width:15px;height:15px;accent-color:#dc2626;cursor:pointer"
+                onchange="_onChkChange()"/>
+            </td>
+            <td><span class="cat-chip">${t.categoria||'Geral'}</span></td>
+            <td><span class="item-name">${t.item||'—'}</span></td>
+            <td>
+              <div class="qty-ctrl">
+                <button class="qty-btn minus" onclick="adjQty('${t.id}',-10)">−10</button>
+                <button class="qty-btn minus" onclick="adjQty('${t.id}',-1)">−</button>
+                <input  class="qty-inp" type="number" id="qi-${t.id}" value="${t.quantidade_padrao||0}" min="0" onchange="markDirty('${t.id}')"/>
+                <button class="qty-btn plus"  onclick="adjQty('${t.id}',1)">+</button>
+                <button class="qty-btn plus"  onclick="adjQty('${t.id}',10)">+10</button>
+              </div>
+            </td>
+            <td style="text-align:center"><span class="unit-lbl">${t.unidade||''}</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="btn-save-row" id="sbtn-${t.id}" onclick="salvarItem('${t.id}')"><i class="fas fa-save"></i> Salvar</button>
+                <button class="btn-trocar" onclick="abrirModalTrocar('${t.id}','${(t.item||'').replace(/'/g,"\\'")}')"><i class="fas fa-exchange-alt"></i> Trocar</button>
+                <button class="btn-del"    onclick="excluirTarefa('${t.id}','${(t.item||'').replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
+              </div>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`).join('');
+}
+
+/* ── Qtd ── */
+function adjQty(id,delta){
+  const inp=document.getElementById(`qi-${id}`);
+  if(!inp) return;
+  inp.value=Math.max(0,Number(inp.value)+delta);
+  markDirty(id);
+}
+function markDirty(id){
+  const btn=document.getElementById(`sbtn-${id}`);
+  if(btn){btn.classList.remove('saved');btn.innerHTML='<i class="fas fa-save"></i> Salvar';}
+}
+
+/* ── Salvar item ── */
+async function salvarItem(id){
+  const inp=document.getElementById(`qi-${id}`);
+  const btn=document.getElementById(`sbtn-${id}`);
+  if(!inp||!btn) return;
+  const qty=Number(inp.value);
+  btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
+  btn.disabled=true;
+  try{
+    const r=await fetch(`tables/tarefas/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({quantidade_padrao:qty})});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    btn.innerHTML='<i class="fas fa-check"></i> Salvo';
+    btn.classList.add('saved');
+    const t=M.tarefas.find(x=>x.id===id);
+    if(t) t.quantidade_padrao=qty;
+    showToastM('✅ Quantidade salva!');
+  }catch(e){btn.innerHTML='<i class="fas fa-save"></i> Salvar';showToastM('❌ Erro: '+e.message);}
+  finally{btn.disabled=false;}
+}
+
+/* ── Salvar todos ── */
+async function salvarTodos(){
+  const colab=document.getElementById('sel-colab').value;
+  const lista=colab?M.tarefas.filter(t=>t.colaborador===colab):M.tarefas;
+  let ok=0,err=0;
+  await Promise.all(lista.map(async t=>{
+    const inp=document.getElementById(`qi-${t.id}`);
+    if(!inp) return;
+    try{
+      const r=await fetch(`tables/tarefas/${t.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({quantidade_padrao:Number(inp.value)})});
+      if(!r.ok) throw new Error();
+      const btn=document.getElementById(`sbtn-${t.id}`);
+      if(btn){btn.innerHTML='<i class="fas fa-check"></i> Salvo';btn.classList.add('saved');}
+      t.quantidade_padrao=Number(inp.value); ok++;
+    }catch{err++;}
+  }));
+  showToastM(err===0?`✅ ${ok} itens salvos!`:`⚠️ ${ok} salvos, ${err} erros`);
+}
+
+/* ── Remover card do colaborador se não tiver mais tarefas visíveis ── */
+function _removerCardSemTarefas(colabNome) {
+  /* verifica no array de dados se ainda há tarefas para esse colab no turno/dia atual */
+  const restantes = M.tarefas.filter(t => t.colaborador === colabNome);
+  if (restantes.length > 0) return; /* ainda tem tarefas, não remove */
+
+  /* localiza o .collab-block pelo nome */
+  const blocks = document.querySelectorAll('.collab-block');
+  blocks.forEach(block => {
+    const nomeEl = block.querySelector('.collab-hdr-name');
+    if (nomeEl && nomeEl.textContent.trim() === colabNome) {
+      block.style.transition = 'opacity .4s, max-height .4s, margin .4s';
+      block.style.overflow   = 'hidden';
+      block.style.maxHeight  = block.scrollHeight + 'px';
+      requestAnimationFrame(() => {
+        block.style.opacity   = '0';
+        block.style.maxHeight = '0';
+        block.style.marginBottom = '0';
+      });
+      setTimeout(() => block.remove(), 420);
+    }
+  });
+
+  /* remove também do select de colaboradores */
+  const sel = document.getElementById('sel-colab');
+  if (sel) {
+    [...sel.options].forEach(opt => { if (opt.value === colabNome) opt.remove(); });
+    if (sel.value === colabNome) { sel.value = ''; renderTabela(); }
+  }
+  /* atualiza M.colabs */
+  M.colabs = M.colabs.filter(c => c !== colabNome);
+}
+
+/* ── Excluir tarefa ── */
+async function excluirTarefa(id, nome){
+  if(!confirm(`Excluir a tarefa "${nome}"?\nEsta ação não pode ser desfeita.`)) return;
+  /* pega colaborador antes de remover do array */
+  const tarefa = M.tarefas.find(x => x.id === id);
+  const colabNome = tarefa ? tarefa.colaborador : null;
+  try{
+    const r=await fetch(`tables/tarefas/${id}`,{method:'DELETE'});
+    if(!r.ok && r.status!==204) throw new Error('HTTP '+r.status);
+    const row=document.getElementById(`row-${id}`);
+    if(row){row.style.transition='all .3s';row.style.opacity='0';row.style.maxHeight='0';setTimeout(()=>row.remove(),300);}
+    M.tarefas=M.tarefas.filter(x=>x.id!==id);
+    M.todos=M.todos.filter(x=>x.id!==id);
+    /* verifica se o card do colaborador deve ser removido */
+    if (colabNome) setTimeout(() => _removerCardSemTarefas(colabNome), 350);
+    showToastM('🗑️ Tarefa excluída!');
+  }catch(e){showToastM('❌ Erro ao excluir: '+e.message);}
+}
+
+/* ══════════════════════════════════════════════════
+   SELEÇÃO EM LOTE
+══════════════════════════════════════════════════ */
+function _onChkChange() {
+  const selecionados = document.querySelectorAll('.row-chk:checked');
+  const bar  = document.getElementById('lote-bar');
+  const cnt  = document.getElementById('lote-cnt');
+  if (selecionados.length > 0) {
+    bar.style.display = 'flex';
+    cnt.textContent   = `${selecionados.length} selecionada${selecionados.length!==1?'s':''}`;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function _selTodos(colab, checked) {
+  /* marca/desmarca todas as checkboxes da tabela daquele colaborador */
+  const card = [...document.querySelectorAll('.collab-block')].find(el => {
+    const h = el.querySelector('.collab-hdr-name');
+    return h && h.textContent.trim() === colab;
+  });
+  if (card) {
+    card.querySelectorAll('.row-chk').forEach(chk => { chk.checked = checked; });
+  } else {
+    /* fallback: marca todas visíveis */
+    document.querySelectorAll('.row-chk').forEach(chk => { chk.checked = checked; });
+  }
+  _onChkChange();
+}
+
+function limparSelecao() {
+  document.querySelectorAll('.row-chk').forEach(chk => { chk.checked = false; });
+  _onChkChange();
+}
+
+async function excluirLote() {
+  const checks = [...document.querySelectorAll('.row-chk:checked')];
+  if (!checks.length) return;
+  const ids   = checks.map(c => c.dataset.id);
+
+  /* guarda colaboradores afetados ANTES de remover do array */
+  const colabsAfetados = [...new Set(
+    ids.map(id => { const t = M.tarefas.find(x => x.id === id); return t ? t.colaborador : null; })
+       .filter(Boolean)
+  )];
+
+  const nomes = ids.map(id => {
+    const t = M.tarefas.find(x => x.id === id);
+    return t ? t.item : id;
+  });
+
+  const confirmMsg = `Excluir ${ids.length} tarefa${ids.length!==1?'s':''} selecionada${ids.length!==1?'s':''}?\n\n` +
+    nomes.slice(0,8).join('\n') + (nomes.length > 8 ? `\n... e mais ${nomes.length-8}` : '') +
+    '\n\n⚠️ Esta ação remove permanentemente e afeta todos os registros futuros.';
+  if (!confirm(confirmMsg)) return;
+
+  let ok = 0, erros = 0;
+  await Promise.all(ids.map(async id => {
+    try {
+      try { const r = await fetch(`tables/tarefas/${id}`, { method: 'DELETE' }); if (r.ok || r.status === 204) {
+        const row = document.getElementById(`row-${id}`);
+        if (row) { row.style.transition='opacity .3s'; row.style.opacity='0'; setTimeout(()=>row.remove(),300); }
+        M.tarefas = M.tarefas.filter(x=>x.id!==id);
+        M.todos   = M.todos.filter(x=>x.id!==id);
+        ok++;
+      } else { erros++; } } catch { erros++; }
+    } catch { erros++; }
+  }));
+
+  /* remove cards de colaboradores que ficaram sem tarefas */
+  setTimeout(() => {
+    colabsAfetados.forEach(c => _removerCardSemTarefas(c));
+  }, 350);
+
+  limparSelecao();
+  showToastM(erros === 0
+    ? `🗑️ ${ok} tarefa${ok!==1?'s':''} excluída${ok!==1?'s':''}!`
+    : `⚠️ ${ok} excluídas, ${erros} com erro`);
+
+  /* Atualiza contagem no count-bar */
+  const total = M.tarefas.filter(t=>t.turno===M.turno&&t.dia_semana===M.dia).length;
+  const colab = document.getElementById('sel-colab').value;
+  const n = colab ? M.tarefas.filter(t=>t.turno===M.turno&&t.dia_semana===M.dia&&t.colaborador===colab).length : total;
+  document.getElementById('count-txt').textContent = `${n} tarefa${n!==1?'s':''} exibida${n!==1?'s':''}`;
+}
+
+/* ── Modal Nova Tarefa ── */
+function toggleNovaCategoria() {
+  const chk  = document.getElementById('nt-cat-chk').checked;
+  document.getElementById('nt-cat-nova').style.display = chk ? 'block' : 'none';
+  document.getElementById('nt-cat').style.display      = chk ? 'none'  : 'block';
+}
+
+function abrirModalNova(){
+  /* Pré-preenche turno e dia atuais */
+  document.getElementById('nt-turno').value=M.turno;
+  document.getElementById('nt-dia').value=M.dia;
+  document.getElementById('nt-item').value='';
+  document.getElementById('nt-qty').value=0;
+  document.getElementById('nt-unidade').value='un';
+  document.getElementById('nt-ordem').value=99;
+  document.getElementById('nt-colab').value='';
+  /* Reset checkbox nova categoria */
+  document.getElementById('nt-cat-chk').checked=false;
+  document.getElementById('nt-cat-nova').style.display='none';
+  document.getElementById('nt-cat-nova').value='';
+  document.getElementById('nt-cat').style.display='block';
+  /* Popula categorias existentes */
+  const cats=[...new Set(M.todos.map(t=>t.categoria).filter(Boolean))].sort();
+  const selCat=document.getElementById('nt-cat');
+  selCat.innerHTML='<option value="">-- Selecione --</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  /* Popula colaboradores */
+  const colabs=[...new Set(M.todos.map(t=>t.colaborador).filter(Boolean))].sort();
+  document.getElementById('nt-colab-list').innerHTML=colabs.map(c=>`<option value="${c}">`).join('');
+  document.getElementById('modal-nova').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('nt-colab').focus(),100);
+}
+function fecharModalNova(){ document.getElementById('modal-nova').classList.add('hidden'); }
+
+async function salvarNovaTarefa(){
+  const colab  = document.getElementById('nt-colab').value.trim();
+  const item   = document.getElementById('nt-item').value.trim();
+  const turno  = document.getElementById('nt-turno').value;
+  const dia    = document.getElementById('nt-dia').value;
+  const useNova = document.getElementById('nt-cat-chk').checked;
+  const cat    = useNova
+    ? document.getElementById('nt-cat-nova').value.trim()
+    : document.getElementById('nt-cat').value.trim();
+  const qty    = Number(document.getElementById('nt-qty').value)||0;
+  const unid   = document.getElementById('nt-unidade').value.trim();
+  const ordem  = Number(document.getElementById('nt-ordem').value)||99;
+
+  if(!colab){ showToastM('⚠️ Informe o colaborador!'); return; }
+  if(!item)  { showToastM('⚠️ Informe o item/tarefa!'); return; }
+
+  const btn=document.querySelector('#modal-nova .btn-confirm');
+  btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Salvando…';
+
+  try{
+    const body={
+      id:'tar-'+Date.now(),
+      turno, dia_semana:dia, colaborador:colab,
+      categoria:cat||'Geral', item, quantidade_padrao:qty,
+      unidade:unid||'un', ordem
+    };
+    const r=await fetch('tables/tarefas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    showToastM('✅ Tarefa criada com sucesso!');
+    fecharModalNova();
+    carregar();
+  }catch(e){showToastM('❌ Erro: '+e.message);}
+  finally{btn.disabled=false;btn.innerHTML='<i class="fas fa-save"></i> Criar Tarefa';}
+}
+
+/* ── Modal Trocar Colaborador ── */
+function abrirModalTrocar(id,nome){
+  _trocarId=id;
+  /* Pega dados atuais da tarefa */
+  const tar=M.todos.find(t=>t.id===id);
+  document.getElementById('trocar-item-nome').textContent=nome;
+  /* Popula select de colaboradores */
+  const colabs=[...new Set(M.todos.map(t=>t.colaborador).filter(Boolean))].sort();
+  const selC=document.getElementById('trocar-colab');
+  selC.innerHTML=colabs.map(c=>`<option value="${c}"${tar&&tar.colaborador===c?' selected':''}>${c}</option>`).join('');
+  /* Turno e dia atuais */
+  document.getElementById('trocar-turno').value=tar?tar.turno:M.turno;
+  document.getElementById('trocar-dia').value=tar?tar.dia_semana:M.dia;
+  document.getElementById('modal-trocar').classList.remove('hidden');
+}
+function fecharModalTrocar(){ document.getElementById('modal-trocar').classList.add('hidden'); _trocarId=null; }
+
+async function confirmarTrocar(){
+  const novoColab=document.getElementById('trocar-colab').value.trim();
+  const novoTurno=document.getElementById('trocar-turno').value;
+  const novoDia  =document.getElementById('trocar-dia').value;
+  if(!novoColab){ showToastM('⚠️ Selecione o colaborador!'); return; }
+  if(!_trocarId) return;
+
+  const btn=document.querySelector('#modal-trocar .btn-confirm');
+  btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
+
+  try{
+    const r=await fetch(`tables/tarefas/${_trocarId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({colaborador:novoColab,turno:novoTurno,dia_semana:novoDia})});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    showToastM('✅ Tarefa movida! Recarregando…');
+    fecharModalTrocar();
+    setTimeout(()=>carregar(),400);
+  }catch(e){showToastM('❌ Erro: '+e.message);}
+  finally{btn.disabled=false;btn.innerHTML='<i class="fas fa-exchange-alt"></i> Mover Tarefa';}
+}
+
+/* ── Modal Renomear Colaborador (global) ── */
+function abrirModalRenomear() {
+  const colabsTodos = [...new Set(M.todos.map(t=>t.colaborador).filter(Boolean))].sort();
+  const sel = document.getElementById('ren-atual');
+  sel.innerHTML = colabsTodos.map(c=>`<option value="${c}">${c}</option>`).join('');
+  document.getElementById('ren-novo').value = '';
+  document.getElementById('ren-preview').textContent = '';
+  sel.onchange = () => {
+    const cnt = M.todos.filter(t=>t.colaborador===sel.value).length;
+    document.getElementById('ren-preview').textContent = `${cnt} tarefa(s) serão renomeadas em todos os dias e turnos.`;
   };
-
-  const sorted = [...pends].sort((a,b)=>{
-    const ma = ordemMotivo[normMotivo(a.motivo)]||9;
-    const mb = ordemMotivo[normMotivo(b.motivo)]||9;
-    return ma-mb || (a.data||'').localeCompare(b.data||'');
-  });
-
-  const exibidos = sorted.slice(0,100);
-  let html = `<table class="motivo-table">
-    <thead><tr>
-      <th>Motivo</th><th>Colaborador</th><th>Item</th><th>Categoria</th><th>Data</th><th>Status</th>
-    </tr></thead><tbody>`;
-
-  exibidos.forEach(p=>{
-    const m = normMotivo(p.motivo);
-    html += `<tr>
-      <td><span class="motivo-pill ${pillClass(m)}">${m}</span></td>
-      <td style="font-weight:700">${emoji(p.colaborador)} ${p.colaborador||'—'}</td>
-      <td>${p.item||'—'}</td>
-      <td>${(p.categoria||'—').replace(/^TRANSF:/,'')}</td>
-      <td>${fmtData(p.data)}</td>
-      <td style="font-size:11px;color:${p.status==='nao_finalizado'?'#dc2626':'#ea580c'}">
-        ${p.status==='nao_finalizado'?'❌ Não feita':'⚠️ Parcial'}
-      </td>
-    </tr>`;
-  });
-
-  html += '</tbody></table>';
-  if(pends.length > 100) html += `<div class="empty-msg" style="font-size:11px;padding:12px">Exibindo 100 de ${pends.length} registros.</div>`;
-  wrap.innerHTML = html;
+  sel.dispatchEvent(new Event('change'));
+  document.getElementById('modal-renomear').classList.remove('hidden');
+}
+function fecharModalRenomear() {
+  document.getElementById('modal-renomear').classList.add('hidden');
 }
 
-/* ══════════════════════════════════════════════════════════
-   CONSISTÊNCIA
-══════════════════════════════════════════════════════════ */
-function renderConsistencia(metricas){
-  const el = document.getElementById('consist-grid');
-  el.innerHTML = metricas.map(m=>{
-    const cls = m.pctConclusao>=90?'excelente':m.pctConclusao>=75?'bom':m.pctConclusao>=50?'regular':'baixo';
-    const lbl = m.pctConclusao>=90?'Excelente':m.pctConclusao>=75?'Bom':m.pctConclusao>=50?'Regular':'Baixo';
-    return `
-      <div class="consist-card">
-        <div class="consist-emoji">${emoji(m.nome)}</div>
-        <div class="consist-info">
-          <div class="consist-name">${m.nome}</div>
-          <div class="consist-days">${m.totalSess} turno${m.totalSess!==1?'s':''} · ${m.turnos100} completo${m.turnos100!==1?'s':''} · ${m.naoFeitas} ñ feita${m.naoFeitas!==1?'s':''}</div>
-        </div>
-        <div class="consist-pct ${cls}" title="${lbl}">${m.pctConclusao}%</div>
-      </div>`;
-  }).join('');
-}
+async function confirmarRenomear() {
+  const atual = document.getElementById('ren-atual').value.trim();
+  const novo  = document.getElementById('ren-novo').value.trim();
+  if (!atual) { showToastM('⚠️ Selecione o colaborador!'); return; }
+  if (!novo)  { showToastM('⚠️ Informe o novo nome!'); return; }
+  if (atual === novo) { showToastM('⚠️ O nome é igual ao atual!'); return; }
 
-/* ══════════════════════════════════════════════════════════
-   CHART: EVOLUÇÃO DIÁRIA
-══════════════════════════════════════════════════════════ */
-function renderEvolucao(sessoes, de, ate){
-  destroyChart('evolucao');
-  const ctx = document.getElementById('chart-evolucao').getContext('2d');
+  const afetadas = M.todos.filter(t => t.colaborador === atual);
+  if (!afetadas.length) { showToastM('⚠️ Nenhuma tarefa encontrada.'); return; }
 
-  /* Gera lista de datas no período */
-  const datas = [];
-  const cur = new Date(de);
-  const fim = new Date(ate);
-  while(cur <= fim){ datas.push(cur.toISOString().slice(0,10)); cur.setDate(cur.getDate()+1); }
+  if (!confirm(`Renomear "${atual}" para "${novo}" em ${afetadas.length} tarefa(s)?\nEsta ação afeta TODOS os dias e turnos.`)) return;
 
-  /* Média de conclusão por dia */
-  const porDia = {};
-  datas.forEach(d=>{ porDia[d]={total:0,conclui:0}; });
-  sessoes.forEach(s=>{
-    if(porDia[s.data]){
-      porDia[s.data].total  += (s.total_tarefas||0);
-      porDia[s.data].conclui+= (s.tarefas_concluidas||0);
-    }
-  });
-
-  const labels = datas.map(d=>fmtData(d));
-  const data   = datas.map(d=>{
-    const e = porDia[d];
-    return e.total ? Math.round(e.conclui/e.total*100) : null;
-  });
-
-  _charts.evolucao = new Chart(ctx,{
-    type:'line',
-    data:{
-      labels,
-      datasets:[{
-        label:'Taxa de conclusão (%)',
-        data,
-        borderColor:'#e6a800',
-        backgroundColor:'rgba(230,168,0,.1)',
-        borderWidth:3,
-        pointBackgroundColor:'#e6a800',
-        pointRadius:5,
-        pointHoverRadius:7,
-        fill:true,
-        tension:.35,
-        spanGaps:true
-      },{
-        label:'Meta (90%)',
-        data: datas.map(()=>90),
-        borderColor:'#16a34a',
-        borderDash:[6,4],
-        borderWidth:2,
-        pointRadius:0,
-        fill:false,
-      }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{ position:'bottom', labels:{ font:{family:'Nunito',weight:'700'} }},
-        tooltip:{ callbacks:{ label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y??'—'}%` }}
-      },
-      scales:{
-        x:{ grid:{color:'#f0f2f8'}, ticks:{ font:{family:'Nunito',size:11}, maxRotation:35 }},
-        y:{ min:0, max:100, grid:{color:'#f0f2f8'},
-            ticks:{ callback:v=>v+'%', font:{family:'Nunito',weight:'700'} }}
-      }
-    }
-  });
-}
-
-/* ══════════════════════════════════════════════════════════
-   EXPORTAR PDF
-══════════════════════════════════════════════════════════ */
-function exportarPDF(){
-  const btn = document.getElementById('btn-pdf');
+  const btn = document.getElementById('btn-confirmar-ren');
   btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparando...';
-  setTimeout(()=>{
-    window.print();
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-file-pdf"></i> Exportar PDF';
-  }, 300);
+  btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Renomeando ${afetadas.length}...`;
+
+  let ok = 0, err = 0;
+  /* PATCH em paralelo, lotes de 20 para não sobrecarregar */
+  const LOTE = 20;
+  for (let i = 0; i < afetadas.length; i += LOTE) {
+    const lote = afetadas.slice(i, i + LOTE);
+    await Promise.all(lote.map(async t => {
+      try {
+        const r = await fetch(`tables/tarefas/${t.id}`, {
+          method: 'PATCH',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({colaborador: novo})
+        });
+        if (!r.ok) throw new Error();
+        t.colaborador = novo;
+        ok++;
+      } catch { err++; }
+    }));
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${ok}/${afetadas.length}...`;
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-check"></i> Renomear em Tudo';
+  fecharModalRenomear();
+
+  if (err === 0) {
+    showToastM(`✅ ${ok} tarefa(s) renomeadas com sucesso!`);
+  } else {
+    showToastM(`⚠️ ${ok} ok, ${err} erro(s). Verifique e tente novamente.`);
+  }
+  setTimeout(() => carregar(), 600);
 }
 
-/* ══════════════════════════════════════════════════════════
-   UTILS
-══════════════════════════════════════════════════════════ */
-function fmtData(d){
-  if(!d) return '—';
-  const [a,m,dia] = d.split('-');
-  return `${dia}/${m}/${a}`;
+/* ── Helpers ── */
+function _emoji(n){
+  const e=['👨‍🍳','👩‍🍳','🧑‍🍳','😎','🙂','🤩','💪','🔥','⭐','🌟'];
+  let s=0; for(let i=0;i<n.length;i++) s+=n.charCodeAt(i);
+  return e[s%e.length];
+}
+let _tmt;
+function showToastM(msg){
+  const el=document.getElementById('toast-med');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(_tmt);_tmt=setTimeout(()=>el.classList.remove('show'),2500);
 }
 </script>
-<!-- Firebase SDK (module) -->
+<!-- ══ BOTTOM NAV GLOBAL ══ -->
+<style>
+.gbn{position:fixed;bottom:0;left:0;right:0;z-index:300;background:#fff;border-top:1px solid #e2e6f0;
+  padding:8px 12px;padding-bottom:max(8px,env(safe-area-inset-bottom,8px));
+  box-shadow:0 -4px 20px rgba(0,0,0,.10);}
+.gbn-row{display:flex;gap:6px;justify-content:center;max-width:600px;margin:0 auto}
+.gbn-btn{flex:1;min-width:0;max-width:90px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:3px;padding:8px 4px;border-radius:12px;font-size:9px;font-weight:800;
+  font-family:inherit;cursor:pointer;text-decoration:none;border:none;transition:all .2s;}
+.gbn-btn i{font-size:17px;}
+.gbn-btn:hover{opacity:.85;transform:translateY(-2px);}
+.gbn-blue{background:#dbeafe;color:#1d4ed8}.gbn-pink{background:#fce7f3;color:#be185d}
+.gbn-green{background:#ecfdf5;color:#065f46}.gbn-purple{background:#ede9fe;color:#7c3aed}
+.gbn-amber{background:#fef3c7;color:#d97706}
+body{padding-bottom:72px}
+</style>
+<div class="gbn">
+  <div class="gbn-row">
+    <a href="index.html" class="gbn-btn gbn-amber"><i class="fas fa-home"></i>Home</a>
+    <a href="resultados_v2.html" class="gbn-btn gbn-blue"><i class="fas fa-chart-bar"></i>Resultados</a>
+    <a href="insumos.html" class="gbn-btn gbn-green"><i class="fas fa-boxes"></i>Insumos</a>
+    <a href="dashboard.html" class="gbn-btn gbn-purple"><i class="fas fa-tachometer-alt"></i>Dashboard</a>
+  </div>
+</div>
 </body>
 </html>
