@@ -320,7 +320,7 @@
 <div class="filter-bar" id="filter-bar">
   <div class="filter-group">
     <span class="filter-label">📅 Data</span>
-    <input type="date" id="res-data" onchange="loadResultados()"/>
+    <input type="date" id="res-data" onchange="onResDataChange()"/>
   </div>
   <div class="filter-group">
     <span class="filter-label">☀️ Turno</span>
@@ -450,35 +450,26 @@
       <!-- preenchido pelo JS -->
     </div>
 
-    <!-- PASSO 1: Data destino -->
+    <!-- Data destino + auto-detecta turno e dia -->
     <label class="modal-label">📅 Data destino</label>
-    <input type="date" id="transferir-data" class="modal-input"/>
+    <input type="date" id="transferir-data" class="modal-input" onchange="onTransfDataChange()"/>
 
-    <!-- PASSO 2: Turno destino -->
-    <label class="modal-label">⏰ Turno destino</label>
-    <div style="display:flex;gap:8px;margin-bottom:14px">
-      <button type="button" id="trn-btn-dia" onclick="setTransfTurno('dia')"
-        style="flex:1;padding:10px;border-radius:10px;border:2px solid #f97316;background:#fff7ed;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;color:#c2410c;transition:all .2s">
-        ☀️ Dia
-      </button>
-      <button type="button" id="trn-btn-noite" onclick="setTransfTurno('noite')"
-        style="flex:1;padding:10px;border-radius:10px;border:2px solid #e2e6f0;background:#f9fafb;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;color:#888;transition:all .2s">
-        🌙 Noite
-      </button>
-    </div>
+    <!-- Turno e dia (ocultos — auto-preenchidos pela data) -->
     <input type="hidden" id="transferir-turno" value="dia"/>
-
-    <!-- PASSO 3: Dia da semana destino -->
-    <label class="modal-label">📆 Dia da semana destino</label>
-    <div id="trn-dias-group" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px">
-      <!-- preenchido dinamicamente -->
-    </div>
     <input type="hidden" id="transferir-dia" value="segunda"/>
+    <input type="hidden" id="trn-btn-dia"/>
+    <input type="hidden" id="trn-btn-noite"/>
+    <div id="trn-dias-group" style="display:none"></div>
 
-    <!-- PASSO 4: Colaborador destino (filtra por turno/dia) -->
+    <!-- Tag informativa do turno/dia detectado -->
+    <div id="tranf-turno-info" style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;padding:8px 12px;margin-bottom:14px;font-size:13px;font-weight:700;color:#0369a1;display:none">
+      <!-- preenchido pelo JS -->
+    </div>
+
+    <!-- Colaborador destino -->
     <label class="modal-label">👤 Colaborador destino</label>
     <select id="transferir-destino" class="modal-select">
-      <option value="">Selecione turno e dia primeiro...</option>
+      <option value="">Selecione a data primeiro...</option>
     </select>
 
     <label class="modal-label">📝 Observação (opcional)</label>
@@ -592,6 +583,19 @@ function preencherSelectColaboradores() {
     const base = id === 'hist-colaborador' ? '<option value="">Todos</option>' : '<option value="">Selecione...</option>';
     sel.innerHTML = base + TODOS_COLABS.map(n => `<option value="${n}">${COLLAB_EMOJI_MAP[n]||'👤'} ${n}</option>`).join('');
   });
+}
+
+/* ── Auto-seleciona dia da semana ao mudar data ── */
+function onResDataChange() {
+  const dataVal = document.getElementById('res-data').value;
+  if (dataVal) {
+    const [y,m,d] = dataVal.split('-').map(Number);
+    const jsDay = new Date(y, m-1, d).getDay();
+    const diaKey = DIA_JS_MAP[jsDay];
+    document.getElementById('res-dia').value = diaKey;
+    renderDiasBtns(diaKey);
+  }
+  loadResultados();
 }
 
 /* ── FILTROS ── */
@@ -836,36 +840,37 @@ function _atualizaSummary() {
 /* ══════════════════════════════════════════
    TRANSFERIR TAREFA
 ══════════════════════════════════════════ */
-/* ── Botões de dia no modal transferir ── */
-function _renderTransfDiasBtns(activeKey) {
-  const wrap = document.getElementById('trn-dias-group');
-  if (!wrap) return;
-  wrap.innerHTML = DIAS_LIST.map(d =>
-    `<button type="button" class="trn-dia-btn${d.key === activeKey ? ' trn-dia-active' : ''}" 
-      onclick="setTransfDia('${d.key}')" 
-      style="padding:6px 10px;border-radius:14px;border:2px solid ${d.key===activeKey?'#1a1a2e':'#e2e6f0'};background:${d.key===activeKey?'#1a1a2e':'#f9fafb'};font-family:inherit;font-size:11px;font-weight:800;cursor:pointer;color:${d.key===activeKey?'#fff':'#888'};transition:all .2s">
-      ${d.short}
-    </button>`
-  ).join('');
-}
-
-function setTransfTurno(turno) {
-  document.getElementById('transferir-turno').value = turno;
-  const bD = document.getElementById('trn-btn-dia');
-  const bN = document.getElementById('trn-btn-noite');
-  if (turno === 'dia') {
-    if (bD) { bD.style.borderColor='#f97316'; bD.style.background='#fff7ed'; bD.style.color='#c2410c'; }
-    if (bN) { bN.style.borderColor='#e2e6f0'; bN.style.background='#f9fafb'; bN.style.color='#888'; }
-  } else {
-    if (bN) { bN.style.borderColor='#6366f1'; bN.style.background='#eef2ff'; bN.style.color='#4338ca'; }
-    if (bD) { bD.style.borderColor='#e2e6f0'; bD.style.background='#f9fafb'; bD.style.color='#888'; }
+/* ── Auto-detecta turno e dia pela data selecionada ── */
+function onTransfDataChange() {
+  const dataVal = document.getElementById('transferir-data').value;
+  if (!dataVal) return;
+  /* Calcula dia da semana (JS 0=Dom..6=Sab) */
+  const [y,m,d] = dataVal.split('-').map(Number);
+  const jsDay = new Date(y, m-1, d).getDay();
+  const diaKey = DIA_JS_MAP[jsDay];
+  /* Turno = turno atual dos filtros de resultados (o usuário pode mudar) */
+  const turnoAtual = document.getElementById('res-turno').value || 'dia';
+  document.getElementById('transferir-dia').value   = diaKey;
+  document.getElementById('transferir-turno').value = turnoAtual;
+  /* Mostra info */
+  const DIAS_NOME = {segunda:'Segunda',terca:'Terça',quarta:'Quarta',quinta:'Quinta',sexta:'Sexta',sabado:'Sábado',domingo:'Domingo'};
+  const infoEl = document.getElementById('tranf-turno-info');
+  if (infoEl) {
+    const icon = turnoAtual==='dia'?'☀️':'🌙';
+    const tnome = turnoAtual==='dia'?'Dia':'Noite';
+    infoEl.style.display = '';
+    infoEl.textContent = `${icon} Turno ${tnome} · ${DIAS_NOME[diaKey]||diaKey}`;
   }
   _popularDestinoComTarefas();
 }
 
+function _renderTransfDiasBtns(activeKey) { /* mantida por compatibilidade */ }
+function setTransfTurno(turno) {
+  document.getElementById('transferir-turno').value = turno;
+  _popularDestinoComTarefas();
+}
 function setTransfDia(dia) {
   document.getElementById('transferir-dia').value = dia;
-  _renderTransfDiasBtns(dia);
   _popularDestinoComTarefas();
 }
 
@@ -923,15 +928,10 @@ function abrirModalTransferir(pendId, itemNome, origem, categoria, motivo, qProg
   document.getElementById('transferir-qfeit').value     = qFeit || 0;
   document.getElementById('transferir-categoria').value = categoria || '';
 
-  /* Pré-seleciona data = hoje, turno e dia atuais */
-  const hoje   = new Date().toISOString().slice(0,10);
-  const diaKey = DIA_JS_MAP[new Date().getDay()];
-  const turnoAtual = document.getElementById('res-turno').value || 'dia';
-  document.getElementById('transferir-data').value  = hoje;
-  document.getElementById('transferir-turno').value = turnoAtual;
-  setTransfTurno(turnoAtual);
-  _renderTransfDiasBtns(diaKey);
-  document.getElementById('transferir-dia').value = diaKey;
+  /* Pré-seleciona data = hoje e auto-detecta turno/dia */
+  const hoje = new Date().toISOString().slice(0,10);
+  document.getElementById('transferir-data').value = hoje;
+  onTransfDataChange(); // auto-detect turno e dia da semana
 
   /* Detalhe da tarefa */
   const qRest = Math.max(0, qProg - qFeit);
