@@ -377,8 +377,9 @@
     <div class="sub">Dashboard de Produtividade</div>
   </div>
   <div class="top-bar-links">
-    <a href="resultados.html"><i class="fas fa-chart-bar"></i> Resultados</a>
+    <a href="resultados_v2.html"><i class="fas fa-chart-bar"></i> Resultados</a>
     <a href="medias.html"><i class="fas fa-list-ol"></i> Médias</a>
+    <a href="insumos.html"><i class="fas fa-boxes"></i> Insumos</a>
   </div>
 </div>
 
@@ -616,13 +617,21 @@ function toast(msg){
 async function fetchAll(table){
   let rows=[], pg=1;
   while(true){
-    const r = await fetch(`tables/${table}?limit=500&page=${pg}`);
-    if(!r.ok) break;
-    const j = await r.json();
-    const d = j.data||[];
-    rows = rows.concat(d);
-    if(d.length < 500) break;
-    pg++;
+    try {
+      const r = await fetch(`tables/${table}?limit=500&page=${pg}`);
+      if(!r.ok){
+        if(r.status===404||r.status===422) break; // Tabela vazia ou não encontrada
+        throw new Error(`HTTP ${r.status} ao buscar ${table}`);
+      }
+      const j = await r.json();
+      const d = Array.isArray(j.data) ? j.data : [];
+      rows = rows.concat(d);
+      if(d.length < 500) break;
+      pg++;
+    } catch(e){
+      console.warn(`fetchAll(${table}) p${pg}:`, e.message);
+      break;
+    }
   }
   return rows;
 }
@@ -671,14 +680,15 @@ async function buscar(){
 
     if(filtraSess.length === 0 && filtraFaltas.length === 0){
       setState('empty');
-      toast('⚠️ Nenhum dado encontrado para o período selecionado.');
+      toast('⚠️ Nenhum dado para o período. Registre turnos primeiro.');
       return;
     }
 
     renderDash(filtraSess, filtraPend, filtraFaltas, de, ate);
 
   } catch(e){
-    toast('❌ Erro ao carregar dados: ' + e.message);
+    console.error('Dashboard buscar error:', e);
+    toast('❌ Erro ao carregar: ' + (e.message||'Tente novamente'));
     setState('empty');
   } finally {
     btn.disabled = false; btn.innerHTML = '<i class="fas fa-search"></i> Gerar Relatório';
@@ -1385,6 +1395,29 @@ function fmtData(d){
   return `${dia}/${m}/${a}`;
 }
 </script>
-<!-- Firebase SDK (module) -->
+<!-- ══ BOTTOM NAV GLOBAL ══ -->
+<style>
+.gbn{position:fixed;bottom:0;left:0;right:0;z-index:300;background:#fff;border-top:1px solid #e2e6f0;
+  padding:8px 12px;padding-bottom:max(8px,env(safe-area-inset-bottom,8px));
+  box-shadow:0 -4px 20px rgba(0,0,0,.10);}
+.gbn-row{display:flex;gap:6px;justify-content:center;max-width:600px;margin:0 auto}
+.gbn-btn{flex:1;min-width:0;max-width:90px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:3px;padding:8px 4px;border-radius:12px;font-size:9px;font-weight:800;
+  font-family:inherit;cursor:pointer;text-decoration:none;border:none;transition:all .2s;}
+.gbn-btn i{font-size:17px;}
+.gbn-btn:hover{opacity:.85;transform:translateY(-2px);}
+.gbn-blue{background:#dbeafe;color:#1d4ed8}.gbn-pink{background:#fce7f3;color:#be185d}
+.gbn-green{background:#ecfdf5;color:#065f46}.gbn-purple{background:#ede9fe;color:#7c3aed}
+.gbn-amber{background:#fef3c7;color:#d97706}
+body{padding-bottom:72px}
+</style>
+<div class="gbn">
+  <div class="gbn-row">
+    <a href="index.html" class="gbn-btn gbn-amber"><i class="fas fa-home"></i>Home</a>
+    <a href="resultados_v2.html" class="gbn-btn gbn-blue"><i class="fas fa-chart-bar"></i>Resultados</a>
+    <a href="medias.html" class="gbn-btn gbn-pink"><i class="fas fa-photo-video"></i>Mídias</a>
+    <a href="insumos.html" class="gbn-btn gbn-green"><i class="fas fa-boxes"></i>Insumos</a>
+  </div>
+</div>
 </body>
 </html>
