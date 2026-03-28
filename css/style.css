@@ -153,8 +153,9 @@ body {
 }
 .welcome-header img {
   display:block; height:44px; object-fit:contain;
-  filter:brightness(0) invert(1); /* logo branco sobre preto */
+  /* Sem filtro — SVG já tem cores próprias */
   margin:0 auto;
+  max-width:220px;
 }
 .welcome-brand { display:flex; align-items:center; gap:14px; }
 .welcome-emoji { font-size:40px; }
