@@ -1,5 +1,6 @@
 /* ═══════════════════════════════════════════════════════
    JUST BURGER 🍔 — data.js
+   Dados estáticos dos colaboradores por turno e dia
 ═══════════════════════════════════════════════════════ */
 
 const COLABORADORES_DIA = {
