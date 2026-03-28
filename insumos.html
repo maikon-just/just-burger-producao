@@ -561,5 +561,30 @@ function _toast(msg, dur=3000){
   setTimeout(()=>el.classList.remove('show'), dur);
 }
 </script>
+
+<!-- ══ BOTTOM NAV GLOBAL ══ -->
+<style>
+.gbn{position:fixed;bottom:0;left:0;right:0;z-index:300;background:#fff;border-top:1px solid #e2e6f0;
+  padding:8px 12px;padding-bottom:max(8px,env(safe-area-inset-bottom,8px));
+  box-shadow:0 -4px 20px rgba(0,0,0,.10);}
+.gbn-row{display:flex;gap:6px;justify-content:center;max-width:600px;margin:0 auto}
+.gbn-btn{flex:1;min-width:0;max-width:90px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:3px;padding:8px 4px;border-radius:12px;font-size:9px;font-weight:800;
+  font-family:inherit;cursor:pointer;text-decoration:none;border:none;transition:all .2s;}
+.gbn-btn i{font-size:17px;}
+.gbn-btn:hover{opacity:.85;transform:translateY(-2px);}
+.gbn-blue{background:#dbeafe;color:#1d4ed8}.gbn-pink{background:#fce7f3;color:#be185d}
+.gbn-green{background:#ecfdf5;color:#065f46}.gbn-purple{background:#ede9fe;color:#7c3aed}
+.gbn-amber{background:#fef3c7;color:#d97706}
+body{padding-bottom:72px}
+</style>
+<div class="gbn">
+  <div class="gbn-row">
+    <a href="index.html" class="gbn-btn gbn-amber"><i class="fas fa-home"></i>Home</a>
+    <a href="resultados_v2.html" class="gbn-btn gbn-blue"><i class="fas fa-chart-bar"></i>Resultados</a>
+    <a href="medias.html" class="gbn-btn gbn-pink"><i class="fas fa-photo-video"></i>Mídias</a>
+    <a href="dashboard.html" class="gbn-btn gbn-purple"><i class="fas fa-tachometer-alt"></i>Dashboard</a>
+  </div>
+</div>
 </body>
 </html>
