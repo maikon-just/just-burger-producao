@@ -146,8 +146,15 @@ body {
 
 /* ══ BOAS-VINDAS ══ */
 .welcome-header {
-  background:linear-gradient(135deg,var(--dark),var(--dark2));
-  padding:20px 20px 18px; color:#fff;
+  background:#111; /* preto puro */
+  padding:14px 20px 12px; color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  position:relative;
+}
+.welcome-header img {
+  display:block; height:44px; object-fit:contain;
+  filter:brightness(0) invert(1); /* logo branco sobre preto */
+  margin:0 auto;
 }
 .welcome-brand { display:flex; align-items:center; gap:14px; }
 .welcome-emoji { font-size:40px; }
@@ -934,17 +941,26 @@ body.has-bottom-nav { padding-bottom:72px; }
 .info-box-val   { font-size:20px; font-weight:900; color:var(--dark); }
 .info-box-unit  { font-size:11px; color:var(--text2); }
 
-/* Grid 2x2 para botões de status */
+/* 3 botões em 1 linha para status principal */
+.status-btns-row3 {
+  display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;
+  margin-bottom:0;
+}
+/* 1 botão full width para maior qtd */
+.status-btns-row1 {
+  display:block; margin-bottom:4px;
+}
+/* Compatibilidade com grid antigo (não usado mais) */
 .status-btns-grid {
   display:grid; grid-template-columns:1fr 1fr; gap:8px;
   margin-bottom:4px;
 }
 .sbtn {
-  padding:10px 8px; border-radius:var(--radius-sm);
+  padding:9px 6px; border-radius:var(--radius-sm);
   border:2px solid transparent; font-family:inherit;
-  font-size:12px; font-weight:800; cursor:pointer;
+  font-size:11px; font-weight:800; cursor:pointer;
   transition:all .15s; text-align:center;
-  display:flex; align-items:center; justify-content:center; gap:4px;
+  display:flex; align-items:center; justify-content:center; gap:3px;
 }
 .sbtn-total  { background:#f0fdf4; color:#16a34a; border-color:#86efac; }
 .sbtn-parcial{ background:#fff7ed; color:#c2410c; border-color:#fdba74; }
