@@ -196,13 +196,10 @@ function _updateWorkDateDisplay(ds) {
   const el = document.getElementById('work-date-display');
   if (!el) return;
   const dt = new Date(ds+'T12:00:00');
-  const dn = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const dn = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
   const mn = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const ehHoje = ds===today();
-  el.innerHTML=`
-    <span class="wdd-weekday">${dn[dt.getDay()]}</span>
-    <span class="wdd-date">${dt.getDate()} ${mn[dt.getMonth()]} ${dt.getFullYear()}</span>
-    ${ehHoje?'<span class="wdd-today-tag">HOJE</span>':''}`;
+  // Mostra apenas: Dia da Semana · DD Mês AAAA
+  el.textContent = `${dn[dt.getDay()]} · ${dt.getDate()} ${mn[dt.getMonth()]} ${dt.getFullYear()}`;
 }
 
 /* ══ NAVEGAÇÃO ════════════════════════════════════════════ */
@@ -293,10 +290,12 @@ function renderDayGrid() {
   const diaKey   = DIA_JS_MAP[dtTrab.getDay()];
   const grid     = document.getElementById('day-grid');
   if (!grid) return;
-  grid.innerHTML = DIAS_LIST.map(d=>{
+  grid.innerHTML = DIAS_LIST.map((d,idx)=>{
     const isSelected = d.key===diaKey;
     const isHoje     = d.key===DIA_JS_MAP[new Date().getDay()] && dataTrab===today();
-    return `<button class="day-btn${isSelected?' today':''}" onclick="selectDia('${d.key}')">
+    /* Último item (Domingo, índice 6) fica centralizado na terceira linha */
+    const isLast = idx === DIAS_LIST.length - 1;
+    return `<button class="day-btn${isSelected?' today':''}${isLast?' day-btn-last':''}" onclick="selectDia('${d.key}')">
       <span class="day-icon">${d.icon}</span>
       <span>${d.short}</span>
       <span style="font-size:11px;opacity:.8">${d.label.split('-')[0]}</span>
@@ -392,6 +391,10 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
     if (f.data===dtTrab&&f.turno===S.turno) faltaMap[f.colaborador]=f.tipo;
   });
   const cores=['cc-0','cc-1','cc-2','cc-3','cc-4','cc-5','cc-6','cc-7','cc-8','cc-9','cc-10','cc-11'];
+  /* Centraliza o grid quando há poucos cards */
+  if (nomes.length <= 4) grid.classList.add('few-cards');
+  else grid.classList.remove('few-cards');
+
   grid.innerHTML=nomes.map((nome,i)=>{
     const em       = COLLAB_EMOJI[nome]||'👤';
     const setor    = COLLAB_SETOR[nome]||'';
@@ -805,6 +808,11 @@ function confirmS1() {
   S.s1[_s1Id]={estoque:est,programada:prog,confirmed:true};
   closeModal('modal-s1');
   renderStep1();
+  /* Auto-iniciar produção se 100% programado */
+  const allConfirmed=S.tarefas.every(t=>S.s1[t.id]&&S.s1[t.id].confirmed);
+  if (allConfirmed && S.producaoIniciada) {
+    showToast('✅ 100% programado! Clique em "Iniciar Produção" para continuar.');
+  }
 }
 
 async function iniciarProducao() {
@@ -876,13 +884,21 @@ function renderStep2() {
       </div></div>`;
   }).join('');
 
-  const allDone   =S.tarefas.every(t=>S.s2[t.id]&&S.s2[t.id].status);
-  const pInfo     =document.getElementById('btn-pending-info');
-  const s1done    =document.getElementById('s1-done-footer');
+  const allDone    =S.tarefas.every(t=>S.s2[t.id]&&S.s2[t.id].status);
+  const pInfo      =document.getElementById('btn-pending-info');
+  const s1done     =document.getElementById('s1-done-footer');
   const concludeBtn=document.getElementById('btn-conclude');
-  if (pInfo) pInfo.style.display='none';
-  if (s1done) s1done.classList.add('hidden');
+  const btnImpr    =document.getElementById('btn-imprimir-footer');
+  const btnVoltar  =document.getElementById('btn-voltar');
+  if (pInfo)   pInfo.style.display='none';
+  if (s1done)  s1done.classList.add('hidden');
   if (concludeBtn) concludeBtn.classList.toggle('hidden',!allDone);
+  /* Mostra Imprimir ao lado de Voltar durante etapa 2 */
+  if (btnImpr) btnImpr.classList.remove('hidden');
+  /* Auto-save 100% */
+  if (allDone) {
+    showToast('🎉 100% completo! Clique em "Concluir Turno" para finalizar.');
+  }
 }
 
 let _s2Id=null,_s2Status=null,_s2Motivo=null;
@@ -953,6 +969,12 @@ async function confirmS2() {
   S.s2[_s2Id]={produzida:prod,status:_s2Status,motivo:_s2Motivo};
   closeModal('modal-s2');
   renderStep2();
+
+  /* Auto-save: se TODAS as tarefas foram marcadas como 100% → exibe "Concluir Turno" */
+  const allTotal = S.tarefas.every(t => S.s2[t.id] && S.s2[t.id].status === 'total');
+  if (allTotal) {
+    showToast('🎉 100%! Toque em "Concluir Turno" para finalizar.');
+  }
 
   /* Salvar no Firebase em background */
   const dt=S.dataTrabalho||today();
@@ -1078,20 +1100,46 @@ function printColaborador() {
   const dObj=DIAS_LIST.find(d=>d.key===S.dia);
   const linhas=S.tarefas.map(t=>{
     const d1=S.s1[t.id]||{}; const ck=isChecklist(t);
-    return `<tr><td>${t.categoria||''}</td><td>${t.item}</td>
-      <td>${ck?'Checklist':fmt(d1.programada!==undefined?d1.programada:t.quantidade_padrao)+' '+(t.unidade||'')}</td>
-      <td style="width:60px"></td></tr>`;
+    const media=fmt(t.quantidade_padrao||0)+' '+(t.unidade||'');
+    const estoque=ck?'—':fmt(d1.estoque!==undefined?d1.estoque:0)+' '+(t.unidade||'');
+    const prog=ck?'Checklist':fmt(d1.programada!==undefined?d1.programada:(t.quantidade_padrao||0))+' '+(t.unidade||'');
+    return `<tr>
+      <td>${t.categoria||''}</td>
+      <td><strong>${t.item}</strong></td>
+      <td style="font-weight:700;font-size:13px">${ck?'—':media}</td>
+      <td style="font-weight:700;font-size:13px">${estoque}</td>
+      <td style="font-weight:900;font-size:14px;color:#e8590c">${prog}</td>
+      <td style="width:50px;background:#f9fafb">&nbsp;</td>
+    </tr>`;
   }).join('');
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${S.colaborador}</title>
-    <style>body{font-family:Arial,sans-serif;font-size:12px;padding:20px}h1{font-size:18px;margin:0 0 4px}
-    table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}
-    th{background:#f5f5f5;font-weight:700}</style>
+    <style>
+      body{font-family:Arial,sans-serif;font-size:12px;padding:20px}
+      h1{font-size:18px;margin:0 0 4px}
+      .info{font-size:12px;color:#555;margin:0 0 16px}
+      table{width:100%;border-collapse:collapse}
+      th,td{border:1px solid #ccc;padding:7px 8px;text-align:left}
+      th{background:#f0f0f0;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+      tr:hover{background:#fafafa}
+      .col-media{color:#1a1a2e;font-size:12px}
+      .col-prog{color:#e8590c;font-size:13px;font-weight:900}
+      .col-verif{background:#fafafa;text-align:center}
+    </style>
     </head><body onload="window.print();setTimeout(function(){window.close()},500)">
     <h1>📋 ${S.colaborador}</h1>
-    <p>Turno: ${S.turno==='dia'?'☀️ Dia':'🌙 Noite'} · ${dObj?dObj.label:S.dia} · ${today()}</p>
-    <table><thead><tr><th>Categoria</th><th>Item</th><th>Qtd</th><th>✓</th></tr></thead>
-    <tbody>${linhas}</tbody></table></body></html>`;
-  const w=window.open('','_blank','width=700,height=500');
+    <p class="info">Turno: ${S.turno==='dia'?'☀️ Dia':'🌙 Noite'} · ${dObj?dObj.label:S.dia} · ${today()}</p>
+    <table>
+      <thead><tr>
+        <th>Categoria</th>
+        <th>Item</th>
+        <th class="col-media">📊 Média</th>
+        <th class="col-media">📦 Estoque</th>
+        <th class="col-prog">🎯 A Produzir</th>
+        <th class="col-verif">✓ Verificar</th>
+      </tr></thead>
+      <tbody>${linhas}</tbody>
+    </table></body></html>`;
+  const w=window.open('','_blank','width=800,height=600');
   if (w) { w.document.write(html); w.document.close(); }
 }
 
@@ -1226,60 +1274,163 @@ function _resRenderTasks(itens,slug) {
   }).join('');
 }
 
-/* ══ TRANSFERIR TAREFA (dentro do index.html) ═══════════════ */
+/* ══ TRANSFERIR TAREFA — FLUXO 3 PASSOS ═══════════════════ */
+/* Dados internos do fluxo */
+let _trCtx={};
+
 function _resAbrirTransferir(pendId,itemNome,origem,cat,motivo,qProg,qFeit,tarefaId) {
-  /* Cria modal dinamicamente se não existir */
+  const qRest=Math.max(0,(qProg||0)-(qFeit||0));
+  _trCtx={pendId,itemNome,origem,cat,motivo,qProg,qFeit,tarefaId,qRest,
+    turnoEscolhido:'',diaEscolhido:'',destinoEscolhido:'',dataEscolhida:today()};
+
   let ov=document.getElementById('_modal_transferir_embutido');
   if (!ov) {
-    ov=document.createElement('div');
-    ov.id='_modal_transferir_embutido';
-    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+    ov=document.createElement('div'); ov.id='_modal_transferir_embutido';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
     document.body.appendChild(ov);
   }
-  const qRest=Math.max(0,(qProg||0)-(qFeit||0));
-  const TODOS=['ALAN RICARDO','ALINE','ANTONIEL','DAVI','DESPACHO','DINA','FABIO','FERNANDO',
-    'GABRIEL KHALYL','GABRIEL LEITE','HENRIQUE','JOÃO','JOSÉ BRUNO','JHON','LOHAINE','LUCAS',
-    'MARCUS','MATEUS','NOITE - CHAPEIRO','NOITE - FRITADEIRA','NOITE - MONTADOR',
-    'PABLO','PEDRO','RHUAN','RODRIGO','SAMUEL','SANDRO'];
-  const opts=TODOS.filter(n=>n!==origem).map(n=>`<option value="${n}">${n}</option>`).join('');
-  ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:24px;width:100%;max-width:400px;
-    box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:inherit;max-height:90vh;overflow-y:auto">
-    <div style="font-size:17px;font-weight:900;margin-bottom:4px">🔄 Transferir Tarefa</div>
-    <div style="font-size:12px;color:#888;margin-bottom:14px">De: <strong>${origem}</strong></div>
-    <div style="background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:12px;margin-bottom:14px;font-size:13px">
-      <strong>${itemNome}</strong>
-      ${cat?`<div style="color:#888;font-size:11px;margin-top:4px">🏷️ ${cat}</div>`:''}
-      ${qProg>0?`<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-        <span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">📋 ${qProg}</span>
-        <span style="background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">✅ ${qFeit}</span>
-        ${qRest>0?`<span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">⬇️ falta ${qRest}</span>`:''}
-      </div>`:''}
-    </div>
-    <label style="font-size:11px;font-weight:800;color:#666;text-transform:uppercase;display:block;margin-bottom:5px">Transferir para</label>
-    <select id="_tr_destino" style="width:100%;padding:11px;border:2px solid #e2e6f0;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;margin-bottom:12px;outline:none">
-      <option value="">Selecione o destino...</option>${opts}
-    </select>
-    <label style="font-size:11px;font-weight:800;color:#666;text-transform:uppercase;display:block;margin-bottom:5px">Observação (opcional)</label>
-    <input type="text" id="_tr_obs" placeholder="Motivo da transferência..." style="width:100%;padding:11px;border:2px solid #e2e6f0;border-radius:12px;font-family:inherit;font-size:14px;margin-bottom:16px;outline:none"/>
-    <div style="display:flex;gap:10px">
-      <button onclick="document.getElementById('_modal_transferir_embutido').style.display='none'"
-        style="flex:1;padding:12px;border-radius:12px;border:2px solid #e2e6f0;background:#f9fafb;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">Cancelar</button>
-      <button onclick="_resConfirmarTransferir('${pendId}','${itemNome.replace(/'/g,"\\'")}','${origem.replace(/'/g,"\\'")}','${tarefaId}',${qProg},${qFeit})"
-        style="flex:2;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">
-        <i class="fas fa-exchange-alt"></i> Transferir
-      </button>
-    </div>
-  </div>`;
+  _trRenderPasso1(ov);
   ov.style.display='flex';
 }
 
-async function _resConfirmarTransferir(pendId,itemNome,origem,tarefaId,qProg,qFeit) {
-  const destino=(document.getElementById('_tr_destino')||{}).value||'';
-  const obs    =(document.getElementById('_tr_obs')||{}).value.trim()||'';
+function _trRenderPasso1(ov) {
+  const {itemNome,origem,cat,qProg,qFeit,qRest}=_trCtx;
+  ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:22px 20px;width:100%;max-width:380px;
+    box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:inherit">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <div style="font-size:28px">🔄</div>
+      <div><div style="font-size:16px;font-weight:900">Transferir Tarefa</div>
+        <div style="font-size:11px;color:#888">De: <strong>${origem}</strong></div></div>
+      <button onclick="document.getElementById('_modal_transferir_embutido').style.display='none'"
+        style="margin-left:auto;background:none;border:none;font-size:20px;cursor:pointer;color:#999">✕</button>
+    </div>
+    <div style="background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:11px;margin-bottom:16px;font-size:13px">
+      <strong>${itemNome}</strong>
+      ${cat?`<div style="color:#888;font-size:11px;margin-top:3px">🏷️ ${cat}</div>`:''}
+      ${qProg>0?`<div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap">
+        <span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">📋 ${qProg}</span>
+        ${qFeit>0?`<span style="background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">✅ ${qFeit}</span>`:''}
+        ${qRest>0?`<span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">⬇️ falta ${qRest}</span>`:''}
+      </div>`:''}
+    </div>
+    <!-- PASSO 1: Data + Turno -->
+    <div style="font-size:11px;font-weight:900;color:#6b7280;text-transform:uppercase;margin-bottom:10px;letter-spacing:.5px">
+      Passo 1 de 3 — Data e Turno</div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:11px;font-weight:800;color:#374151;display:block;margin-bottom:4px">📅 Data</label>
+      <input type="date" id="_tr_data" value="${today()}"
+        style="width:100%;padding:10px;border:2px solid #e2e6f0;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;outline:none"/>
+    </div>
+    <label style="font-size:11px;font-weight:800;color:#374151;display:block;margin-bottom:8px">⏰ Turno de destino</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+      <button onclick="_trSelecionarTurno('dia')" id="_tr_btn_dia"
+        style="padding:14px;border-radius:14px;border:2px solid #f97316;background:#fff7ed;
+               font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;color:#f97316">
+        ☀️ Dia</button>
+      <button onclick="_trSelecionarTurno('noite')" id="_tr_btn_noite"
+        style="padding:14px;border-radius:14px;border:2px solid #6366f1;background:#eef2ff;
+               font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;color:#6366f1">
+        🌙 Noite</button>
+    </div>
+    <button onclick="document.getElementById('_modal_transferir_embutido').style.display='none'"
+      style="width:100%;padding:11px;border-radius:12px;border:2px solid #e2e6f0;background:#f9fafb;
+             font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;color:#6b7280">Cancelar</button>
+  </div>`;
+}
+
+function _trSelecionarTurno(turno) {
+  _trCtx.turnoEscolhido=turno;
+  _trCtx.dataEscolhida=document.getElementById('_tr_data')?.value||today();
+  const ov=document.getElementById('_modal_transferir_embutido');
+  _trRenderPasso2(ov);
+}
+
+function _trRenderPasso2(ov) {
+  const {turnoEscolhido}=_trCtx;
+  const turnoLabel=turnoEscolhido==='dia'?'☀️ Dia':'🌙 Noite';
+  const diasBtns=DIAS_LIST.map(d=>`
+    <button onclick="_trSelecionarDia('${d.key}')"
+      style="padding:12px 6px;border-radius:12px;border:2px solid #e2e6f0;background:#fff;
+             font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;color:#374151;
+             display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s"
+      onmouseover="this.style.borderColor='#3b82f6';this.style.background='#eff6ff'"
+      onmouseout="this.style.borderColor='#e2e6f0';this.style.background='#fff'">
+      <span style="font-size:18px">${d.icon}</span>
+      <span>${d.short}</span>
+      <span style="font-size:10px;color:#9ca3af;font-weight:600">${d.label.split('-')[0].trim()}</span>
+    </button>`).join('');
+  ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:22px 20px;width:100%;max-width:380px;
+    box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:inherit">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <button onclick="_trRenderPasso1(document.getElementById('_modal_transferir_embutido'))"
+        style="background:#f3f4f6;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px">← Voltar</button>
+      <div style="font-size:15px;font-weight:900">🔄 Transferir — Turno ${turnoLabel}</div>
+    </div>
+    <div style="font-size:11px;font-weight:900;color:#6b7280;text-transform:uppercase;margin-bottom:12px;letter-spacing:.5px">
+      Passo 2 de 3 — Dia da Semana</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px">
+      ${diasBtns}
+    </div>
+    <button onclick="document.getElementById('_modal_transferir_embutido').style.display='none'"
+      style="width:100%;padding:11px;border-radius:12px;border:2px solid #e2e6f0;background:#f9fafb;
+             font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;color:#6b7280">Cancelar</button>
+  </div>`;
+}
+
+function _trSelecionarDia(dia) {
+  _trCtx.diaEscolhido=dia;
+  const ov=document.getElementById('_modal_transferir_embutido');
+  _trRenderPasso3(ov);
+}
+
+function _trRenderPasso3(ov) {
+  const {turnoEscolhido,diaEscolhido,origem}=_trCtx;
+  const diaObj=DIAS_LIST.find(d=>d.key===diaEscolhido)||{label:diaEscolhido,short:diaEscolhido};
+  /* Filtra colaboradores do turno e dia escolhidos */
+  const TODOS_DIA=['GABRIEL KHALYL','JOÃO','PABLO','MATEUS','DINA','ALAN RICARDO','GABRIEL LEITE','LOHAINE','RHUAN','SAMUEL'];
+  const TODOS_NOITE=['SANDRO','NOITE - CHAPEIRO','NOITE - MONTADOR','NOITE - FRITADEIRA','ATENDIMENTO / DESPACHO'];
+  const lista=(turnoEscolhido==='dia'?TODOS_DIA:TODOS_NOITE).filter(n=>n!==origem);
+  const btnEstilo=n=>`padding:12px;border-radius:12px;border:2px solid #e2e6f0;background:#fff;
+    font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;color:#374151;
+    text-align:center;transition:all .15s;display:flex;align-items:center;gap:8px`;
+  const btns=lista.map(n=>`
+    <button onclick="_trSelecionarDestino('${n.replace(/'/g,"\\'")}','${n.replace(/'/g,"\\'")}',this)"
+      style="${btnEstilo(n)}">
+      <span style="font-size:18px">${COLLAB_EMOJI[n]||'👤'}</span>
+      <span>${n}</span>
+    </button>`).join('');
+  ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:22px 20px;width:100%;max-width:380px;
+    box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:inherit;max-height:88vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <button onclick="_trRenderPasso2(document.getElementById('_modal_transferir_embutido'))"
+        style="background:#f3f4f6;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px">← Voltar</button>
+      <div style="font-size:14px;font-weight:900">🔄 ${diaObj.short} — ${turnoEscolhido==='dia'?'☀️ Dia':'🌙 Noite'}</div>
+    </div>
+    <div style="font-size:11px;font-weight:900;color:#6b7280;text-transform:uppercase;margin-bottom:12px;letter-spacing:.5px">
+      Passo 3 de 3 — Colaborador destino</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">${btns}</div>
+    <label style="font-size:11px;font-weight:800;color:#374151;display:block;margin-bottom:4px">📝 Observação (opcional)</label>
+    <input type="text" id="_tr_obs" placeholder="Motivo da transferência..."
+      style="width:100%;padding:10px;border:2px solid #e2e6f0;border-radius:10px;font-family:inherit;font-size:14px;margin-bottom:14px;outline:none"/>
+    <button onclick="document.getElementById('_modal_transferir_embutido').style.display='none'"
+      style="width:100%;padding:11px;border-radius:12px;border:2px solid #e2e6f0;background:#f9fafb;
+             font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;color:#6b7280">Cancelar</button>
+  </div>`;
+}
+
+function _trSelecionarDestino(destino) {
+  _trCtx.destinoEscolhido=destino;
+  const obs=(document.getElementById('_tr_obs')||{}).value?.trim()||'';
+  _resConfirmarTransferir(_trCtx.pendId,_trCtx.itemNome,_trCtx.origem,_trCtx.tarefaId,_trCtx.qProg,_trCtx.qFeit,obs);
+}
+
+async function _resConfirmarTransferir(pendId,itemNome,origem,tarefaId,qProg,qFeit,obsParam) {
+  const destino=_trCtx.destinoEscolhido||'';
+  const obs    =obsParam||(document.getElementById('_tr_obs')||{}).value?.trim()||'';
   if (!destino) { showToast('⚠️ Selecione o colaborador destino!'); return; }
-  const turno=(document.getElementById('res-turno')||{}).value||'dia';
-  const dia  =(document.getElementById('res-dia')||{}).value||'segunda';
-  const data =((document.getElementById('res-data')||{}).value)||today();
+  const turno=_trCtx.turnoEscolhido||(document.getElementById('res-turno')||{}).value||'dia';
+  const dia  =_trCtx.diaEscolhido  ||(document.getElementById('res-dia')||{}).value||'segunda';
+  const data =_trCtx.dataEscolhida ||((document.getElementById('res-data')||{}).value)||today();
   const qRest=Math.max(0,(qProg||0)-(qFeit||0));
   const qtdFinal=qRest>0?qRest:qProg;
   /* Busca categoria da tarefa original para manter contexto */
