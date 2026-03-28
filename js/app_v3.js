@@ -810,9 +810,7 @@ function confirmS1() {
   renderStep1();
   /* Auto-iniciar produção se 100% programado */
   const allConfirmed=S.tarefas.every(t=>S.s1[t.id]&&S.s1[t.id].confirmed);
-  if (allConfirmed && S.producaoIniciada) {
-    showToast('✅ 100% programado! Clique em "Iniciar Produção" para continuar.');
-  }
+  // sem toast — fluxo silencioso
 }
 
 async function iniciarProducao() {
@@ -895,10 +893,7 @@ function renderStep2() {
   if (concludeBtn) concludeBtn.classList.toggle('hidden',!allDone);
   /* Mostra Imprimir ao lado de Voltar durante etapa 2 */
   if (btnImpr) btnImpr.classList.remove('hidden');
-  /* Auto-save 100% */
-  if (allDone) {
-    showToast('🎉 100% completo! Clique em "Concluir Turno" para finalizar.');
-  }
+  /* Auto-save 100% — sem toast, botão Concluir aparece automaticamente */
 }
 
 let _s2Id=null,_s2Status=null,_s2Motivo=null;
@@ -925,11 +920,23 @@ function openS2Modal(id) {
   _s2Status=d2.status||null; _s2Motivo=d2.motivo||'';
   const qpw=document.getElementById('qty-prod-wrap'); if (qpw) qpw.classList.add('hidden');
   const mw =document.getElementById('motivos-wrap');  if (mw)  mw.classList.add('hidden');
-  const mc =document.getElementById('motivo-custom'); if (mc)  mc.value='';
+  const mc =document.getElementById('motivo-custom'); if (mc) { mc.value=''; mc.classList.add('hidden'); }
   document.querySelectorAll('.motivo-btn').forEach(b=>b.classList.remove('active'));
   if (_s2Motivo) {
     const mb=document.querySelector(`.motivo-btn[onclick*="${_s2Motivo.replace(/'/g,"\\'")}"]`);
     if (mb) mb.classList.add('active');
+    // mostra textarea se Outros
+    if (_s2Motivo&&!['\u23f0 Tempo insuficiente','\ud83d\udd27 Equipamento','\ud83d\udce6 Falta de insumos','\u2705 Estoque já completo','\ud83c\udf89 Feriado','\u26a1 Ação especial'].includes(_s2Motivo)) {
+      if (mc) { mc.classList.remove('hidden'); mc.value=_s2Motivo; }
+    }
+  }
+  // Se já tinha status, restaura visível
+  if (d2.status && d2.status!=='total') {
+    const qpwEl=document.getElementById('qty-prod-wrap');
+    const mwEl =document.getElementById('motivos-wrap');
+    const showQ=(d2.status==='parcial'||d2.status==='maior_qtd');
+    if (qpwEl) qpwEl.classList.toggle('hidden',!showQ);
+    if (mwEl)  mwEl.classList.remove('hidden');
   }
   document.getElementById('modal-s2').classList.remove('hidden');
 }
@@ -939,15 +946,45 @@ function selectStatus(status) {
   document.querySelectorAll('.sbtn').forEach(b=>b.classList.remove('active'));
   const ab=document.querySelector(`.sbtn[data-status="${status}"]`);
   if (ab) ab.classList.add('active');
-  const qpw=document.getElementById('qty-prod-wrap');
-  const mw =document.getElementById('motivos-wrap');
-  if (qpw) qpw.classList.toggle('hidden',status!=='parcial');
-  if (mw)  mw.classList.toggle('hidden',status==='total');
+
+  const qpw   = document.getElementById('qty-prod-wrap');
+  const mw    = document.getElementById('motivos-wrap');
+  const label = document.getElementById('qty-prod-label');
+
+  // Quantidade visível para parcial e maior_qtd
+  const showQty = (status==='parcial'||status==='maior_qtd');
+  if (qpw) qpw.classList.toggle('hidden', !showQty);
+  if (label) label.textContent = status==='maior_qtd' ? '📦 Quantidade Real Produzida (maior)' : '📦 Quantidade Produzida';
+
+  // Motivos necessários para parcial, nao_finalizado e maior_qtd
+  if (mw) mw.classList.toggle('hidden', status==='total');
+
+  // Limpa motivo ao trocar status
+  _s2Motivo=null;
+  document.querySelectorAll('.motivo-btn').forEach(b=>b.classList.remove('active'));
+  const mc=document.getElementById('motivo-custom');
+  if (mc) { mc.classList.add('hidden'); mc.value=''; }
+
+  // Se 100%: auto-salva imediatamente
+  if (status==='total') {
+    setTimeout(()=>confirmS2(), 120);
+  }
 }
 
 function selectMotivo(motivo) {
   _s2Motivo=motivo;
-  document.querySelectorAll('.motivo-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick')&&b.getAttribute('onclick').includes(motivo)));
+  document.querySelectorAll('.motivo-btn').forEach(b=>{
+    const oc=b.getAttribute('onclick')||'';
+    b.classList.toggle('active', oc.includes("'"+motivo+"'") || oc.includes('"'+motivo+'"'));
+  });
+  // Campo personalizado só aparece se escolher Outros
+  const mc=document.getElementById('motivo-custom');
+  if (mc) {
+    const isOthers=(motivo==='Outros');
+    mc.classList.toggle('hidden',!isOthers);
+    if (!isOthers) mc.value='';
+    if (isOthers) mc.focus();
+  }
 }
 
 async function confirmS2() {
@@ -955,26 +992,28 @@ async function confirmS2() {
   const t=S.tarefas.find(x=>x.id===_s2Id);
   const ck=isChecklist(t);
   let prod=1;
-  if (!ck&&_s2Status==='parcial') {
+
+  // Validações por status
+  if (!ck && (_s2Status==='parcial'||_s2Status==='maior_qtd')) {
     prod=Number(document.getElementById('modal-s2-prod').textContent)||0;
+    if (prod<=0) { shakeEl('qty-prod-wrap'); showToast('⚠️ Informe a quantidade!'); return; }
   }
-  if (_s2Status!=='total'&&!_s2Motivo) {
+  if (_s2Status!=='total' && !_s2Motivo) {
+    shakeEl('motivos-wrap'); showToast('⚠️ Selecione um motivo!'); return;
+  }
+  if (_s2Motivo==='Outros') {
     const inp=document.getElementById('motivo-custom');
     const mv=inp?inp.value.trim():'';
-    if (!mv) { shakeEl('motivos-wrap'); showToast('⚠️ Informe o motivo!'); return; }
+    if (!mv) { shakeEl('motivo-custom'); showToast('⚠️ Descreva o motivo!'); return; }
     _s2Motivo=mv;
   }
-  if (_s2Status==='total')        prod=ck?1:(S.s1[_s2Id]||{}).programada||t.quantidade_padrao||0;
+
+  if (_s2Status==='total')          prod=ck?1:(S.s1[_s2Id]||{}).programada||t.quantidade_padrao||0;
   if (_s2Status==='nao_finalizado') prod=0;
+
   S.s2[_s2Id]={produzida:prod,status:_s2Status,motivo:_s2Motivo};
   closeModal('modal-s2');
   renderStep2();
-
-  /* Auto-save: se TODAS as tarefas foram marcadas como 100% → exibe "Concluir Turno" */
-  const allTotal = S.tarefas.every(t => S.s2[t.id] && S.s2[t.id].status === 'total');
-  if (allTotal) {
-    showToast('🎉 100%! Toque em "Concluir Turno" para finalizar.');
-  }
 
   /* Salvar no Firebase em background */
   const dt=S.dataTrabalho||today();
@@ -1013,14 +1052,14 @@ function openFinishModal() {
     <div class="finish-row"><span>✅ Finalizadas 100%</span><span class="finish-num" style="color:#16a34a">${totais}</span></div>
     <div class="finish-row"><span>⚠️ Parcialmente</span><span class="finish-num" style="color:#d97706">${parciais}</span></div>
     <div class="finish-row"><span>❌ Não executadas</span><span class="finish-num" style="color:#dc2626">${nao}</span></div>`;
-  document.getElementById('finish-obs').value='';
+  // obs removida
   document.getElementById('modal-finish').classList.remove('hidden');
 }
 
 async function finalizarTurno() {
   const total =S.tarefas.length;
   const totais=Object.values(S.s2).filter(d=>d.status==='total').length;
-  const obs   =document.getElementById('finish-obs').value.trim();
+  const obs   = '';
   const completo=totais===total;
   const dt=S.dataTrabalho||today();
   showLoading(true);
@@ -1062,7 +1101,7 @@ async function finalizarTurno() {
   S.s1={}; S.s2={}; S.producaoIniciada=false;
   _cache.sessoes=null; _cache._registros=null;
   _checkPendenciasNotif();
-  showToast(completo?'🎉 Turno finalizado!':'✅ Turno encerrado!');
+  // sem toast de turno encerrado
   _irParaDept();
 }
 
