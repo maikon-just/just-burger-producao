@@ -4,630 +4,552 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Just Burger — Seed Tarefas v2</title>
-<!-- Firebase SDK v9 compat -->
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
-<!-- XLSX -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',sans-serif;background:#0d1117;color:#e6edf3;padding:16px;font-size:13px}
-h1{color:#ffa657;font-size:20px;margin-bottom:16px}
-h2{color:#79c0ff;font-size:15px;margin:16px 0 8px;border-bottom:1px solid #30363d;padding-bottom:4px}
-h3{color:#7ee787;font-size:13px;margin:10px 0 4px}
-.card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px;margin:8px 0}
-.btn{display:inline-block;padding:10px 20px;border-radius:8px;border:none;font-weight:700;font-size:14px;cursor:pointer;margin:6px 4px}
-.btn-primary{background:#238636;color:#fff}
+body{font-family:'Segoe UI',sans-serif;background:#0d1117;color:#e6edf3;padding:16px;max-width:860px;margin:0 auto;font-size:13px}
+h1{color:#ffa657;font-size:20px;margin-bottom:4px}
+.subtitle{color:#8b949e;font-size:12px;margin-bottom:20px}
+h2{color:#79c0ff;font-size:14px;margin:0 0 10px;display:flex;align-items:center;gap:6px}
+h3{color:#7ee787;font-size:12px;margin:8px 0 4px}
+.card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:14px 16px;margin-bottom:12px}
+.btn{padding:10px 18px;border-radius:8px;border:none;font-weight:800;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;transition:opacity .15s}
+.btn:hover{opacity:.85}.btn:disabled{opacity:.4;cursor:not-allowed}
 .btn-danger{background:#da3633;color:#fff}
-.btn-warning{background:#d29922;color:#000}
-.btn-secondary{background:#21262d;color:#e6edf3;border:1px solid #30363d}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-.log{background:#000a;border:1px solid #30363d;border-radius:6px;padding:10px;font-family:monospace;font-size:11px;max-height:350px;overflow-y:auto;margin-top:8px}
-.log .ok{color:#7ee787}
-.log .err{color:#ff7b72}
-.log .warn{color:#ffa657}
-.log .info{color:#79c0ff}
-.progress-bar{background:#21262d;border-radius:4px;height:16px;margin:8px 0;overflow:hidden}
-.progress-fill{background:#238636;height:100%;transition:width .3s;border-radius:4px}
-.stats{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
-.stat{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:8px 14px;text-align:center}
-.stat-num{font-size:22px;font-weight:900;color:#ffa657}
-.stat-label{font-size:11px;color:#8b949e;margin-top:2px}
-table{width:100%;border-collapse:collapse;font-size:11px;margin:8px 0}
-th{background:#21262d;padding:4px 8px;text-align:left;border:1px solid #30363d}
-td{padding:3px 8px;border:1px solid #21262d}
-tr:nth-child(even){background:#161b22}
-.badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700}
-.badge-dia{background:#1a3a1a;color:#7ee787}
-.badge-noite{background:#1a1a3a;color:#79c0ff}
+.btn-add{background:#d29922;color:#000}
+.btn-sec{background:#21262d;color:#e6edf3;border:1px solid #30363d}
+
+/* Upload zones */
+.upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px}
+@media(max-width:540px){.upload-grid{grid-template-columns:1fr}}
+.upload-zone{border:2px dashed #30363d;border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:all .2s;position:relative;background:#0d1117}
+.upload-zone:hover,.upload-zone.drag{border-color:#ffa657;background:#1a1400}
+.upload-zone.done{border-color:#2ea043;border-style:solid;background:#0d1f0d}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-zone .uz-icon{font-size:28px;margin-bottom:6px}
+.upload-zone .uz-label{font-size:12px;font-weight:700;color:#8b949e}
+.upload-zone .uz-sub{font-size:11px;color:#6e7681;margin-top:3px}
+.upload-zone.done .uz-label{color:#7ee787}
+.upload-zone.done .uz-sub{color:#2ea043}
+.badge-turno{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800;margin-bottom:6px}
+.bt-dia{background:#1a3a1a;color:#7ee787}
+.bt-noite{background:#1a1a3a;color:#79c0ff}
+
+/* Stats */
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.stat{background:#21262d;border:1px solid #30363d;border-radius:8px;padding:8px 14px;text-align:center;min-width:80px}
+.stat-num{font-size:20px;font-weight:900;color:#ffa657}
+.stat-label{font-size:10px;color:#8b949e;margin-top:1px}
+
+/* Colab blocks */
+.colab-block{background:#0d1117;border:1px solid #21262d;border-radius:6px;margin:6px 0;overflow:hidden}
+.colab-hdr{padding:7px 12px;display:flex;align-items:center;gap:8px;background:#161b22;cursor:pointer}
+.colab-hdr-name{font-size:12px;font-weight:800;flex:1}
+.colab-hdr-cnt{font-size:11px;color:#8b949e}
+.colab-body{padding:0 8px 8px;display:none}
+.colab-body.open{display:block}
+table{width:100%;border-collapse:collapse;font-size:11px;margin:6px 0}
+th{background:#21262d;padding:4px 8px;text-align:left;border-bottom:1px solid #30363d;color:#8b949e;text-transform:uppercase;font-size:10px}
+td{padding:4px 8px;border-bottom:1px solid #0d1117;color:#c9d1d9}
+tr:last-child td{border-bottom:none}
+td.num{color:#ffa657;font-weight:700;text-align:right}
+
+/* Progress & log */
+.progress-bar{background:#21262d;border-radius:4px;height:14px;margin:8px 0;overflow:hidden;display:none}
+.progress-fill{background:linear-gradient(90deg,#238636,#2ea043);height:100%;transition:width .3s;border-radius:4px}
+.log{background:#010409;border:1px solid #21262d;border-radius:6px;padding:10px;font-family:monospace;font-size:11px;max-height:280px;overflow-y:auto;margin-top:8px;display:none;line-height:1.7}
+.ok{color:#7ee787}.err{color:#ff7b72}.warn{color:#ffa657}.info{color:#79c0ff}
+
+.alert-warn{background:#2d1f00;border:1px solid #d29922;border-radius:8px;padding:10px 14px;font-size:12px;color:#fde68a;margin:8px 0}
+.alert-warn strong{color:#ffa657}
+.sep{border:none;border-top:1px solid #21262d;margin:14px 0}
+.empty-state{text-align:center;padding:30px;color:#6e7681;font-size:13px}
 </style>
 </head>
 <body>
-<h1>🍔 Just Burger — Seed de Tarefas v2</h1>
-<p style="color:#8b949e;margin-bottom:12px">Importa tarefas das planilhas XLSX diretamente para o Firebase, ignorando abas de dias da semana.</p>
 
+<h1>🍔 Just Burger — Seed de Tarefas v2</h1>
+<p class="subtitle">Faça upload das planilhas XLSX e importe as tarefas direto para o Firebase</p>
+
+<!-- ═══ STEP 1 — UPLOAD ═══ -->
 <div class="card">
-  <h2>1️⃣ Preview das Planilhas</h2>
-  <p style="color:#8b949e;font-size:12px">Carregando e processando os arquivos XLSX...</p>
-  <div class="progress-bar"><div class="progress-fill" id="prog-load" style="width:0%"></div></div>
-  <div id="preview-area"></div>
+  <h2>📂 Passo 1 — Selecione as planilhas</h2>
+  <div class="upload-grid">
+    <!-- DIA -->
+    <div class="upload-zone" id="zone-dia" onclick="document.getElementById('inp-dia').click()">
+      <input type="file" id="inp-dia" accept=".xlsx,.xls" style="display:none" onchange="onFile(this,'dia')"/>
+      <div class="uz-icon">☀️</div>
+      <div style="margin-bottom:4px"><span class="badge-turno bt-dia">TURNO DIA</span></div>
+      <div class="uz-label" id="lbl-dia">Clique para selecionar</div>
+      <div class="uz-sub" id="sub-dia">TAREFAS DIA DINÁ.xlsx</div>
+    </div>
+    <!-- NOITE -->
+    <div class="upload-zone" id="zone-noite" onclick="document.getElementById('inp-noite').click()">
+      <input type="file" id="inp-noite" accept=".xlsx,.xls" style="display:none" onchange="onFile(this,'noite')"/>
+      <div class="uz-icon">🌙</div>
+      <div style="margin-bottom:4px"><span class="badge-turno bt-noite">TURNO NOITE</span></div>
+      <div class="uz-label" id="lbl-noite">Clique para selecionar</div>
+      <div class="uz-sub" id="sub-noite">TAREFAS NOITE SANDRO.xlsx</div>
+    </div>
+  </div>
+  <p style="color:#6e7681;font-size:11px;margin-top:6px">💡 Arraste ou clique em cada caixa para selecionar o arquivo correto</p>
 </div>
 
-<div class="card" id="card-import" style="display:none">
-  <h2>2️⃣ Importar para Firebase</h2>
+<!-- ═══ STEP 2 — PREVIEW ═══ -->
+<div class="card" id="card-preview" style="display:none">
+  <h2>👁️ Passo 2 — Preview das tarefas</h2>
   <div class="stats" id="stats-area"></div>
-  <div style="margin:12px 0;padding:10px;background:#1a2a1a;border:1px solid #2ea043;border-radius:6px">
-    <p style="color:#7ee787;font-weight:700">⚠️ Atenção:</p>
-    <p style="font-size:12px;color:#8b949e;margin-top:4px">Esta operação vai <strong style="color:#ffa657">APAGAR TODAS</strong> as tarefas existentes no Firebase e reinserir as tarefas das planilhas.<br>Confirme antes de prosseguir.</p>
+  <div id="preview-area"><div class="empty-state">Aguardando upload das planilhas...</div></div>
+</div>
+
+<!-- ═══ STEP 3 — IMPORTAR ═══ -->
+<div class="card" id="card-import" style="display:none">
+  <h2>🚀 Passo 3 — Importar para Firebase</h2>
+  <div class="alert-warn">
+    ⚠️ <strong>Limpar e Reinserir</strong> vai APAGAR todas as tarefas existentes e inserir as novas planilhas.<br>
+    Use <strong>Inserir sem Limpar</strong> apenas se quiser adicionar sem apagar as existentes.
   </div>
-  <button class="btn btn-danger" id="btn-limpar" onclick="limparEInserir()">🗑️ Limpar e Reinserir Tarefas</button>
-  <button class="btn btn-warning" id="btn-apenas-inserir" onclick="apenasInserir()">➕ Inserir sem Limpar (adiciona)</button>
-  <div class="progress-bar" style="display:none" id="prog-import-wrap">
-    <div class="progress-fill" id="prog-import" style="width:0%"></div>
+  <div style="margin:10px 0;display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn btn-danger" id="btn-limpar" onclick="limparEInserir()">🗑️ Limpar e Reinserir Tarefas</button>
+    <button class="btn btn-add" id="btn-add" onclick="apenasInserir()">➕ Inserir sem Limpar</button>
   </div>
-  <div class="log" id="log-area" style="display:none"></div>
+  <div class="progress-bar" id="prog-wrap"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+  <div class="log" id="log-area"></div>
 </div>
 
 <script>
-/* ═══════════════════════════
-   FIREBASE CONFIG
-═══════════════════════════ */
-const FB_CONFIG = {
-  apiKey: "AIzaSyDt1yzxGGzuT2cSdten1bFuXG7yeDQ90Po",
-  authDomain: "justburger-producao-e9b27.firebaseapp.com",
-  databaseURL: "https://justburger-producao-e9b27-default-rtdb.firebaseio.com",
-  projectId: "justburger-producao-e9b27",
-  storageBucket: "justburger-producao-e9b27.firebasestorage.app",
-  messagingSenderId: "387070713910",
-  appId: "1:387070713910:web:f156d3247a1715a58ab897"
+/* ═══════════ FIREBASE ═══════════ */
+const FB = {
+  apiKey:"AIzaSyDt1yzxGGzuT2cSdten1bFuXG7yeDQ90Po",
+  authDomain:"justburger-producao-e9b27.firebaseapp.com",
+  databaseURL:"https://justburger-producao-e9b27-default-rtdb.firebaseio.com",
+  projectId:"justburger-producao-e9b27",
+  storageBucket:"justburger-producao-e9b27.firebasestorage.app",
+  messagingSenderId:"387070713910",
+  appId:"1:387070713910:web:f156d3247a1715a58ab897"
 };
-
-if (!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+if(!firebase.apps.length) firebase.initializeApp(FB);
 const db = firebase.database();
 
-/* ═══════════════════════════
-   CONSTANTES
-═══════════════════════════ */
-const DIAS_SEMANA_SET = new Set([
+/* ═══════════ ESTADO ═══════════ */
+const ARQUIVOS = { dia: null, noite: null };
+let TODAS_TAREFAS = [];
+
+/* ═══════════ CONSTANTES ═══════════ */
+const DIAS_SET = new Set([
   'segunda','segunda-feira',
   'terca','terça','terça-feira','terca-feira',
   'quarta','quarta-feira',
   'quinta','quinta-feira',
   'sexta','sexta-feira',
-  'sabado','sábado','sabado-feira','sábado-feira',
-  'domingo','domingo-feira'
+  'sabado','sábado',
+  'domingo'
 ]);
 
-// Mapeamento de data → dia da semana (calendário 2026)
-// Para interpretar datas como DD/MM/YYYY → dia da semana
-const DIAS_MAP = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
+const DIAS_JS = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
 
-/* ═══════════════════════════
-   LÓGICA DE EXTRAÇÃO
-═══════════════════════════ */
-function isDiaSemana(nome) {
-  if(!nome) return false;
-  const n = String(nome).toLowerCase().trim()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  // Remover sufixo "-feira"
-  const base = n.replace(/-feira$/,'').trim();
-  return DIAS_SEMANA_SET.has(n) || DIAS_SEMANA_SET.has(base);
-}
-
-function excelSerialToJSDate(serial) {
-  if(typeof serial !== 'number' || serial < 40000 || serial > 55000) return null;
-  const utcDays = Math.floor(serial - 25569);
-  return new Date(utcDays * 86400 * 1000);
-}
-
-function parseDataTexto(txt) {
-  if(!txt) return null;
-  const s = String(txt).replace(/^DATA:?\s*/i,'').trim();
-  // Tentar DD/MM/YYYY ou DD/MM/YY
-  const m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
-  if(m1) {
-    const d=parseInt(m1[1]), mo=parseInt(m1[2])-1;
-    const yr = m1[3].length===2 ? 2000+parseInt(m1[3]) : parseInt(m1[3]);
-    return new Date(yr, mo, d);
-  }
-  return null;
-}
-
-function getDiaSemana(date) {
-  if(!date || isNaN(date.getTime())) return null;
-  return DIAS_MAP[date.getDay()];
-}
-
-function normalizarColaborador(nome) {
-  return String(nome||'').trim()
-    .replace(/\s+/g,' ')
-    .toUpperCase()
-    .replace(/\s*-.*$/, '') // Remover cargo/função (ex: "PABLO - Pré-preparo" → "PABLO")
-    .trim();
-}
-
-// Mapeamento explícito de aba → nome do colaborador no sistema
-const ABA_PARA_COLAB = {
-  // Planilha DIA (Diná)
-  'ALINE': 'ALINE',
-  'PABLO': 'PABLO',
-  'MATEUS PRODUÇÃO': 'MATEUS',
-  'JOÃO ': 'JOÃO',
-  'JOÃO': 'JOÃO',
-  'ALAN RICARDO': 'ALAN RICARDO',
-  'GABRIEL LEITE': 'GABRIEL LEITE',
-  'FRITADEIRA': 'FRITADEIRA',
-  'GABRIEL KHALYL': 'GABRIEL KHALYL',
-  'SERGIO CAMARAS': 'SERGIO CAMARAS',
-  'WESLEY MOTORISTA': 'WESLEY MOTORISTA',
-  'DINA': 'DINA',
-  'FAXINA': 'FAXINA',
-  // Planilha NOITE (Sandro)
-  'DESPACHO': 'DESPACHO',
-  'JOSÉ BRUNO': 'JOSÉ BRUNO',
-  'ABC': 'ABC',
-  'FABIO': 'FABIO',
-  'ATENDIMENTO ANTONIEL': 'ANTONIEL',
-  'ATENDIMENTO MARCUS': 'MARCUS',
-  'ESTAGIARIO HENRIQUE': 'HENRIQUE',
-  'ESTÁGIO PEDRO': 'PEDRO',
-  'ESTÁGIO DAVI': 'DAVI',
-  'SANDRO': 'SANDRO',
-  'RHUAN': 'RHUAN',
+// Mapeamento aba → nome do colaborador no sistema
+const ABA_COLAB = {
+  'ALINE':'ALINE','PABLO':'PABLO',
+  'MATEUS PRODUÇÃO':'MATEUS','MATEUS PRODUCAO':'MATEUS',
+  'JOÃO ':'JOÃO','JOÃO':'JOÃO','JOAO':'JOÃO',
+  'ALAN RICARDO':'ALAN RICARDO',
+  'GABRIEL LEITE':'GABRIEL LEITE',
+  'FRITADEIRA':'FRITADEIRA',
+  'GABRIEL KHALYL':'GABRIEL KHALYL',
+  'SERGIO CAMARAS':'SERGIO CAMARAS',
+  'WESLEY MOTORISTA':'WESLEY MOTORISTA',
+  'DINA':'DINA','FAXINA':'FAXINA',
+  // Noite
+  'DESPACHO':'DESPACHO',
+  'JOSÉ BRUNO':'JOSÉ BRUNO','JOSE BRUNO':'JOSÉ BRUNO',
+  'ABC':'ABC','FABIO':'FABIO',
+  'ATENDIMENTO ANTONIEL':'ANTONIEL',
+  'ATENDIMENTO MARCUS':'MARCUS',
+  'ESTAGIARIO HENRIQUE':'HENRIQUE',
+  'ESTÁGIO PEDRO':'PEDRO','ESTAGIO PEDRO':'PEDRO',
+  'ESTÁGIO DAVI':'DAVI','ESTAGIO DAVI':'DAVI',
+  'SANDRO':'SANDRO','RHUAN':'RHUAN',
 };
 
-function extrairNomeReal(abaNome) {
-  const aba = abaNome.trim();
-  // Verificar mapeamento explícito
-  if(ABA_PARA_COLAB[aba]) return ABA_PARA_COLAB[aba];
-  // Verificar mapeamento com case-insensitive
-  const abaUp = aba.toUpperCase();
-  for(const [k, v] of Object.entries(ABA_PARA_COLAB)) {
-    if(k.toUpperCase() === abaUp) return v;
-  }
-  // Fallback: pegar primeiro nome antes do " - "
-  const partes = aba.split(/\s*[-–]\s*/);
-  return partes[0].trim().toUpperCase();
-}
-
-// Palavras que indicam linha de cabeçalho/aviso a ignorar
-const IGNORAR_PALAVRAS = [
+const IGNORAR = [
   'JUST BURGER','PROIBIDO','CELULAR','MATRIZ','COORDENADOR','SUPERVISOR',
   'RESPONSÁVEL','RESPONSAVEL','EMERGÊNCIA','EMERGENCIA','TELEFONE','CONTATO',
-  'ATENÇÃO','ATENCAO','MANTER LIMPO','CERTIFIQUE','MANTENHA','LAVAR UNIFORME',
-  'BOA TARDE','BOM DIA','BOA NOITE','DESPACHO','/// ','DESPACHO:',
-  'QUANTIDADE','DIA ','INICIO','INÍCIO','TERÇA-FEIRA','SEGUNDA-FEIRA',
-  'QUARTA-FEIRA','QUINTA-FEIRA','SEXTA-FEIRA','SÁBADO-FEIRA','DOMINGO-FEIRA',
-  'DATA:','QUANT/ESTOQUE','QUANT/FEITA','VISTO/ENC','OBSERVAÇÃO',
-  'TAREFA ','JUST BURGER MATRIZ'
+  'ATENÇÃO','ATENCAO','MANTENHA','CERTIFIQUE','LAVAR UNIFORME',
+  'BOA TARDE','BOM DIA','BOA NOITE','///',
+  'QUANTIDADE','QUANT/ESTOQUE','QUANT/FEITA','VISTO/ENC','OBSERVAÇÃO',
+  'JUST BURGER MATRIZ','DATA:','DIA  ','INICIO ','TAREFA  ',
 ];
 
-function deveIgnorar(linha) {
-  const txt = linha.join(' ').toUpperCase().trim();
-  if(!txt || txt.length < 2) return true;
-  return IGNORAR_PALAVRAS.some(p => txt.includes(p));
+function norm(s){ return String(s||'').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+function isDia(s){ const n=norm(s); return DIAS_SET.has(n)||DIAS_SET.has(n.replace(/-feira$/,'')); }
+function excelDate(serial){
+  if(typeof serial!=='number'||serial<40000||serial>55000) return null;
+  return new Date(Math.floor(serial-25569)*86400000);
 }
-
-function extrairUnidade(itemText) {
-  const t = String(itemText||'').toLowerCase();
+function parseData(txt){
+  const s=String(txt||'').replace(/^DATA:?\s*/i,'').trim();
+  const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if(!m) return null;
+  const yr=m[3].length===2?2000+parseInt(m[3]):parseInt(m[3]);
+  return new Date(yr,parseInt(m[2])-1,parseInt(m[1]));
+}
+function diaSemana(d){ return d&&!isNaN(d.getTime())?DIAS_JS[d.getDay()]:null; }
+function nomeColab(aba){
+  const k=aba.trim();
+  if(ABA_COLAB[k]) return ABA_COLAB[k];
+  const ku=k.toUpperCase();
+  for(const [a,v] of Object.entries(ABA_COLAB)) if(a.toUpperCase()===ku) return v;
+  return k.split(/\s*[-–]\s*/)[0].trim().toUpperCase();
+}
+function unidade(txt){
+  const t=String(txt||'').toLowerCase();
   if(/\bkg\b|\bkilos?\b/.test(t)) return 'kg';
-  if(/\blitros?\b|\bml\b/.test(t)) return 'L';
-  if(/\bporç[aã]o|\bporç[oõ]es\b/.test(t)) return 'porções';
-  if(/\bsach[eê]s?\b/.test(t)) return 'un';
-  if(/\bcartão|cartões\b/.test(t)) return 'un';
-  if(/\bbolinhas?\b/.test(t)) return 'un';
-  if(/\bsaladas?\b/.test(t)) return 'un';
-  if(/\bpinks?\b/.test(t)) return 'un';
+  if(/\blitros?\b/.test(t)) return 'L';
+  if(/\bporç/.test(t)) return 'porções';
   return 'un';
 }
-
-function limparItemTexto(txt) {
-  return String(txt||'').trim()
-    .replace(/\s+/g,' ')
-    // Remover "X kilos de" no início
-    .replace(/^\d+\s*kilos?\s+de\s+/i,'')
-    // Capitalizar primeira letra
-    .replace(/^(.)/, c => c.toUpperCase());
-}
-
-function detectarCategoria(colaborador, item) {
-  const col = String(colaborador||'').toUpperCase();
-  const it = String(item||'').toUpperCase();
-  
-  if(col.includes('FAXINA')) return 'Limpeza';
-  if(col.includes('DESPACHO')) return 'Despacho';
-  if(col.includes('FRITADEIRA') || col.includes('RHUAN')) return 'Fritadeira';
-  if(col.includes('ATENDIMENTO') || col.includes('ANTONIEL') || col.includes('MARCUS')) return 'Atendimento';
-  if(col.includes('ESTAGIARIO') || col.includes('ESTAGIÁRIO') || col.includes('ESTÁGIO') || col.includes('ESTAGIO')) return 'Estágio';
-  if(col.includes('MOTORISTA') || col.includes('WESLEY')) return 'Logística';
-  if(col.includes('DINA')) return 'Gestão';
-  if(col.includes('SANDRO')) return 'Gestão';
-  if(col.includes('ABC')) return 'Loja ABC';
-  
-  if(it.includes('PINK') || it.includes('HAMBURGUER') || it.includes('HAMBURGER') || it.includes('BURGER')) return 'Hambúrguer';
-  if(it.includes('FRANGO') || it.includes('SASSAMI') || it.includes('FILÉ')) return 'Frango';
-  if(it.includes('BACON') || it.includes('CARNE') || it.includes('BIFE')) return 'Proteínas';
-  if(it.includes('CEBOLA') || it.includes('PICLES') || it.includes('ALFACE') || it.includes('TOMATE')) return 'Vegetais';
-  if(it.includes('MAIONESE') || it.includes('MAYO') || it.includes('CHEDDAR') || it.includes('SACHE')) return 'Condimentos';
-  if(it.includes('COXINHA') || it.includes('CRINKLE') || it.includes('SUPREME') || it.includes('FRANGUITO')) return 'Salgados';
-  if(it.includes('SALADA') || it.includes('CAESAR')) return 'Saladas';
-  if(it.includes('CARTÃO') || it.includes('AVALIAÇÃO') || it.includes('LEMBRANCINHA')) return 'Atendimento';
-  if(it.includes('ILHÃ') || it.includes('ILHA') || it.includes('MONTAGEM')) return 'Montagem';
-  
+function categ(col,item){
+  const c=String(col||'').toUpperCase(), i=String(item||'').toUpperCase();
+  if(c.includes('FAXINA')) return 'Limpeza';
+  if(c.includes('DESPACHO')) return 'Despacho';
+  if(c.includes('FRITADEIRA')||c.includes('RHUAN')) return 'Fritadeira';
+  if(c.includes('ANTONIEL')||c.includes('MARCUS')||c.includes('ALINE')) return 'Atendimento';
+  if(c.includes('ESTAGIO')||c.includes('ESTÁGIO')||c.includes('HENRIQUE')||c.includes('PEDRO')||c.includes('DAVI')) return 'Estágio';
+  if(c.includes('MOTORISTA')||c.includes('WESLEY')) return 'Logística';
+  if(c.includes('ABC')) return 'Loja ABC';
+  if(c.includes('DINA')||c.includes('SANDRO')) return 'Gestão';
+  if(i.includes('PINK')||i.includes('HAMBURGUER')) return 'Hambúrguer';
+  if(i.includes('FRANGO')||i.includes('SASSAMI')) return 'Frango';
+  if(i.includes('BACON')||i.includes('CARNE')) return 'Proteínas';
+  if(i.includes('CEBOLA')||i.includes('PICLES')) return 'Vegetais';
+  if(i.includes('MAIONESE')||i.includes('MAYO')||i.includes('CHEDDAR')||i.includes('SACHE')) return 'Condimentos';
+  if(i.includes('COXINHA')||i.includes('CRINKLE')||i.includes('SUPREME')) return 'Salgados';
+  if(i.includes('SALADA')||i.includes('CAESAR')) return 'Saladas';
+  if(i.includes('CARTÃO')||i.includes('AVALIAÇÃO')) return 'Atendimento';
   return 'Produção';
 }
+function limpar(t){ return String(t||'').trim().replace(/\s+/g,' ').replace(/^\d+\s*kilos?\s+de\s+/i,'').replace(/^./,c=>c.toUpperCase()); }
 
-/* ═══════════════════════════
-   PROCESSAMENTO DAS ABAS
-═══════════════════════════ */
-function processarAba(sheetName, ws, turno) {
-  const data = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true});
-  if(!data || data.length < 3) return [];
-  
-  const tarefas = [];
-  let diaAtual = null; // dia da semana atual (string)
-  
-  for(let i = 0; i < data.length; i++) {
-    const row = data[i];
-    if(!row) continue;
-    
-    // Filtrar linhas vazias
-    const naoVazias = row.filter(c => String(c||'').trim() !== '');
-    if(naoVazias.length === 0) continue;
-    
-    // Verificar se é linha de cabeçalho/aviso
+function deveIgnorar(row){
+  const txt=row.map(c=>String(c||'')).join(' ').toUpperCase().trim();
+  if(!txt||txt.length<2) return true;
+  return IGNORAR.some(p=>txt.includes(p));
+}
+
+/* ═══════════ PROCESSAR ABA ═══════════ */
+function processarAba(sheetName, ws, turno){
+  const data = XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
+  if(!data||data.length<2) return [];
+  const colab = nomeColab(sheetName);
+  const tarefas=[], vistas=new Set();
+  let diaAtual=null;
+
+  for(let i=0;i<data.length;i++){
+    const row=data[i]; if(!row) continue;
+    const nv=row.filter(c=>String(c||'').trim()!=='');
+    if(!nv.length) continue;
     if(deveIgnorar(row)) continue;
-    
-    const c0 = String(row[0]||'').trim();
-    const c1 = row[1]; // pode ser número
-    const c2 = String(row[2]||'').trim();
-    const c0up = c0.toUpperCase();
-    
-    // Detectar linha de CABEÇALHO com dia da semana (ex: "TERÇA-FEIRA", "Dia", etc)
-    if(isDiaSemana(c0) || isDiaSemana(c0.replace(/^DIA\s*/i,'').trim())) continue;
-    
-    // Detectar DATA: DD/MM/YY como marcador de dia
-    const dataSerial = excelSerialToJSDate(row[0]);
-    const dataTexto = !dataSerial ? parseDataTexto(c0) : null;
-    const dataDetectada = dataSerial || dataTexto;
-    
-    if(dataDetectada) {
-      diaAtual = getDiaSemana(dataDetectada);
-      // Verificar se o resto da linha tem tarefa (col B = qty, col C = item)
-      // Às vezes a linha de data já tem tarefa (ex: "DATA: 24/03/26" | 25 | Pinks)
-      if(typeof c1 === 'number' && c1 > 0 && c2) {
-        const item = limparItemTexto(c2);
-        if(item.length >= 3) {
-          tarefas.push(criarTarefa(sheetName, turno, diaAtual, item, c1, extrairUnidade(c2), i));
-        }
-      } else if(c2 && !isDiaSemana(c2) && typeof c1 !== 'number') {
-        // Linha de data com descrição mas sem qty numérica
-        // Ex: "DATA:24/03/26" | "" | "Montagem da ilha quente"
-        const item = limparItemTexto(c2 || c1 || '');
-        if(item.length >= 3) {
-          tarefas.push(criarTarefa(sheetName, turno, diaAtual, item, null, 'checklist', i));
-        }
+
+    const c0=String(row[0]||'').trim();
+    const c1=row[1];
+    const c2=String(row[2]||'').trim();
+
+    // Detectar cabeçalho de dia da semana
+    if(isDia(c0)) continue;
+
+    // Detectar data
+    const dSerial=excelDate(row[0]);
+    const dTexto=!dSerial?parseData(c0):null;
+    const dDet=dSerial||dTexto;
+
+    if(dDet){
+      diaAtual=diaSemana(dDet);
+      // Linha de data com tarefa embutida (col1=qty, col2=item)
+      if(typeof c1==='number'&&c1>0&&c1<100000&&c2&&c2.length>2){
+        push(colab,turno,diaAtual,limpar(c2),c1,unidade(c2),categ(colab,c2),i);
+      } else if(c2&&c2.length>2&&typeof c1!=='number'){
+        // Linha de data com apenas descrição (sem qty)
+        push(colab,turno,diaAtual,limpar(c2),null,'checklist',categ(colab,c2),i);
       }
       continue;
     }
-    
-    // Linha sem data detectada — verificar se tem quantidade
-    let item = '';
-    let qty = null;
-    let unidade = 'un';
-    
-    // Padrão: col0=vazio, col1=número, col2=item
-    if(c0 === '' && typeof c1 === 'number' && c1 > 0 && c1 < 100000 && c2) {
-      item = limparItemTexto(c2);
-      qty = c1;
-      unidade = extrairUnidade(c2);
+
+    let item='',qty=null,un='un';
+
+    // col0 vazio, col1=número, col2=item
+    if(c0===''&&typeof c1==='number'&&c1>0&&c1<100000&&c2){
+      item=limpar(c2); qty=c1; un=unidade(c2);
     }
-    // Padrão: col0=item, col1=número
-    else if(c0 && typeof c1 === 'number' && c1 > 0 && c1 < 100000) {
-      item = limparItemTexto(c0);
-      qty = c1;
-      unidade = extrairUnidade(c0);
+    // col0=item, col1=número
+    else if(c0&&typeof c1==='number'&&c1>0&&c1<100000){
+      item=limpar(c0); qty=c1; un=unidade(c0);
     }
-    // Padrão: col0=número (string), col1=item
-    else if(!isNaN(c0) && c0 !== '' && parseFloat(c0) > 0 && c1) {
-      item = limparItemTexto(String(c1));
-      qty = parseFloat(c0);
-      unidade = extrairUnidade(String(c1));
+    // col1 = "08 kilos" (string)
+    else if(c0===''&&typeof c1==='string'&&/^\d+\s*kilos?/i.test(c1)&&c2){
+      const m=c1.match(/^(\d+(?:\.\d+)?)/);
+      if(m){qty=parseFloat(m[1]);un='kg';item=limpar(c2);}
     }
-    // Padrão: col1 = "XX kilos" (string com número embutido)
-    else if(c0 === '' && typeof c1 === 'string' && c1.match(/^\d+\s*kilos?/i) && c2) {
-      const m = c1.match(/^(\d+(?:\.\d+)?)\s*kilos?/i);
-      if(m) {
-        qty = parseFloat(m[1]);
-        unidade = 'kg';
-        item = limparItemTexto(c2);
-      }
+    // col0=número string, col1=item
+    else if(c0!==''&&!isNaN(c0)&&parseFloat(c0)>0&&c1){
+      item=limpar(String(c1)); qty=parseFloat(c0); un=unidade(String(c1));
     }
-    // Sem número — checklist
-    else if(c0 && !c0.match(/^data:/i)) {
-      // Verificar se é item de checklist válido (>= 10 chars)
-      const texto = naoVazias.join(' ');
-      if(texto.length >= 8 && !IGNORAR_PALAVRAS.some(p => texto.toUpperCase().includes(p))) {
-        item = limparItemTexto(c0);
-        qty = null;
-        unidade = 'checklist';
-      }
+    // só texto — pode ser checklist
+    else if(c0&&c0.length>3){
+      item=limpar(c0); un='checklist';
     }
-    
-    if(!item || item.length < 3) continue;
-    
-    // Se não detectamos dia da semana, aplicar para todos os dias
-    const dias = diaAtual
-      ? [diaAtual]
-      : ['segunda','terca','quarta','quinta','sexta','sabado','domingo'];
-    
-    dias.forEach(dia => {
-      tarefas.push(criarTarefa(sheetName, turno, dia, item, qty, unidade, i));
-    });
+
+    if(!item||item.length<3) continue;
+
+    const dias=diaAtual?[diaAtual]:['segunda','terca','quarta','quinta','sexta','sabado','domingo'];
+    dias.forEach(d=>push(colab,turno,d,item,qty,un,categ(colab,item),i));
   }
-  
-  // Deduplicar tarefas com mesmo colaborador+dia+item
-  const vistas = new Set();
-  return tarefas.filter(t => {
-    const chave = `${t.colaborador}|${t.dia_semana}|${t.item}`;
-    if(vistas.has(chave)) return false;
+
+  function push(col,tur,dia,it,q,u,cat,ord){
+    if(u==='checklist') return; // ignora checklists
+    if(!q||q<=0) return; // ignora sem quantidade
+    const chave=`${col}|${dia}|${it}`;
+    if(vistas.has(chave)) return;
     vistas.add(chave);
-    return true;
-  });
+    tarefas.push({colaborador:col,turno:tur,dia_semana:dia||'segunda',categoria:cat,item:it,quantidade:q,quantidade_padrao:q,unidade:u,ordem:ord});
+  }
+
+  return tarefas;
 }
 
-function criarTarefa(sheetName, turno, dia, item, qty, unidade, rowIdx) {
-  const colaborador = extrairNomeReal(sheetName);
-  return {
-    colaborador,
-    turno,
-    dia_semana: dia || 'segunda',
-    categoria: detectarCategoria(colaborador, item),
-    item,
-    quantidade: qty !== null ? qty : 1,
-    unidade: unidade || 'un',
-    ordem: rowIdx,
-    _aba: sheetName
-  };
+/* ═══════════ UPLOAD ═══════════ */
+async function onFile(inp, turno){
+  const file=inp.files[0]; if(!file) return;
+  const zone=document.getElementById('zone-'+turno);
+  const lbl=document.getElementById('lbl-'+turno);
+  const sub=document.getElementById('sub-'+turno);
+
+  lbl.textContent='⏳ Lendo...';
+  zone.classList.remove('done');
+
+  try{
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array',raw:true});
+    ARQUIVOS[turno]={wb,nome:file.name};
+    zone.classList.add('done');
+    lbl.textContent='✅ '+file.name;
+    sub.textContent=`${wb.SheetNames.length} abas encontradas`;
+    await processarTodos();
+  }catch(e){
+    lbl.textContent='❌ Erro: '+e.message;
+    sub.textContent='Tente novamente';
+  }
 }
 
-/* ═══════════════════════════
-   ESTADO GLOBAL
-═══════════════════════════ */
-let TODAS_TAREFAS = [];
+async function processarTodos(){
+  TODAS_TAREFAS=[];
+  const pArea=document.getElementById('preview-area');
+  const cardPrev=document.getElementById('card-preview');
+  const cardImp=document.getElementById('card-import');
+  cardPrev.style.display='block';
 
-/* ═══════════════════════════
-   CARGA E PREVIEW
-═══════════════════════════ */
-async function carregarPreview() {
-  const pArea = document.getElementById('preview-area');
-  pArea.innerHTML = '';
-  TODAS_TAREFAS = [];
-  
-  const arquivos = [
-    {label:'TAREFAS DIA — Diná', url:'temp/tarefas_dia_dina.xlsx', turno:'dia'},
-    {label:'TAREFAS NOITE — Sandro', url:'temp/tarefas_noite_sandro.xlsx', turno:'noite'}
-  ];
-  
-  setProgress('prog-load', 10);
-  
-  for(let fi=0; fi<arquivos.length; fi++) {
-    const arq = arquivos[fi];
-    setProgress('prog-load', 10 + fi*40);
-    
-    try {
-      const resp = await fetch(arq.url);
-      if(!resp.ok) throw new Error(`HTTP ${resp.status} ao carregar ${arq.url}`);
-      const buf = await resp.arrayBuffer();
-      const wb = XLSX.read(buf, {type:'array', raw:true});
-      
-      let html = `<h2>📁 ${arq.label}</h2>`;
-      
-      const colaboradores = [];
-      
-      for(const sheetName of wb.SheetNames) {
-        const snorm = String(sheetName).toLowerCase().trim()
-          .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-        
-        if(isDiaSemana(sheetName) || isDiaSemana(snorm) ||
-           sheetName.toUpperCase().includes('ANOTA')) {
-          html += `<p style="color:#6e7681;font-size:11px">⏭️ Ignorado: <em>${sheetName}</em></p>`;
-          continue;
-        }
-        
-        const ws = wb.Sheets[sheetName];
-        const tarefas = processarAba(sheetName, ws, arq.turno);
-        
-        // Filtrar apenas tarefas com quantidade (não checklist)
-        const comQtd = tarefas.filter(t => t.unidade !== 'checklist');
-        const checklist = tarefas.filter(t => t.unidade === 'checklist');
-        
-        TODAS_TAREFAS.push(...comQtd);
-        
-        const nomeReal = extrairNomeReal(sheetName);
-        colaboradores.push({nome:nomeReal, aba:sheetName, total:comQtd.length, check:checklist.length});
-        
-        html += `
-        <div class="card" style="margin:6px 0;padding:8px 12px">
-          <h3>👤 ${sheetName} → <strong>${nomeReal}</strong> 
-            <span class="badge badge-${arq.turno}">${arq.turno}</span>
-          </h3>
-          <p style="color:#8b949e;font-size:11px">
-            ✅ ${comQtd.length} tarefas com quantidade | 📋 ${checklist.length} checklists (ignorados)
-          </p>
-          ${comQtd.length > 0 ? renderTabelaTarefas(comQtd.slice(0,8)) : '<p style="color:#ff7b72;font-size:11px">⚠️ Nenhuma tarefa com quantidade encontrada</p>'}
-          ${comQtd.length > 8 ? `<p style="color:#6e7681;font-size:10px">... e mais ${comQtd.length-8}</p>` : ''}
-        </div>`;
+  let html='';
+  const arquivosCarregados=Object.entries(ARQUIVOS).filter(([,v])=>v);
+  if(!arquivosCarregados.length){
+    pArea.innerHTML='<div class="empty-state">📂 Selecione pelo menos um arquivo acima</div>';
+    return;
+  }
+
+  for(const [turno,{wb,nome}] of arquivosCarregados){
+    html+=`<h3 style="color:#ffa657;margin:12px 0 6px">📁 ${nome} — ${turno.toUpperCase()}</h3>`;
+    const colabs={};
+    for(const sn of wb.SheetNames){
+      const snorm=norm(sn);
+      if(isDia(sn)||isDia(snorm)||sn.toUpperCase().includes('ANOTA')){
+        html+=`<p style="color:#6e7681;font-size:11px">⏭️ Ignorado: ${sn}</p>`;
+        continue;
       }
-      
-      pArea.innerHTML += html;
-    } catch(e) {
-      pArea.innerHTML += `<div class="card"><p style="color:#ff7b72">❌ Erro: ${e.message}</p></div>`;
+      const ws=wb.Sheets[sn];
+      const tarefas=processarAba(sn,ws,turno);
+      if(!tarefas.length){
+        html+=`<p style="color:#6e7681;font-size:11px">⚠️ Sem tarefas válidas: ${sn}</p>`;
+        continue;
+      }
+      TODAS_TAREFAS.push(...tarefas);
+      const col=nomeColab(sn);
+      if(!colabs[col]) colabs[col]=[];
+      colabs[col].push(...tarefas);
+    }
+
+    // Renderizar por colaborador
+    for(const [col,tasks] of Object.entries(colabs)){
+      const dias=[...new Set(tasks.map(t=>t.dia_semana))];
+      html+=`
+      <div class="colab-block">
+        <div class="colab-hdr" onclick="toggleColab(this)">
+          <span style="font-size:16px">${turno==='dia'?'☀️':'🌙'}</span>
+          <span class="colab-hdr-name">${col}</span>
+          <span class="colab-hdr-cnt">${tasks.length} tarefas · ${dias.length} dia(s)</span>
+          <span style="color:#6e7681;font-size:11px;margin-left:4px">▼</span>
+        </div>
+        <div class="colab-body">
+          <table>
+            <thead><tr><th>Dia</th><th>Item</th><th style="text-align:right">Qtd</th><th>Un</th><th>Categoria</th></tr></thead>
+            <tbody>
+              ${tasks.slice(0,15).map(t=>`<tr>
+                <td style="color:#8b949e">${t.dia_semana}</td>
+                <td>${t.item}</td>
+                <td class="num">${t.quantidade}</td>
+                <td style="color:#8b949e">${t.unidade}</td>
+                <td style="color:#6e7681">${t.categoria}</td>
+              </tr>`).join('')}
+              ${tasks.length>15?`<tr><td colspan="5" style="color:#6e7681;text-align:center">... e mais ${tasks.length-15} tarefas</td></tr>`:''}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
     }
   }
-  
-  setProgress('prog-load', 100);
-  
-  // Mostrar stats
-  const cardImport = document.getElementById('card-import');
-  const statsArea = document.getElementById('stats-area');
-  
-  const totalDia = TODAS_TAREFAS.filter(t=>t.turno==='dia').length;
-  const totalNoite = TODAS_TAREFAS.filter(t=>t.turno==='noite').length;
-  const colabors = [...new Set(TODAS_TAREFAS.map(t=>t.colaborador))];
-  
-  statsArea.innerHTML = `
+
+  pArea.innerHTML=html||'<div class="empty-state">Nenhuma tarefa extraída</div>';
+
+  // Stats
+  const totalDia=TODAS_TAREFAS.filter(t=>t.turno==='dia').length;
+  const totalNoite=TODAS_TAREFAS.filter(t=>t.turno==='noite').length;
+  const colabs=[...new Set(TODAS_TAREFAS.map(t=>t.colaborador))];
+  const cats=[...new Set(TODAS_TAREFAS.map(t=>t.categoria))];
+  document.getElementById('stats-area').innerHTML=`
     <div class="stat"><div class="stat-num">${TODAS_TAREFAS.length}</div><div class="stat-label">Total Tarefas</div></div>
     <div class="stat"><div class="stat-num" style="color:#7ee787">${totalDia}</div><div class="stat-label">☀️ Dia</div></div>
     <div class="stat"><div class="stat-num" style="color:#79c0ff">${totalNoite}</div><div class="stat-label">🌙 Noite</div></div>
-    <div class="stat"><div class="stat-num">${colabors.length}</div><div class="stat-label">Colaboradores</div></div>
-    <div class="stat"><div class="stat-num" style="color:#ffa657">${[...new Set(TODAS_TAREFAS.map(t=>t.categoria))].length}</div><div class="stat-label">Categorias</div></div>
+    <div class="stat"><div class="stat-num">${colabs.length}</div><div class="stat-label">Colaboradores</div></div>
+    <div class="stat"><div class="stat-num" style="color:#ffa657">${cats.length}</div><div class="stat-label">Categorias</div></div>
   `;
-  
-  cardImport.style.display = 'block';
+
+  cardImp.style.display = TODAS_TAREFAS.length>0 ? 'block' : 'none';
 }
 
-function renderTabelaTarefas(tarefas) {
-  let h = `<table><tr><th>Dia</th><th>Item</th><th>Qtd</th><th>Un</th><th>Categoria</th></tr>`;
-  tarefas.forEach(t => {
-    h += `<tr>
-      <td>${t.dia_semana}</td>
-      <td>${t.item}</td>
-      <td style="color:#ffa657">${t.quantidade}</td>
-      <td>${t.unidade}</td>
-      <td style="color:#8b949e">${t.categoria}</td>
-    </tr>`;
-  });
-  h += '</table>';
-  return h;
+function toggleColab(hdr){
+  const body=hdr.nextElementSibling;
+  body.classList.toggle('open');
+  const arr=hdr.querySelector('span:last-child');
+  if(arr) arr.textContent=body.classList.contains('open')?'▲':'▼';
 }
 
-function setProgress(id, pct) {
-  const el = document.getElementById(id);
-  if(el) el.style.width = pct + '%';
-}
+/* ═══════════ FIREBASE OPS ═══════════ */
+function geraId(){ return Date.now().toString(36)+Math.random().toString(36).substr(2,8); }
+function setProgress(p){ document.getElementById('prog-fill').style.width=p+'%'; }
+function setBtns(on){ ['btn-limpar','btn-add'].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=!on;}); }
 
-/* ═══════════════════════════
-   LOG HELPERS
-═══════════════════════════ */
 let logEl;
-function logMsg(msg, tipo='info') {
-  if(!logEl) logEl = document.getElementById('log-area');
-  const span = document.createElement('span');
-  span.className = tipo;
-  span.textContent = msg + '\n';
-  logEl.appendChild(span);
-  logEl.scrollTop = logEl.scrollHeight;
+function log(msg,tipo='info'){
+  if(!logEl) logEl=document.getElementById('log-area');
+  const s=document.createElement('span');
+  s.className=tipo; s.textContent=msg+'\n';
+  logEl.appendChild(s);
+  logEl.scrollTop=logEl.scrollHeight;
 }
 
-/* ═══════════════════════════
-   FIREBASE OPERAÇÕES
-═══════════════════════════ */
-async function limparEInserir() {
-  if(!confirm(`⚠️ Apagar TODAS as tarefas e reinserir ${TODAS_TAREFAS.length} novas?\n\nEsta ação é irreversível!`)) return;
-  
+async function limparEInserir(){
+  if(!TODAS_TAREFAS.length){alert('⚠️ Nenhuma tarefa carregada! Faça o upload das planilhas primeiro.');return;}
+  if(!confirm(`⚠️ Apagar TODAS as tarefas do Firebase e inserir ${TODAS_TAREFAS.length} novas?\n\nEsta ação não pode ser desfeita!`)) return;
   setBtns(false);
-  logEl = document.getElementById('log-area');
-  logEl.innerHTML = '';
-  logEl.style.display = 'block';
-  document.getElementById('prog-import-wrap').style.display = 'block';
-  
-  logMsg('🗑️ Limpando tarefas existentes...', 'warn');
-  
-  try {
+  logEl=document.getElementById('log-area');
+  logEl.innerHTML='';
+  logEl.style.display='block';
+  document.getElementById('prog-wrap').style.display='block';
+  setProgress(0);
+
+  log('🗑️ Apagando tarefas existentes...','warn');
+  try{
     await db.ref('tarefas').remove();
-    logMsg('✅ Tarefas antigas removidas.', 'ok');
-  } catch(e) {
-    logMsg('❌ Erro ao limpar: ' + e.message, 'err');
-    setBtns(true);
-    return;
+    log('✅ Tarefas antigas removidas.','ok');
+  }catch(e){
+    log('❌ Erro ao limpar: '+e.message,'err');
+    setBtns(true); return;
   }
-  
-  await inserirTarefas();
+  await inserir();
 }
 
-async function apenasInserir() {
-  if(!confirm(`Inserir ${TODAS_TAREFAS.length} tarefas sem limpar as existentes?`)) return;
-  
+async function apenasInserir(){
+  if(!TODAS_TAREFAS.length){alert('⚠️ Nenhuma tarefa carregada!');return;}
+  if(!confirm(`Inserir ${TODAS_TAREFAS.length} tarefas sem apagar as existentes?`)) return;
   setBtns(false);
-  logEl = document.getElementById('log-area');
-  logEl.innerHTML = '';
-  logEl.style.display = 'block';
-  document.getElementById('prog-import-wrap').style.display = 'block';
-  
-  await inserirTarefas();
+  logEl=document.getElementById('log-area');
+  logEl.innerHTML='';
+  logEl.style.display='block';
+  document.getElementById('prog-wrap').style.display='block';
+  setProgress(0);
+  await inserir();
 }
 
-function gerarId() {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2,9);
-}
+async function inserir(){
+  const total=TODAS_TAREFAS.length;
+  log(`📦 Inserindo ${total} tarefas no Firebase...`,'info');
+  let ok=0,erros=0;
+  const LOTE=25;
 
-async function inserirTarefas() {
-  const total = TODAS_TAREFAS.length;
-  logMsg(`📦 Inserindo ${total} tarefas no Firebase...`, 'info');
-  
-  let ok = 0, erros = 0;
-  const BATCH = 20;
-  
-  for(let i = 0; i < TODAS_TAREFAS.length; i += BATCH) {
-    const lote = TODAS_TAREFAS.slice(i, i + BATCH);
-    const updates = {};
-    
-    lote.forEach((t, idx) => {
-      const id = gerarId() + '_' + (i+idx);
-      updates['tarefas/' + id] = {
+  for(let i=0;i<total;i+=LOTE){
+    const lote=TODAS_TAREFAS.slice(i,i+LOTE);
+    const updates={};
+    lote.forEach((t,idx)=>{
+      const id=geraId()+'_'+(i+idx);
+      updates['tarefas/'+id]={
         id,
-        colaborador: t.colaborador,
-        turno: t.turno,
-        dia_semana: t.dia_semana,
-        categoria: t.categoria,
-        item: t.item,
-        quantidade: t.quantidade,          // usado pelo app_v3.js nos cards
-        quantidade_padrao: t.quantidade,   // usado pelo medias.html
-        unidade: t.unidade,
-        ordem: t.ordem || (i+idx),
-        created_at: Date.now(),
-        updated_at: Date.now()
+        colaborador:t.colaborador,
+        turno:t.turno,
+        dia_semana:t.dia_semana,
+        categoria:t.categoria,
+        item:t.item,
+        quantidade:t.quantidade,
+        quantidade_padrao:t.quantidade_padrao,
+        unidade:t.unidade,
+        ordem:t.ordem||(i+idx),
+        created_at:Date.now(),
+        updated_at:Date.now()
       };
     });
-    
-    try {
+    try{
       await db.ref().update(updates);
-      ok += lote.length;
-      setProgress('prog-import', Math.round((i+BATCH)/total*100));
-      if(i % (BATCH*5) === 0) logMsg(`  ✅ ${ok}/${total} inseridas...`, 'ok');
-    } catch(e) {
-      erros += lote.length;
-      logMsg(`  ❌ Erro no lote ${i}: ${e.message}`, 'err');
+      ok+=lote.length;
+      setProgress(Math.round((i+LOTE)/total*100));
+      if(i%(LOTE*4)===0) log(`  ✅ ${ok}/${total} inseridas...`,'ok');
+    }catch(e){
+      erros+=lote.length;
+      log(`  ❌ Erro lote ${i}: ${e.message}`,'err');
     }
-    
-    // Pequena pausa para não sobrecarregar
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise(r=>setTimeout(r,80));
   }
-  
-  setProgress('prog-import', 100);
-  
-  logMsg('', 'info');
-  logMsg(`══════════════════════════════`, 'info');
-  logMsg(`✅ Concluído! ${ok} tarefas inseridas, ${erros} erros.`, ok > 0 ? 'ok' : 'err');
-  logMsg(`Colaboradores: ${[...new Set(TODAS_TAREFAS.map(t=>t.colaborador))].join(', ')}`, 'info');
-  logMsg(``, 'info');
-  logMsg(`🔗 Verifique em: index.html`, 'info');
-  
+
+  setProgress(100);
+  log('','info');
+  log('══════════════════════════════','info');
+  if(erros===0){
+    log(`✅ CONCLUÍDO! ${ok} tarefas inseridas com sucesso.`,'ok');
+  } else {
+    log(`⚠️ ${ok} inseridas, ${erros} com erro.`,'warn');
+  }
+  log('','info');
+  log('Colaboradores: '+[...new Set(TODAS_TAREFAS.map(t=>t.colaborador))].join(', '),'info');
+  log('','info');
+  log('👉 Abra index.html para testar os cards!','info');
   setBtns(true);
 }
 
-function setBtns(enabled) {
-  ['btn-limpar','btn-apenas-inserir'].forEach(id => {
-    const btn = document.getElementById(id);
-    if(btn) btn.disabled = !enabled;
+/* Drag & drop */
+['dia','noite'].forEach(turno=>{
+  const zone=document.getElementById('zone-'+turno);
+  zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag');});
+  zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));
+  zone.addEventListener('drop',e=>{
+    e.preventDefault();zone.classList.remove('drag');
+    const file=e.dataTransfer.files[0];
+    if(!file) return;
+    const inp=document.getElementById('inp-'+turno);
+    // Simular seleção via DataTransfer
+    const dt=new DataTransfer();
+    dt.items.add(file);
+    inp.files=dt.files;
+    onFile(inp,turno);
   });
-}
-
-/* ═══════════════════════════
-   INIT
-═══════════════════════════ */
-window.addEventListener('DOMContentLoaded', carregarPreview);
+});
 </script>
 </body>
 </html>
