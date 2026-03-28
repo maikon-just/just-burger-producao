@@ -4,6 +4,9 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Just Burger — Insumos por Colaborador</title>
+  <!-- Firebase SDK v9 compat -->
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
   <style>
@@ -235,8 +238,23 @@
 /* ══════════════════════════════════════════
    JUST BURGER — Insumos por Colaborador
    Lista de retirada de estoque filtrada por turno + dia da semana
-   Integração com RESTful Table API (tarefas)
+   Integração com Firebase Realtime Database
 ══════════════════════════════════════════ */
+
+/* ── Firebase init ── */
+(function(){
+  const cfg={
+    apiKey:"AIzaSyDt1yzxGGzuT2cSdten1bFuXG7yeDQ90Po",
+    authDomain:"justburger-producao-e9b27.firebaseapp.com",
+    databaseURL:"https://justburger-producao-e9b27-default-rtdb.firebaseio.com",
+    projectId:"justburger-producao-e9b27",
+    storageBucket:"justburger-producao-e9b27.firebasestorage.app",
+    messagingSenderId:"387070713910",
+    appId:"1:387070713910:web:f156d3247a1715a58ab897"
+  };
+  if(!firebase.apps.length) firebase.initializeApp(cfg);
+  window._fbIns = firebase.database();
+})();
 
 const DIAS_LIST_INS = [
   {key:'segunda',label:'Segunda-feira',short:'SEG'},
@@ -317,16 +335,10 @@ async function carregar(){
   const turno = _turnoAtual;
 
   try {
-    let rows=[], pg=1;
-    while(true){
-      const r = await fetch(`tables/tarefas?limit=500&page=${pg}`);
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      const j = await r.json();
-      const d = j.data||[];
-      rows = rows.concat(d);
-      if(d.length < 500) break;
-      pg++;
-    }
+    /* Carrega via Firebase Realtime DB */
+    const snap = await window._fbIns.ref('tarefas').once('value');
+    const val  = snap.val();
+    const rows = val ? Object.entries(val).map(([id,obj])=>({id,...obj})) : [];
 
     // Filtra por turno e dia, excluindo checklists (sem quantidade ou unidade especial)
     const UNID_CHECKLIST = ['checklist','vídeo','video','execução','execucao','tarefa','atividade',
