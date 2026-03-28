@@ -4,7 +4,10 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Just Burger 🍔 Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <!-- Firebase SDK v9 compat -->
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
@@ -612,15 +615,44 @@ function toast(msg){
 }
 
 /* ══════════════════════════════════════════════════════════
-   FETCH PAGINADO
+   FIREBASE CONFIG
+══════════════════════════════════════════════════════════ */
+(function(){
+  const cfg={
+    apiKey:"AIzaSyDt1yzxGGzuT2cSdten1bFuXG7yeDQ90Po",
+    authDomain:"justburger-producao-e9b27.firebaseapp.com",
+    databaseURL:"https://justburger-producao-e9b27-default-rtdb.firebaseio.com",
+    projectId:"justburger-producao-e9b27",
+    storageBucket:"justburger-producao-e9b27.firebasestorage.app",
+    messagingSenderId:"387070713910",
+    appId:"1:387070713910:web:f156d3247a1715a58ab897"
+  };
+  if(!firebase.apps.length) firebase.initializeApp(cfg);
+  window._fbDash = firebase.database();
+})();
+
+/* ══════════════════════════════════════════════════════════
+   FETCH VIA FIREBASE (substitui fetch paginado)
 ══════════════════════════════════════════════════════════ */
 async function fetchAll(table){
+  try{
+    const snap = await window._fbDash.ref(table).once('value');
+    const val  = snap.val();
+    if(!val) return [];
+    return Object.entries(val).map(([id,obj])=>({id,...obj}));
+  }catch(e){
+    console.warn(`fetchAll(${table}):`, e.message);
+    return [];
+  }
+}
+// Alias legacy (não usado, mas mantido por segurança)
+async function _fetchAllLegacy(table){
   let rows=[], pg=1;
   while(true){
     try {
       const r = await fetch(`tables/${table}?limit=500&page=${pg}`);
       if(!r.ok){
-        if(r.status===404||r.status===422) break; // Tabela vazia ou não encontrada
+        if(r.status===404||r.status===422) break;
         throw new Error(`HTTP ${r.status} ao buscar ${table}`);
       }
       const j = await r.json();
