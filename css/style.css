@@ -217,6 +217,20 @@ body {
 .shift-sub   { font-size:11px; color:var(--text2); }
 .shift-arrow { font-size:16px; color:var(--text2); }
 
+/* ══ BOTTOM NAV GLOBAL (fixa, mobile-safe) ══ */
+.global-bottom-nav {
+  position:fixed; bottom:0; left:0; right:0; z-index:200;
+  background:#fff; border-top:1px solid var(--border);
+  padding:8px 12px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
+  box-shadow:0 -4px 20px rgba(0,0,0,.10);
+}
+.global-bottom-nav .footer-links-row {
+  max-width:600px; margin:0 auto;
+}
+/* Padding body para n\u00e3o sobrepor conte\u00fado */
+body.has-bottom-nav { padding-bottom:72px; }
+
 .welcome-footer {
   padding:14px 16px; background:#fff; border-top:1px solid var(--border);
 }
@@ -920,26 +934,36 @@ body {
 .info-box-val   { font-size:20px; font-weight:900; color:var(--dark); }
 .info-box-unit  { font-size:11px; color:var(--text2); }
 
-.status-btns { display:flex; flex-direction:column; gap:8px; }
+/* Grid 2x2 para botões de status */
+.status-btns-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:8px;
+  margin-bottom:4px;
+}
 .sbtn {
-  padding:12px 16px; border-radius:var(--radius-sm);
+  padding:10px 8px; border-radius:var(--radius-sm);
   border:2px solid transparent; font-family:inherit;
-  font-size:14px; font-weight:800; cursor:pointer;
-  transition:all .15s; text-align:left;
+  font-size:12px; font-weight:800; cursor:pointer;
+  transition:all .15s; text-align:center;
+  display:flex; align-items:center; justify-content:center; gap:4px;
 }
 .sbtn-total  { background:#f0fdf4; color:#16a34a; border-color:#86efac; }
 .sbtn-parcial{ background:#fff7ed; color:#c2410c; border-color:#fdba74; }
 .sbtn-nao    { background:#fee2e2; color:#dc2626; border-color:#fca5a5; }
+.sbtn-maior  { background:#eff6ff; color:#1d4ed8; border-color:#93c5fd; }
 .sbtn-total.active   { background:#22c55e; color:#fff; border-color:#22c55e; }
 .sbtn-parcial.active { background:#f97316; color:#fff; border-color:#f97316; }
 .sbtn-nao.active     { background:#ef4444; color:#fff; border-color:#ef4444; }
+.sbtn-maior.active   { background:#2563eb; color:#fff; border-color:#2563eb; }
 
-.motivo-btns { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:10px; }
+/* Grid 4 colunas para motivos */
+.motivo-btns-grid {
+  display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-bottom:8px;
+}
 .motivo-btn {
-  background:#f1f5f9; border:2px solid var(--border);
-  border-radius:20px; padding:6px 13px;
-  font-size:12px; font-weight:800; cursor:pointer;
-  font-family:inherit; transition:all .15s; color:var(--text);
+  background:#f1f5f9; border:1.5px solid var(--border);
+  border-radius:10px; padding:6px 4px;
+  font-size:10px; font-weight:800; cursor:pointer;
+  font-family:inherit; transition:all .15s; color:var(--text); text-align:center;
 }
 .motivo-btn.active { background:var(--dark); border-color:var(--dark); color:#fff; }
 .motivo-input {
