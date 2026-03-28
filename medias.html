@@ -238,26 +238,29 @@
 <!-- ══ OVERLAY DE SENHA ══ -->
 <div id="pw-overlay" style="
   position:fixed;inset:0;background:linear-gradient(135deg,#1a1d2e,#2d3250);
-  z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;">
-  <div style="background:#fff;border-radius:18px;padding:36px 32px;width:100%;max-width:360px;
+  z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;
+  overflow:hidden;">
+  <div style="background:#fff;border-radius:18px;padding:32px 28px;width:100%;max-width:340px;
               box-shadow:0 20px 60px rgba(0,0,0,0.4);text-align:center;">
-    <div style="font-size:48px;margin-bottom:8px">🔐</div>
-    <h2 style="font-size:20px;font-weight:900;color:#1a1d2e;margin-bottom:4px">Área Restrita</h2>
-    <p style="font-size:13px;color:#6b7280;margin-bottom:24px">Digite a senha para continuar</p>
-    <form onsubmit="event.preventDefault();_pwEnter()">
+    <div style="font-size:44px;margin-bottom:6px">🔐</div>
+    <h2 style="font-size:19px;font-weight:900;color:#1a1d2e;margin-bottom:4px">Área Restrita</h2>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:20px">Digite a senha para continuar</p>
+    <form onsubmit="event.preventDefault();_pwEnter()" autocomplete="off">
       <input type="text" name="username" value="lider" autocomplete="username" style="display:none" aria-hidden="true"/>
-      <div style="position:relative;margin-bottom:14px">
+      <div style="position:relative;margin-bottom:12px">
         <input id="pw-input" type="password" name="password" placeholder="Senha..."
           autocomplete="current-password"
-          style="width:100%;padding:12px 44px 12px 16px;border:2px solid #dde1ed;border-radius:10px;
-                 font-size:15px;font-family:inherit;outline:none;box-sizing:border-box;"
+          style="width:100%;padding:11px 44px 11px 14px;border:2px solid #dde1ed;border-radius:10px;
+                 font-size:15px;font-family:inherit;outline:none;box-sizing:border-box;
+                 -webkit-appearance:none;appearance:none;"
           onfocus="this.style.borderColor='#e6a800'" onblur="this.style.borderColor='#dde1ed'"/>
         <button type="button" onclick="_pwToggle()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);
-          background:none;border:none;cursor:pointer;font-size:16px;color:#6b7280">👁️</button>
+          background:none;border:none;cursor:pointer;font-size:16px;color:#6b7280;padding:0;line-height:1">👁️</button>
       </div>
       <p id="pw-err" style="color:#dc2626;font-size:12px;font-weight:700;margin-bottom:10px;min-height:16px;"></p>
       <button type="submit" style="width:100%;background:#e6a800;color:#fff;border:none;
-        padding:13px;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">
+        padding:12px;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;
+        -webkit-appearance:none;appearance:none;">
         🚀 Entrar
       </button>
     </form>
@@ -266,11 +269,14 @@
 </div>
 <script>
 (function(){
+  /* Bloqueia scroll do body enquanto overlay está visível */
+  document.body.style.overflow='hidden';
   function _pwEnter(){
     const v=document.getElementById('pw-input').value;
     const senhasValidas=['lider123*'];
     if(senhasValidas.includes(v)){
       document.getElementById('pw-overlay').style.display='none';
+      document.body.style.overflow=''; /* restaura scroll */
     } else {
       const e=document.getElementById('pw-err');
       e.textContent='❌ Senha incorreta!';
