@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Just Burger — Seed Tarefas v2</title>
+<title>Just Burger — Seed Tarefas v3</title>
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',sans-serif;background:#0d1117;color:#e6edf3;padding:16px;max-width:860px;margin:0 auto;font-size:13px}
+body{font-family:'Segoe UI',sans-serif;background:#0d1117;color:#e6edf3;padding:16px;max-width:900px;margin:0 auto;font-size:13px}
 h1{color:#ffa657;font-size:20px;margin-bottom:4px}
 .subtitle{color:#8b949e;font-size:12px;margin-bottom:20px}
 h2{color:#79c0ff;font-size:14px;margin:0 0 10px;display:flex;align-items:center;gap:6px}
@@ -59,39 +59,38 @@ td.num{color:#ffa657;font-weight:700;text-align:right}
 /* Progress & log */
 .progress-bar{background:#21262d;border-radius:4px;height:14px;margin:8px 0;overflow:hidden;display:none}
 .progress-fill{background:linear-gradient(90deg,#238636,#2ea043);height:100%;transition:width .3s;border-radius:4px}
-.log{background:#010409;border:1px solid #21262d;border-radius:6px;padding:10px;font-family:monospace;font-size:11px;max-height:280px;overflow-y:auto;margin-top:8px;display:none;line-height:1.7}
+.log{background:#010409;border:1px solid #21262d;border-radius:6px;padding:10px;font-family:monospace;font-size:11px;max-height:320px;overflow-y:auto;margin-top:8px;display:none;line-height:1.7}
 .ok{color:#7ee787}.err{color:#ff7b72}.warn{color:#ffa657}.info{color:#79c0ff}
 
 .alert-warn{background:#2d1f00;border:1px solid #d29922;border-radius:8px;padding:10px 14px;font-size:12px;color:#fde68a;margin:8px 0}
 .alert-warn strong{color:#ffa657}
 .sep{border:none;border-top:1px solid #21262d;margin:14px 0}
 .empty-state{text-align:center;padding:30px;color:#6e7681;font-size:13px}
+.version-badge{display:inline-block;background:#1f3a5f;color:#79c0ff;font-size:10px;padding:2px 8px;border-radius:12px;margin-left:8px;font-weight:700}
 </style>
 </head>
 <body>
 
-<h1>🍔 Just Burger — Seed de Tarefas v2</h1>
-<p class="subtitle">Faça upload das planilhas XLSX e importe as tarefas direto para o Firebase</p>
+<h1>🍔 Just Burger — Seed de Tarefas <span class="version-badge">v3 CORRIGIDO</span></h1>
+<p class="subtitle">Versão corrigida — lê TODAS as abas de ambas as planilhas, incluindo Antoniel, Marcus, Aline, Sandro, Dina, Rhuan/Fritadeira e todas as abas de dias</p>
 
 <!-- ═══ STEP 1 — UPLOAD ═══ -->
 <div class="card">
   <h2>📂 Passo 1 — Selecione as planilhas</h2>
   <div class="upload-grid">
-    <!-- DIA -->
     <div class="upload-zone" id="zone-dia" onclick="document.getElementById('inp-dia').click()">
       <input type="file" id="inp-dia" accept=".xlsx,.xls" style="display:none" onchange="onFile(this,'dia')"/>
       <div class="uz-icon">☀️</div>
       <div style="margin-bottom:4px"><span class="badge-turno bt-dia">TURNO DIA</span></div>
       <div class="uz-label" id="lbl-dia">Clique para selecionar</div>
-      <div class="uz-sub" id="sub-dia">TAREFAS DIA DINÁ.xlsx</div>
+      <div class="uz-sub" id="sub-dia">1-TAREFAS DIA DINÁ.xlsx</div>
     </div>
-    <!-- NOITE -->
     <div class="upload-zone" id="zone-noite" onclick="document.getElementById('inp-noite').click()">
       <input type="file" id="inp-noite" accept=".xlsx,.xls" style="display:none" onchange="onFile(this,'noite')"/>
       <div class="uz-icon">🌙</div>
       <div style="margin-bottom:4px"><span class="badge-turno bt-noite">TURNO NOITE</span></div>
       <div class="uz-label" id="lbl-noite">Clique para selecionar</div>
-      <div class="uz-sub" id="sub-noite">TAREFAS NOITE SANDRO.xlsx</div>
+      <div class="uz-sub" id="sub-noite">2-TAREFAS NOITE SANDRO.xlsx</div>
     </div>
   </div>
   <p style="color:#6e7681;font-size:11px;margin-top:6px">💡 Arraste ou clique em cada caixa para selecionar o arquivo correto</p>
@@ -138,269 +137,747 @@ const ARQUIVOS = { dia: null, noite: null };
 let TODAS_TAREFAS = [];
 
 /* ═══════════ CONSTANTES ═══════════ */
-const DIAS_SET = new Set([
-  'segunda','segunda-feira',
-  'terca','terça','terça-feira','terca-feira',
-  'quarta','quarta-feira',
-  'quinta','quinta-feira',
-  'sexta','sexta-feira',
-  'sabado','sábado',
-  'domingo'
+// Dias da semana para normalização
+const DIAS_MAP = {
+  'segunda':  'segunda','segunda-feira':'segunda','seg':'segunda',
+  'terca':    'terca','terça':'terca','terça-feira':'terca','terca-feira':'terca','ter':'terca',
+  'quarta':   'quarta','quarta-feira':'quarta','qua':'quarta',
+  'quinta':   'quinta','quinta-feira':'quinta','qui':'quinta',
+  'sexta':    'sexta','sexta-feira':'sexta','sex':'sexta',
+  'sabado':   'sabado','sábado':'sabado','sab':'sabado',
+  'domingo':  'domingo','dom':'domingo',
+};
+const TODOS_DIAS = ['segunda','terca','quarta','quinta','sexta','sabado','domingo'];
+const DIAS_JS   = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
+
+// Abas de dias de semana a ignorar como aba principal (serão processadas separadamente nas abas de turno)
+const ABAS_DIAS_SEMANA = new Set([
+  'SEGUNDA','TERÇA','QUARTA','QUINTA','SEXTA','SABADO','SÁBADO','DOMINGO',
+  'SEGUNDA-FEIRA','TERÇA-FEIRA','QUARTA-FEIRA','QUINTA-FEIRA','SEXTA-FEIRA',
+  'ANOTAÇÕES','ANOTACOES'
 ]);
 
-const DIAS_JS = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
-
-// Mapeamento aba → nome do colaborador no sistema
+// Mapeamento aba → nome canônico do colaborador
 const ABA_COLAB = {
-  'ALINE':'ALINE','PABLO':'PABLO',
-  'MATEUS PRODUÇÃO':'MATEUS','MATEUS PRODUCAO':'MATEUS',
-  'JOÃO ':'JOÃO','JOÃO':'JOÃO','JOAO':'JOÃO',
-  'ALAN RICARDO':'ALAN RICARDO',
-  'GABRIEL LEITE':'GABRIEL LEITE',
-  'FRITADEIRA':'FRITADEIRA',
-  'GABRIEL KHALYL':'GABRIEL KHALYL',
-  'SERGIO CAMARAS':'SERGIO CAMARAS',
-  'WESLEY MOTORISTA':'WESLEY MOTORISTA',
-  'DINA':'DINA','FAXINA':'FAXINA',
-  // Noite
-  'DESPACHO':'DESPACHO',
-  'JOSÉ BRUNO':'JOSÉ BRUNO','JOSE BRUNO':'JOSÉ BRUNO',
-  'ABC':'ABC','FABIO':'FABIO',
-  'ATENDIMENTO ANTONIEL':'ANTONIEL',
-  'ATENDIMENTO MARCUS':'MARCUS',
-  'ESTAGIARIO HENRIQUE':'HENRIQUE',
-  'ESTÁGIO PEDRO':'PEDRO','ESTAGIO PEDRO':'PEDRO',
-  'ESTÁGIO DAVI':'DAVI','ESTAGIO DAVI':'DAVI',
-  'SANDRO':'SANDRO','RHUAN':'RHUAN',
+  // DIA
+  'ALINE':              'ALINE',
+  'PABLO':              'PABLO',
+  'MATEUS PRODUÇÃO':    'MATEUS',
+  'MATEUS PRODUCAO':    'MATEUS',
+  'JOÃO ':              'JOÃO',
+  'JOÃO':               'JOÃO',
+  'JOAO ':              'JOÃO',
+  'JOAO':               'JOÃO',
+  'ALAN RICARDO':       'ALAN RICARDO',
+  'GABRIEL LEITE':      'GABRIEL LEITE',
+  'FRITADEIRA':         'RHUAN',     // aba FRITADEIRA = RHUAN
+  'GABRIEL KHALYL':     'GABRIEL KHALYL',
+  'SERGIO CAMARAS':     'SERGIO CAMARAS',
+  'SÉRGIO ':            'SERGIO CAMARAS',
+  'SÉRGIO':             'SERGIO CAMARAS',
+  'SERGIO ':            'SERGIO CAMARAS',
+  'WESLEY MOTORISTA':   'WESLEY MOTORISTA',
+  'DINA':               'DINA',
+  'FAXINA':             'FAXINA',
+  // NOITE
+  'DESPACHO':                'DESPACHO',
+  'JOSÉ BRUNO':              'JOSÉ BRUNO',
+  'JOSE BRUNO':              'JOSÉ BRUNO',
+  'ABC':                     'ABC',
+  'FABIO':                   'FABIO',
+  'ATENDIMENTO ANTONIEL':    'ANTONIEL',
+  'ATENDIMENTO MARCUS':      'MARCUS',
+  'ESTAGIARIO HENRIQUE':     'HENRIQUE',
+  'ESTÁGIO PEDRO':           'PEDRO',
+  'ESTAGIO PEDRO':           'PEDRO',
+  'ESTÁGIO DAVI':            'DAVI',
+  'ESTAGIO DAVI':            'DAVI',
+  'SANDRO':                  'SANDRO',
 };
 
-const IGNORAR = [
-  'JUST BURGER','PROIBIDO','CELULAR','MATRIZ','COORDENADOR','SUPERVISOR',
-  'RESPONSÁVEL','RESPONSAVEL','EMERGÊNCIA','EMERGENCIA','TELEFONE','CONTATO',
-  'ATENÇÃO','ATENCAO','MANTENHA','CERTIFIQUE','LAVAR UNIFORME',
-  'BOA TARDE','BOM DIA','BOA NOITE','///',
-  'QUANTIDADE','QUANT/ESTOQUE','QUANT/FEITA','VISTO/ENC','OBSERVAÇÃO',
-  'JUST BURGER MATRIZ','DATA:','DIA  ','INICIO ','TAREFA  ',
+// Linhas a ignorar (cabeçalhos, rodapés, avisos)
+const IGNORAR_CONTAINS = [
+  'PROIBIDO O USO','EMERGÊNCIA LIGAR','JUST BURGER MATRIZ',
+  'PARA QUALQUER','PASSIVO DE ADVERTENCIA',
+  'Todos os dias cada funcionários','Prencher folha de descarte','Prencher a folha',
+  'QUANTIDADE','Quantidade','QUANT/ESTOQUE','VISTO/ENC','OBSERVAÇÃO','Observação:',
+  'COORDENADOR','SUPERVISOR','RESPONSÁVEL','RESPONSAVEL',
+  'MANTENHA','CERTIFIQUE','LAVAR UNIFORME','BOA TARDE','BOM DIA','BOA NOITE',
+  'Abater o que tem no estoque, exceto coxinha',
+  'Todos os dias cada funcionário'
 ];
 
 function norm(s){ return String(s||'').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
-function isDia(s){ const n=norm(s); return DIAS_SET.has(n)||DIAS_SET.has(n.replace(/-feira$/,'')); }
-function excelDate(serial){
+
+function isDiaSemana(s){
+  const n = norm(s).replace(/-feira$/,'').replace(/\s+/g,'');
+  return !!DIAS_MAP[n] || !!DIAS_MAP[String(s||'').toLowerCase().trim()];
+}
+
+function normDia(s){
+  const n = norm(s).replace(/-feira$/,'').replace(/\s+/g,' ').trim();
+  return DIAS_MAP[n] || DIAS_MAP[String(s||'').toLowerCase().trim()] || null;
+}
+
+function excelDateToJS(serial){
   if(typeof serial!=='number'||serial<40000||serial>55000) return null;
-  return new Date(Math.floor(serial-25569)*86400000);
+  return new Date(Math.floor((serial-25569)*86400000));
 }
-function parseData(txt){
-  const s=String(txt||'').replace(/^DATA:?\s*/i,'').trim();
-  const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+
+function parseDataTexto(txt){
+  const s = String(txt||'').replace(/^DATA:?\s*/i,'').trim();
+  const m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
   if(!m) return null;
-  const yr=m[3].length===2?2000+parseInt(m[3]):parseInt(m[3]);
-  return new Date(yr,parseInt(m[2])-1,parseInt(m[1]));
+  const yr = m[3].length===2 ? 2000+parseInt(m[3]) : parseInt(m[3]);
+  return new Date(yr, parseInt(m[2])-1, parseInt(m[1]));
 }
-function diaSemana(d){ return d&&!isNaN(d.getTime())?DIAS_JS[d.getDay()]:null; }
+
+function diaSemanaDeData(d){
+  return d && !isNaN(d.getTime()) ? DIAS_JS[d.getDay()] : null;
+}
+
 function nomeColab(aba){
-  const k=aba.trim();
+  const k = aba.trim();
   if(ABA_COLAB[k]) return ABA_COLAB[k];
-  const ku=k.toUpperCase();
+  const ku = k.toUpperCase();
   for(const [a,v] of Object.entries(ABA_COLAB)) if(a.toUpperCase()===ku) return v;
-  return k.split(/\s*[-–]\s*/)[0].trim().toUpperCase();
+  // Tentar extrair nome antes de " - " (ex: "RHUAN - Fritadeira" → "RHUAN")
+  const partes = k.split(/\s*[-–]\s*/);
+  return partes[0].trim().toUpperCase();
 }
+
+function parseQtd(b){
+  if(typeof b==='number' && b>0 && b<1000000) return {qty:b, un:'un'};
+  const s = String(b||'').trim();
+  if(!s) return null;
+  // "70 kilos", "08 kilos", "150 kilos"
+  const mKilo = s.match(/^(\d+(?:[.,]\d+)?)\s*kilos?/i);
+  if(mKilo) return {qty:parseFloat(mKilo[1].replace(',','.')), un:'kg'};
+  // "60 litros"
+  const mLit = s.match(/^(\d+(?:[.,]\d+)?)\s*litros?/i);
+  if(mLit) return {qty:parseFloat(mLit[1].replace(',','.')), un:'L'};
+  // "200 discos"
+  const mDisc = s.match(/^(\d+(?:[.,]\d+)?)\s*discos?/i);
+  if(mDisc) return {qty:parseFloat(mDisc[1].replace(',','.')), un:'un'};
+  // "todos" ou texto especial → sem qtd
+  if(/^todos?/i.test(s)||/^final/i.test(s)||s.length>20) return null;
+  // número puro em string
+  const mNum = s.match(/^(\d+(?:[.,]\d+)?)$/);
+  if(mNum) return {qty:parseFloat(mNum[1].replace(',','.')), un:'un'};
+  return null;
+}
+
 function unidade(txt){
-  const t=String(txt||'').toLowerCase();
+  const t = String(txt||'').toLowerCase();
   if(/\bkg\b|\bkilos?\b/.test(t)) return 'kg';
   if(/\blitros?\b/.test(t)) return 'L';
   if(/\bporç/.test(t)) return 'porções';
+  if(/\bpacote/.test(t)) return 'pacotes';
+  if(/\bpé/.test(t)||/\bpes\b/.test(t)) return 'un';
   return 'un';
 }
-function categ(col,item){
-  const c=String(col||'').toUpperCase(), i=String(item||'').toUpperCase();
-  if(c.includes('FAXINA')) return 'Limpeza';
-  if(c.includes('DESPACHO')) return 'Despacho';
-  if(c.includes('FRITADEIRA')||c.includes('RHUAN')) return 'Fritadeira';
-  if(c.includes('ANTONIEL')||c.includes('MARCUS')||c.includes('ALINE')) return 'Atendimento';
-  if(c.includes('ESTAGIO')||c.includes('ESTÁGIO')||c.includes('HENRIQUE')||c.includes('PEDRO')||c.includes('DAVI')) return 'Estágio';
-  if(c.includes('MOTORISTA')||c.includes('WESLEY')) return 'Logística';
-  if(c.includes('ABC')) return 'Loja ABC';
-  if(c.includes('DINA')||c.includes('SANDRO')) return 'Gestão';
-  if(i.includes('PINK')||i.includes('HAMBURGUER')) return 'Hambúrguer';
+
+function categ(col, item){
+  const c = String(col||'').toUpperCase();
+  const i = String(item||'').toUpperCase();
+  if(c==='FAXINA') return 'Limpeza';
+  if(c==='DESPACHO') return 'Despacho';
+  if(c==='RHUAN'||c==='FRITADEIRA') return 'Fritadeira';
+  if(c==='ANTONIEL') return 'Atendimento';
+  if(c==='MARCUS') return 'Atendimento';
+  if(c==='ALINE') return 'Atendimento';
+  if(c==='HENRIQUE'||c==='PEDRO'||c==='DAVI') return 'Estágio';
+  if(c==='WESLEY MOTORISTA') return 'Logística';
+  if(c==='ABC') return 'Loja ABC';
+  if(c==='DINA') return 'Gestão';
+  if(c==='SANDRO') return 'Gestão';
+  if(c==='SERGIO CAMARAS') return 'Câmaras';
+  if(c==='GABRIEL KHALYL') return 'Hambúrguer';
+  if(c==='JOSE BRUNO'||c==='JOSÉ BRUNO') return 'Câmaras';
+  if(c==='FABIO') return 'Produção';
+  if(c==='PABLO') return 'Estágio';
+  if(c==='MATEUS') return 'Sachês';
+  if(c==='JOÃO') return 'Pré-preparo';
+  if(c==='ALAN RICARDO') return 'Ilha';
+  if(c==='GABRIEL LEITE') return 'Ilha';
+  if(i.includes('PINK')||i.includes('HAMBURGUER')||i.includes('HAMBÚRGUER')) return 'Hambúrguer';
   if(i.includes('FRANGO')||i.includes('SASSAMI')) return 'Frango';
-  if(i.includes('BACON')||i.includes('CARNE')) return 'Proteínas';
-  if(i.includes('CEBOLA')||i.includes('PICLES')) return 'Vegetais';
+  if(i.includes('BACON')||i.includes('CARNE')||i.includes('QUEIJO')) return 'Proteínas';
+  if(i.includes('CEBOLA')||i.includes('PICLES')||i.includes('TOMATE')) return 'Vegetais';
   if(i.includes('MAIONESE')||i.includes('MAYO')||i.includes('CHEDDAR')||i.includes('SACHE')) return 'Condimentos';
-  if(i.includes('COXINHA')||i.includes('CRINKLE')||i.includes('SUPREME')) return 'Salgados';
+  if(i.includes('COXINHA')||i.includes('CRINKLE')||i.includes('SUPREME')||i.includes('FRANGUITO')) return 'Salgados';
   if(i.includes('SALADA')||i.includes('CAESAR')) return 'Saladas';
-  if(i.includes('CARTÃO')||i.includes('AVALIAÇÃO')) return 'Atendimento';
+  if(i.includes('CARTÃO')||i.includes('AVALIAÇÃO')||i.includes('CARTAO')) return 'Atendimento';
+  if(i.includes('LIMPEZA')||i.includes('LAVAR')||i.includes('OLEO')) return 'Limpeza';
+  if(i.includes('MOLHO')||i.includes('MAYO')||i.includes('JUST SAUCE')) return 'Molhos';
   return 'Produção';
 }
-function limpar(t){ return String(t||'').trim().replace(/\s+/g,' ').replace(/^\d+\s*kilos?\s+de\s+/i,'').replace(/^./,c=>c.toUpperCase()); }
 
-function deveIgnorar(row){
-  const txt=row.map(c=>String(c||'')).join(' ').toUpperCase().trim();
-  if(!txt||txt.length<2) return true;
-  return IGNORAR.some(p=>txt.includes(p));
+function limpar(t){
+  return String(t||'').trim()
+    .replace(/\s+/g,' ')
+    .replace(/^["""'']+|["""'']+$/g,'')
+    .replace(/^./,c=>c.toUpperCase());
 }
 
-/* ═══════════ PROCESSAR ABA ═══════════ */
-function processarAba(sheetName, ws, turno){
-  const data = XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
-  if(!data||data.length<2) return [];
-  const colab = nomeColab(sheetName);
-  const tarefas=[], vistas=new Set();
-  let diaAtual=null;
+function deveIgnorar(txt){
+  const t = String(txt||'').trim();
+  if(!t || t.length < 3) return true;
+  return IGNORAR_CONTAINS.some(p => t.includes(p));
+}
 
-  for(let i=0;i<data.length;i++){
-    const row=data[i]; if(!row) continue;
-    const nv=row.filter(c=>String(c||'').trim()!=='');
-    if(!nv.length) continue;
-    if(deveIgnorar(row)) continue;
+function isDataLinha(c0){
+  // "DATA:24/03/26" ou "DATA: 24/03/2026" ou serial Excel
+  return /^DATA:?\s*\d/i.test(String(c0||'').trim()) || (typeof c0==='number' && c0>40000 && c0<55000);
+}
 
-    const c0=String(row[0]||'').trim();
-    const c1=row[1];
-    const c2=String(row[2]||'').trim();
+/* ═══════════ PROCESSADORES ═══════════ */
 
-    // Detectar cabeçalho de dia da semana
-    if(isDia(c0)) continue;
+/*
+ * processarAbaIndividual:
+ * Abas onde cada linha é de um colaborador específico.
+ * Estrutura: [DIA DA SEMANA] → [Dia | Qtd | Tarefa] → DATA:... → tarefas
+ * Padrões detectados:
+ *   - Col A = dia semana (ignorar), Col B vazia
+ *   - Col A = "Dia " / "DATA:..." / vazio
+ *   - Col B = quantidade (número ou "X kilos")
+ *   - Col C = tarefa
+ * Variantes:
+ *   - GABRIEL KHALYL: Col A = data, Col B = tarefa (sem col C separada)
+ *   - DINA/FAXINA: Col A = data, Col B = tarefa
+ *   - SERGIO CAMARAS: Col A = data, Col B = qtd, Col C = tarefa
+ *   - Alguns sem quantidade (só checklist)
+ */
+function processarAbaIndividual(sheetName, ws, turno){
+  const raw  = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true});
+  const fmt  = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false});
+  if(!raw || raw.length < 2) return [];
 
-    // Detectar data
-    const dSerial=excelDate(row[0]);
-    const dTexto=!dSerial?parseData(c0):null;
-    const dDet=dSerial||dTexto;
+  const colabNome = nomeColab(sheetName);
+  const tarefas   = [];
+  const vistas    = new Set();
+  let diaAtual    = null;
 
+  // Detectar o tipo de layout da aba
+  // Verificar se col B é tarefa ou quantidade olhando primeiras linhas com dados
+  let layoutB_eh_tarefa = false;
+  for(let i=0; i<raw.length; i++){
+    const r = raw[i];
+    if(!r) continue;
+    const c0s = String(r[0]||'').trim();
+    const c1s = String(r[1]||'').trim();
+    const c2s = String(r[2]||'').trim();
+    if(c0s && /^DATA/i.test(c0s)){
+      // Se col B é texto longo (tarefa) e col C está vazia → layout B=tarefa
+      if(c1s.length > 5 && c2s==='' && typeof r[1]==='string') {
+        layoutB_eh_tarefa = true;
+      }
+      break;
+    }
+  }
+
+  for(let i=0; i<raw.length; i++){
+    const r0 = raw[i];
+    const r2 = fmt[i];
+    if(!r0) continue;
+
+    const c0r = r0[0], c1r = r0[1], c2r = r0[2];
+    const c0s = String(c0r||'').trim();
+    const c1s = String(c1r||'').trim();
+    const c2s = String(c2r||'').trim();
+
+    // Linha vazia
+    const totalNonEmpty = [c0r,c1r,c2r,...(r0.slice(3)||[])].filter(c=>String(c||'').trim()).length;
+    if(totalNonEmpty===0) continue;
+
+    // Detectar dia da semana como separador
+    if(isDiaSemana(c0s) && !c1s && !c2s){
+      diaAtual = normDia(c0s);
+      continue;
+    }
+    // Variante "QUARTA - FEIRA " com espaços
+    const c0Clean = c0s.replace(/\s*-\s*/g,' ').replace(/\s+/g,' ').trim();
+    if(isDiaSemana(c0Clean) && !c1s && !c2s){
+      diaAtual = normDia(c0Clean);
+      continue;
+    }
+
+    // Linha de data
+    const dSerial = typeof c0r==='number' ? excelDateToJS(c0r) : null;
+    const dTexto  = !dSerial ? parseDataTexto(c0s) : null;
+    const dDet    = dSerial || dTexto;
     if(dDet){
-      diaAtual=diaSemana(dDet);
-      // Linha de data com tarefa embutida (col1=qty, col2=item)
-      if(typeof c1==='number'&&c1>0&&c1<100000&&c2&&c2.length>2){
-        push(colab,turno,diaAtual,limpar(c2),c1,unidade(c2),categ(colab,c2),i);
-      } else if(c2&&c2.length>2&&typeof c1!=='number'){
-        // Linha de data com apenas descrição (sem qty)
-        push(colab,turno,diaAtual,limpar(c2),null,'checklist',categ(colab,c2),i);
+      diaAtual = diaSemanaDeData(dDet);
+      // Tarefa na mesma linha que a data?
+      if(layoutB_eh_tarefa && c1s && !deveIgnorar(c1s)){
+        push(colabNome, turno, diaAtual||'segunda', limpar(c1s), null, 'checklist', categ(colabNome,c1s), i);
+      } else if(!layoutB_eh_tarefa){
+        const qtdDet = parseQtd(c1r);
+        if(c2s && !deveIgnorar(c2s)){
+          if(qtdDet){
+            push(colabNome, turno, diaAtual||'segunda', limpar(c2s), qtdDet.qty, qtdDet.un, categ(colabNome,c2s), i);
+          } else {
+            push(colabNome, turno, diaAtual||'segunda', limpar(c2s), null, 'checklist', categ(colabNome,c2s), i);
+          }
+        }
       }
       continue;
     }
 
-    let item='',qty=null,un='un';
+    // Linha de tarefa pura (col A vazia, tarefa em col B ou C)
+    if(c0s==='' || isDiaSemana(c0s)){
+      if(layoutB_eh_tarefa){
+        // Col B = tarefa
+        if(c1s && c1s.length>3 && !deveIgnorar(c1s) && !isDiaSemana(c1s)){
+          push(colabNome, turno, diaAtual||'segunda', limpar(c1s), null, 'checklist', categ(colabNome,c1s), i);
+        }
+      } else {
+        // Col B = qty, Col C = tarefa
+        const qtdDet = parseQtd(c1r);
+        if(c2s && c2s.length>3 && !deveIgnorar(c2s)){
+          if(qtdDet){
+            push(colabNome, turno, diaAtual||'segunda', limpar(c2s), qtdDet.qty, qtdDet.un, categ(colabNome,c2s), i);
+          } else if(c1s && !deveIgnorar(c1s)){
+            // Col B é texto de finalização/observação + Col C é tarefa
+            push(colabNome, turno, diaAtual||'segunda', limpar(c2s), null, 'checklist', categ(colabNome,c2s), i);
+          } else {
+            push(colabNome, turno, diaAtual||'segunda', limpar(c2s), null, 'checklist', categ(colabNome,c2s), i);
+          }
+        } else if(c2s==='' && c1s && c1s.length>3 && !deveIgnorar(c1s) && typeof c1r==='string' && !parseQtd(c1r)){
+          // Col B é texto (tarefa), Col C vazia
+          push(colabNome, turno, diaAtual||'segunda', limpar(c1s), null, 'checklist', categ(colabNome,c1s), i);
+        }
+      }
+      continue;
+    }
 
-    // col0 vazio, col1=número, col2=item
-    if(c0===''&&typeof c1==='number'&&c1>0&&c1<100000&&c2){
-      item=limpar(c2); qty=c1; un=unidade(c2);
+    // Linha com col A preenchida e não é data nem dia da semana (possível cabeçalho de subseção ou tarefa)
+    if(c0s && !deveIgnorar(c0s) && !isDiaSemana(c0s) && !isDataLinha(c0r)){
+      if(typeof c1r==='number' && c1r>0){
+        // Col A = item, Col B = qtd
+        push(colabNome, turno, diaAtual||'segunda', limpar(c0s), c1r, unidade(c0s), categ(colabNome,c0s), i);
+      }
+      // Outros casos com texto em col A são provavelmente cabeçalhos de colaborador na aba de dia
     }
-    // col0=item, col1=número
-    else if(c0&&typeof c1==='number'&&c1>0&&c1<100000){
-      item=limpar(c0); qty=c1; un=unidade(c0);
-    }
-    // col1 = "08 kilos" (string)
-    else if(c0===''&&typeof c1==='string'&&/^\d+\s*kilos?/i.test(c1)&&c2){
-      const m=c1.match(/^(\d+(?:\.\d+)?)/);
-      if(m){qty=parseFloat(m[1]);un='kg';item=limpar(c2);}
-    }
-    // col0=número string, col1=item
-    else if(c0!==''&&!isNaN(c0)&&parseFloat(c0)>0&&c1){
-      item=limpar(String(c1)); qty=parseFloat(c0); un=unidade(String(c1));
-    }
-    // só texto — pode ser checklist
-    else if(c0&&c0.length>3){
-      item=limpar(c0); un='checklist';
-    }
-
-    if(!item||item.length<3) continue;
-
-    const dias=diaAtual?[diaAtual]:['segunda','terca','quarta','quinta','sexta','sabado','domingo'];
-    dias.forEach(d=>push(colab,turno,d,item,qty,un,categ(colab,item),i));
   }
 
-  function push(col,tur,dia,it,q,u,cat,ord){
-    if(u==='checklist') return; // ignora checklists
-    if(!q||q<=0) return; // ignora sem quantidade
-    const chave=`${col}|${dia}|${it}`;
-    if(vistas.has(chave)) return;
-    vistas.add(chave);
-    tarefas.push({colaborador:col,turno:tur,dia_semana:dia||'segunda',categoria:cat,item:it,quantidade:q,quantidade_padrao:q,unidade:u,ordem:ord});
+  function push(col, tur, dia, item, qty, un, cat, ord){
+    if(!item || item.length<3) return;
+    if(deveIgnorar(item)) return;
+    const key = `${col}|${dia}|${item.toUpperCase().substring(0,40)}`;
+    if(vistas.has(key)) return;
+    vistas.add(key);
+    tarefas.push({
+      colaborador:col, turno:tur, dia_semana:dia||'segunda',
+      categoria:cat, item, quantidade:qty, quantidade_padrao:qty,
+      unidade:un||'checklist', ordem:ord
+    });
   }
 
   return tarefas;
 }
 
+/*
+ * processarAbaDia (abas de dia da semana do turno NOITE):
+ * Cada aba de dia contém múltiplos colaboradores separados por linha de nome.
+ * Estrutura: [NOME COLAB] → DATA:... → tarefas com qtd em "X kilos" na col B
+ * Colaboradores possíveis: FABIO, DAVI, HENRIQUE, PEDRO, BRUNO/JOSÉ BRUNO
+ */
+function processarAbaDia_Noite(sheetName, ws){
+  const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true});
+  if(!raw || raw.length<2) return [];
+
+  const diaKey = normDia(sheetName);
+  if(!diaKey) return [];
+
+  const tarefas = [];
+  const vistas  = new Set();
+  let colabAtual = null;
+
+  // Colaboradores que aparecem nas abas de dia noite
+  const NOITE_COLABS_RE = /^(FABIO|DAVI|HENRIQUE|PEDRO|BRUNO|JOÃO VICTOR|SAMUEL|SANDRO|DESPACHO)/i;
+
+  for(let i=0; i<raw.length; i++){
+    const r0 = raw[i];
+    if(!r0) continue;
+    const c0s = String(r0[0]||'').trim();
+    const c1r = r0[1];
+    const c1s = String(c1r||'').trim();
+    const c2s = String(r0[2]||'').trim();
+
+    const totalNonEmpty = [r0[0],r0[1],r0[2]].filter(c=>String(c||'').trim()).length;
+    if(totalNonEmpty===0) continue;
+
+    // Detectar linha de nome de colaborador
+    // Padrão: "FABIO", "DAVI - ESTAGIÁRIO", "HENRIQUE -ESTÁGIARIO", "BRUNO - Ilha 3/Chapeiro"
+    if(NOITE_COLABS_RE.test(c0s) && !isDataLinha(r0[0])){
+      const nome = c0s.split(/\s*[-–]\s*/)[0].trim().toUpperCase();
+      // Mapear nomes
+      if(/^FABIO/i.test(nome))    colabAtual = 'FABIO';
+      else if(/^DAVI/i.test(nome))     colabAtual = 'DAVI';
+      else if(/^HENRIQUE/i.test(nome)) colabAtual = 'HENRIQUE';
+      else if(/^PEDRO/i.test(nome))    colabAtual = 'PEDRO';
+      else if(/^BRUNO/i.test(nome))    colabAtual = 'JOSÉ BRUNO';
+      else if(/^SANDRO/i.test(nome))   colabAtual = 'SANDRO';
+      else colabAtual = nome;
+      continue;
+    }
+    if(!colabAtual) continue;
+
+    // Linha de data
+    const dSerial = typeof r0[0]==='number' ? excelDateToJS(r0[0]) : null;
+    const dTexto  = !dSerial ? parseDataTexto(c0s) : null;
+    if(dSerial||dTexto){
+      // Ver se tem tarefa embutida (col B e C)
+      const qtdDet = parseQtd(c1r);
+      if(c2s && c2s.length>3 && !deveIgnorar(c2s)){
+        if(qtdDet) push(colabAtual, diaKey, limpar(c2s), qtdDet.qty, qtdDet.un, i);
+        else push(colabAtual, diaKey, limpar(c2s), null, 'checklist', i);
+      } else if(c1s && typeof c1r==='string' && !parseQtd(c1r) && c1s.length>3 && !deveIgnorar(c1s)){
+        push(colabAtual, diaKey, limpar(c1s), null, 'checklist', i);
+      }
+      continue;
+    }
+
+    // Linha de tarefa
+    if(c0s==='' || c0s==='Dia '){
+      const qtdDet = parseQtd(c1r);
+      if(c2s && c2s.length>3 && !deveIgnorar(c2s)){
+        if(qtdDet) push(colabAtual, diaKey, limpar(c2s), qtdDet.qty, qtdDet.un, i);
+        else push(colabAtual, diaKey, limpar(c2s), null, 'checklist', i);
+      } else if(c2s==='' && c1s && c1s.length>3 && !deveIgnorar(c1s)){
+        // Col B é a tarefa (sem qtd)
+        if(typeof c1r==='string' && !parseQtd(c1r)){
+          push(colabAtual, diaKey, limpar(c1s), null, 'checklist', i);
+        }
+      }
+    }
+  }
+
+  function push(col, dia, item, qty, un, ord){
+    if(!item||item.length<3) return;
+    if(deveIgnorar(item)) return;
+    const key = `${col}|${dia}|${item.toUpperCase().substring(0,40)}`;
+    if(vistas.has(key)) return;
+    vistas.add(key);
+    tarefas.push({
+      colaborador:col, turno:'noite', dia_semana:dia,
+      categoria:categ(col,item), item, quantidade:qty, quantidade_padrao:qty,
+      unidade:un||'checklist', ordem:ord
+    });
+  }
+
+  return tarefas;
+}
+
+/*
+ * processarAbaAline:
+ * A aba ALINE não tem estrutura de dias - é uma lista de tarefas diárias fixas.
+ * Todas as tarefas aparecem para todos os dias úteis (terca a domingo).
+ * Estrutura: lista de tarefas em col A (sem quantidade).
+ * Seções: INICIO / IFOOD E APP / FINALIZAÇÃO
+ */
+function processarAbaAline(ws, turno){
+  const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true});
+  if(!raw) return [];
+
+  const tarefas = [];
+  const vistas  = new Set();
+  // Aline trabalha terça a domingo (conforme cabeçalho "INICIO TERÇA QUARTA...")
+  const diasAline = ['terca','quarta','quinta','sexta','sabado','domingo'];
+
+  for(let i=0; i<raw.length; i++){
+    const r0 = raw[i];
+    if(!r0) continue;
+    const c0s = String(r0[0]||'').trim();
+    if(!c0s || c0s.length<5) continue;
+    if(deveIgnorar(c0s)) continue;
+    if(isDiaSemana(c0s)) continue;
+    // Ignorar cabeçalho "INICIO", "FINALIZAÇÃO", seção IF
+    if(/^(INICIO|FINALIZAÇÃO|FINALIZACAO|IFOOD|150 CARTÕES|ATENDIMENTO ALINE)/i.test(c0s)) continue;
+    if(/^\d+\s*(cartões|cartos)/i.test(c0s)) continue;
+
+    const item = limpar(c0s);
+    if(item.length<5) continue;
+
+    diasAline.forEach(dia=>{
+      const key = `ALINE|${dia}|${item.toUpperCase().substring(0,40)}`;
+      if(vistas.has(key)) return;
+      vistas.add(key);
+      tarefas.push({
+        colaborador:'ALINE', turno, dia_semana:dia,
+        categoria:'Atendimento', item, quantidade:null, quantidade_padrao:null,
+        unidade:'checklist', ordem:i
+      });
+    });
+  }
+  return tarefas;
+}
+
+/*
+ * processarAbaAtendimento (Antoniel/Marcus):
+ * Estrutura similar a Aline — lista de tarefas sem dias específicos.
+ * Devem aparecer para todos os dias.
+ */
+function processarAbaAtendimento(ws, turno, colabNome){
+  const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true});
+  if(!raw) return [];
+
+  const tarefas = [];
+  const vistas  = new Set();
+
+  for(let i=0; i<raw.length; i++){
+    const r0 = raw[i];
+    if(!r0) continue;
+    const c0s = String(r0[0]||'').trim();
+    const c1s = String(r0[1]||'').trim();
+    const c2s = String(r0[2]||'').trim();
+    if(!c0s && !c1s && !c2s) continue;
+
+    // Verificar se tem estrutura dia/data
+    if(isDiaSemana(c0s)) continue;
+    if(isDataLinha(r0[0])){
+      // Se tem estrutura de data, processar como aba individual
+      return processarAbaIndividual('_'+colabNome, ws, turno);
+    }
+
+    const item = limpar(c0s || c1s || c2s);
+    if(!item || item.length<5) continue;
+    if(deveIgnorar(item)) continue;
+    if(isDiaSemana(item)) continue;
+
+    TODOS_DIAS.forEach(dia=>{
+      const key = `${colabNome}|${dia}|${item.toUpperCase().substring(0,40)}`;
+      if(vistas.has(key)) return;
+      vistas.add(key);
+      tarefas.push({
+        colaborador:colabNome, turno, dia_semana:dia,
+        categoria:'Atendimento', item, quantidade:null, quantidade_padrao:null,
+        unidade:'checklist', ordem:i
+      });
+    });
+  }
+  return tarefas;
+}
+
+/*
+ * processarAbaDespacho:
+ * Formato A=quantidade (número), B=item. Tarefas para todos os dias.
+ */
+function processarAbaDespacho(ws, turno){
+  const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true});
+  if(!raw) return [];
+  const tarefas = [];
+  const vistas  = new Set();
+  const IGNORAR_DESPACHO = [
+    'Andar central','PARTE DE BAIXO DA ILHA','LISTA DE ITENS PARA FICAR EMBALADAS',
+    'DEIXAR NA GELADEIRA','REFRIGERANTES','OBS:','QUANTIDADE','MANTER O AMBIENTE',
+    'VESPERA','ILHA DE DESPACHO','PERIODO','NÃO PRECISA','CHECK LIST','Andar central'
+  ];
+  for(let i=0; i<raw.length; i++){
+    const r0 = raw[i];
+    if(!r0) continue;
+    const c0r = r0[0];
+    const c1s = String(r0[1]||'').trim();
+    if(!c1s || c1s.length<3) continue;
+    if(deveIgnorar(c1s)) continue;
+    if(IGNORAR_DESPACHO.some(ig=>c1s.toUpperCase().startsWith(ig.toUpperCase()))) continue;
+    if(c1s.startsWith('TODOS OS 600ML')) continue;
+    const qty = typeof c0r==='number' && c0r>0 && c0r<10000 ? c0r : null;
+    const item = limpar(c1s);
+    if(item.length<3) continue;
+    TODOS_DIAS.forEach(dia=>{
+      const key = `DESPACHO|${dia}|${item.toUpperCase().substring(0,40)}`;
+      if(vistas.has(key)) return;
+      vistas.add(key);
+      tarefas.push({colaborador:'DESPACHO', turno, dia_semana:dia, categoria:'Despacho',
+        item, quantidade:qty, quantidade_padrao:qty, unidade:qty?'un':'checklist', ordem:i});
+    });
+  }
+  return tarefas;
+}
+
+/*
+ * processarAbaSandro:
+ * Lista de tarefas de supervisão sem datas — para todos os dias.
+ */
+function processarAbaSandro(ws, turno){
+  const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true});
+  if(!raw) return [];
+  const tarefas = [];
+  const vistas  = new Set();
+  for(let i=0; i<raw.length; i++){
+    const r0 = raw[i];
+    if(!r0) continue;
+    const c1s = String(r0[1]||'').trim();
+    const c0s = String(r0[0]||'').trim();
+    const item_txt = c1s.length>3 ? c1s : c0s;
+    if(!item_txt || item_txt.length<5) continue;
+    if(deveIgnorar(item_txt)) continue;
+    if(isDiaSemana(item_txt)) continue;
+    if(/^(Dia |Quantidade|NÃO PRECISA|SANDRO|Observação|Semana com feriado)/i.test(item_txt)) continue;
+    const item = limpar(item_txt);
+    if(item.length<5) continue;
+    TODOS_DIAS.forEach(dia=>{
+      const key = `SANDRO|${dia}|${item.toUpperCase().substring(0,40)}`;
+      if(vistas.has(key)) return;
+      vistas.add(key);
+      tarefas.push({colaborador:'SANDRO', turno, dia_semana:dia, categoria:'Gestão',
+        item, quantidade:null, quantidade_padrao:null, unidade:'checklist', ordem:i});
+    });
+  }
+  return tarefas;
+}
+
+/* ═══════════ ENTRY POINT POR ABA ═══════════ */
+function processarAba(sheetName, ws, turno){
+  const sn = sheetName.trim();
+  const snU = sn.toUpperCase();
+
+  // Detectar se é aba de dia da semana (planilha de noite)
+  // Essas abas têm múltiplos colaboradores dentro
+  if(turno==='noite' && ABAS_DIAS_SEMANA.has(snU)){
+    return processarAbaDia_Noite(sn, ws);
+  }
+
+  // Abas a ignorar completamente
+  if(ABAS_DIAS_SEMANA.has(snU)) return []; // dias da semana no turno dia
+
+  // Aba ABC — apenas planilha de controle de desperdício, sem tarefas reais
+  if(snU==='ABC') return [];
+
+  // Aba ALINE — lista de tarefas diárias fixas sem estrutura de datas
+  if(snU==='ALINE') return processarAbaAline(ws, turno);
+
+  // Abas ANTONIEL e MARCUS — lista de tarefas diárias fixas (sem datas)
+  if(snU==='ATENDIMENTO ANTONIEL'||snU==='ANTONIEL'){
+    return processarAbaAtendimento(ws, turno, 'ANTONIEL');
+  }
+  if(snU==='ATENDIMENTO MARCUS'||snU==='MARCUS'){
+    return processarAbaAtendimento(ws, turno, 'MARCUS');
+  }
+
+  // Aba DESPACHO — checklist com formato A=qty, B=item (para todos os dias)
+  if(snU==='DESPACHO'){
+    return processarAbaDespacho(ws, turno);
+  }
+
+  // Aba SANDRO — lista de tarefas para todos os dias (sem datas)
+  if(snU==='SANDRO'){
+    return processarAbaSandro(ws, turno);
+  }
+
+  // Processamento padrão por aba individual
+  return processarAbaIndividual(sn, ws, turno);
+}
+
 /* ═══════════ UPLOAD ═══════════ */
 async function onFile(inp, turno){
-  const file=inp.files[0]; if(!file) return;
-  const zone=document.getElementById('zone-'+turno);
-  const lbl=document.getElementById('lbl-'+turno);
-  const sub=document.getElementById('sub-'+turno);
+  const file = inp.files[0]; if(!file) return;
+  const zone = document.getElementById('zone-'+turno);
+  const lbl  = document.getElementById('lbl-'+turno);
+  const sub  = document.getElementById('sub-'+turno);
 
-  lbl.textContent='⏳ Lendo...';
+  lbl.textContent = '⏳ Lendo...';
   zone.classList.remove('done');
 
   try{
-    const buf=await file.arrayBuffer();
-    const wb=XLSX.read(buf,{type:'array',raw:true});
-    ARQUIVOS[turno]={wb,nome:file.name};
+    const buf = await file.arrayBuffer();
+    const wb  = XLSX.read(buf, {type:'array', raw:true});
+    ARQUIVOS[turno] = {wb, nome:file.name};
     zone.classList.add('done');
-    lbl.textContent='✅ '+file.name;
-    sub.textContent=`${wb.SheetNames.length} abas encontradas`;
+    lbl.textContent = '✅ '+file.name;
+    sub.textContent = `${wb.SheetNames.length} abas encontradas`;
     await processarTodos();
   }catch(e){
-    lbl.textContent='❌ Erro: '+e.message;
-    sub.textContent='Tente novamente';
+    lbl.textContent = '❌ Erro: '+e.message;
+    sub.textContent = 'Tente novamente';
   }
 }
 
 async function processarTodos(){
-  TODAS_TAREFAS=[];
-  const pArea=document.getElementById('preview-area');
-  const cardPrev=document.getElementById('card-preview');
-  const cardImp=document.getElementById('card-import');
-  cardPrev.style.display='block';
+  TODAS_TAREFAS = [];
+  const pArea    = document.getElementById('preview-area');
+  const cardPrev = document.getElementById('card-preview');
+  const cardImp  = document.getElementById('card-import');
+  cardPrev.style.display = 'block';
 
-  let html='';
-  const arquivosCarregados=Object.entries(ARQUIVOS).filter(([,v])=>v);
+  let html = '';
+  const arquivosCarregados = Object.entries(ARQUIVOS).filter(([,v])=>v);
   if(!arquivosCarregados.length){
-    pArea.innerHTML='<div class="empty-state">📂 Selecione pelo menos um arquivo acima</div>';
+    pArea.innerHTML = '<div class="empty-state">📂 Selecione pelo menos um arquivo acima</div>';
     return;
   }
 
-  for(const [turno,{wb,nome}] of arquivosCarregados){
-    html+=`<h3 style="color:#ffa657;margin:12px 0 6px">📁 ${nome} — ${turno.toUpperCase()}</h3>`;
-    const colabs={};
+  for(const [turno, {wb, nome}] of arquivosCarregados){
+    html += `<h3 style="color:#ffa657;margin:12px 0 6px">📁 ${nome} — ${turno.toUpperCase()}</h3>`;
+    const colabsMap = {};
+
     for(const sn of wb.SheetNames){
-      const snorm=norm(sn);
-      if(isDia(sn)||isDia(snorm)||sn.toUpperCase().includes('ANOTA')){
-        html+=`<p style="color:#6e7681;font-size:11px">⏭️ Ignorado: ${sn}</p>`;
+      const snU = sn.trim().toUpperCase();
+      if(snU==='ANOTAÇÕES'||snU==='ANOTACOES'||snU==='ABC'){
+        html += `<p style="color:#6e7681;font-size:11px">⏭️ Ignorado: ${sn}</p>`;
         continue;
       }
-      const ws=wb.Sheets[sn];
-      const tarefas=processarAba(sn,ws,turno);
+      // Nas planilhas de DIA, as abas de dias de semana são ignoradas
+      if(turno==='dia' && ABAS_DIAS_SEMANA.has(snU)){
+        html += `<p style="color:#6e7681;font-size:11px">⏭️ Ignorado (aba de dia): ${sn}</p>`;
+        continue;
+      }
+
+      const ws = wb.Sheets[sn];
+      const tarefas = processarAba(sn, ws, turno);
+
       if(!tarefas.length){
-        html+=`<p style="color:#6e7681;font-size:11px">⚠️ Sem tarefas válidas: ${sn}</p>`;
+        html += `<p style="color:#ffa657;font-size:11px">⚠️ Sem tarefas: ${sn}</p>`;
         continue;
       }
+
       TODAS_TAREFAS.push(...tarefas);
-      const col=nomeColab(sn);
-      if(!colabs[col]) colabs[col]=[];
-      colabs[col].push(...tarefas);
+      // Agrupar por colaborador para exibição
+      for(const t of tarefas){
+        if(!colabsMap[t.colaborador]) colabsMap[t.colaborador]=[];
+        colabsMap[t.colaborador].push(t);
+      }
     }
 
-    // Renderizar por colaborador
-    for(const [col,tasks] of Object.entries(colabs)){
-      const dias=[...new Set(tasks.map(t=>t.dia_semana))];
-      html+=`
+    // Remover duplicatas entre abas (ex: colaborador FABIO pode aparecer em aba individual + aba de dia)
+    const dedupKey = new Set();
+    TODAS_TAREFAS = TODAS_TAREFAS.filter(t=>{
+      const k = `${t.colaborador}|${t.dia_semana}|${t.item.toUpperCase().substring(0,40)}`;
+      if(dedupKey.has(k)) return false;
+      dedupKey.add(k); return true;
+    });
+
+    // Renderizar preview por colaborador
+    for(const [col, tasks] of Object.entries(colabsMap)){
+      const uniqueTasks = [];
+      const seen = new Set();
+      for(const t of tasks){
+        const k = `${t.dia_semana}|${t.item.substring(0,40)}`;
+        if(!seen.has(k)){ seen.add(k); uniqueTasks.push(t); }
+      }
+      const dias = [...new Set(uniqueTasks.map(t=>t.dia_semana))];
+      html += `
       <div class="colab-block">
         <div class="colab-hdr" onclick="toggleColab(this)">
           <span style="font-size:16px">${turno==='dia'?'☀️':'🌙'}</span>
           <span class="colab-hdr-name">${col}</span>
-          <span class="colab-hdr-cnt">${tasks.length} tarefas · ${dias.length} dia(s)</span>
+          <span class="colab-hdr-cnt">${uniqueTasks.length} tarefas · ${dias.length} dia(s): ${dias.join(', ')}</span>
           <span style="color:#6e7681;font-size:11px;margin-left:4px">▼</span>
         </div>
         <div class="colab-body">
           <table>
-            <thead><tr><th>Dia</th><th>Item</th><th style="text-align:right">Qtd</th><th>Un</th><th>Categoria</th></tr></thead>
+            <thead><tr><th>Dia</th><th>Item</th><th style="text-align:right">Qtd</th><th>Un</th><th>Cat</th></tr></thead>
             <tbody>
-              ${tasks.slice(0,15).map(t=>`<tr>
+              ${uniqueTasks.slice(0,20).map(t=>`<tr>
                 <td style="color:#8b949e">${t.dia_semana}</td>
                 <td>${t.item}</td>
-                <td class="num">${t.quantidade}</td>
+                <td class="num">${t.quantidade??'—'}</td>
                 <td style="color:#8b949e">${t.unidade}</td>
                 <td style="color:#6e7681">${t.categoria}</td>
               </tr>`).join('')}
-              ${tasks.length>15?`<tr><td colspan="5" style="color:#6e7681;text-align:center">... e mais ${tasks.length-15} tarefas</td></tr>`:''}
+              ${uniqueTasks.length>20?`<tr><td colspan="5" style="color:#6e7681;text-align:center">... e mais ${uniqueTasks.length-20} tarefas</td></tr>`:''}
             </tbody>
           </table>
         </div>
@@ -408,14 +885,14 @@ async function processarTodos(){
     }
   }
 
-  pArea.innerHTML=html||'<div class="empty-state">Nenhuma tarefa extraída</div>';
+  pArea.innerHTML = html || '<div class="empty-state">Nenhuma tarefa extraída</div>';
 
   // Stats
-  const totalDia=TODAS_TAREFAS.filter(t=>t.turno==='dia').length;
-  const totalNoite=TODAS_TAREFAS.filter(t=>t.turno==='noite').length;
-  const colabs=[...new Set(TODAS_TAREFAS.map(t=>t.colaborador))];
-  const cats=[...new Set(TODAS_TAREFAS.map(t=>t.categoria))];
-  document.getElementById('stats-area').innerHTML=`
+  const totalDia   = TODAS_TAREFAS.filter(t=>t.turno==='dia').length;
+  const totalNoite = TODAS_TAREFAS.filter(t=>t.turno==='noite').length;
+  const colabs     = [...new Set(TODAS_TAREFAS.map(t=>t.colaborador))];
+  const cats       = [...new Set(TODAS_TAREFAS.map(t=>t.categoria))];
+  document.getElementById('stats-area').innerHTML = `
     <div class="stat"><div class="stat-num">${TODAS_TAREFAS.length}</div><div class="stat-label">Total Tarefas</div></div>
     <div class="stat"><div class="stat-num" style="color:#7ee787">${totalDia}</div><div class="stat-label">☀️ Dia</div></div>
     <div class="stat"><div class="stat-num" style="color:#79c0ff">${totalNoite}</div><div class="stat-label">🌙 Noite</div></div>
@@ -423,38 +900,38 @@ async function processarTodos(){
     <div class="stat"><div class="stat-num" style="color:#ffa657">${cats.length}</div><div class="stat-label">Categorias</div></div>
   `;
 
-  cardImp.style.display = TODAS_TAREFAS.length>0 ? 'block' : 'none';
+  cardImp.style.display = TODAS_TAREFAS.length > 0 ? 'block' : 'none';
 }
 
 function toggleColab(hdr){
-  const body=hdr.nextElementSibling;
+  const body = hdr.nextElementSibling;
   body.classList.toggle('open');
-  const arr=hdr.querySelector('span:last-child');
-  if(arr) arr.textContent=body.classList.contains('open')?'▲':'▼';
+  const arr = hdr.querySelector('span:last-child');
+  if(arr) arr.textContent = body.classList.contains('open')?'▲':'▼';
 }
 
 /* ═══════════ FIREBASE OPS ═══════════ */
 function geraId(){ return Date.now().toString(36)+Math.random().toString(36).substr(2,8); }
-function setProgress(p){ document.getElementById('prog-fill').style.width=p+'%'; }
+function setProgress(p){ document.getElementById('prog-fill').style.width = p+'%'; }
 function setBtns(on){ ['btn-limpar','btn-add'].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=!on;}); }
 
 let logEl;
-function log(msg,tipo='info'){
-  if(!logEl) logEl=document.getElementById('log-area');
-  const s=document.createElement('span');
-  s.className=tipo; s.textContent=msg+'\n';
+function log(msg, tipo='info'){
+  if(!logEl) logEl = document.getElementById('log-area');
+  const s = document.createElement('span');
+  s.className = tipo; s.textContent = msg+'\n';
   logEl.appendChild(s);
-  logEl.scrollTop=logEl.scrollHeight;
+  logEl.scrollTop = logEl.scrollHeight;
 }
 
 async function limparEInserir(){
   if(!TODAS_TAREFAS.length){alert('⚠️ Nenhuma tarefa carregada! Faça o upload das planilhas primeiro.');return;}
   if(!confirm(`⚠️ Apagar TODAS as tarefas do Firebase e inserir ${TODAS_TAREFAS.length} novas?\n\nEsta ação não pode ser desfeita!`)) return;
   setBtns(false);
-  logEl=document.getElementById('log-area');
-  logEl.innerHTML='';
-  logEl.style.display='block';
-  document.getElementById('prog-wrap').style.display='block';
+  logEl = document.getElementById('log-area');
+  logEl.innerHTML = '';
+  logEl.style.display = 'block';
+  document.getElementById('prog-wrap').style.display = 'block';
   setProgress(0);
 
   log('🗑️ Apagando tarefas existentes...','warn');
@@ -472,47 +949,48 @@ async function apenasInserir(){
   if(!TODAS_TAREFAS.length){alert('⚠️ Nenhuma tarefa carregada!');return;}
   if(!confirm(`Inserir ${TODAS_TAREFAS.length} tarefas sem apagar as existentes?`)) return;
   setBtns(false);
-  logEl=document.getElementById('log-area');
-  logEl.innerHTML='';
-  logEl.style.display='block';
-  document.getElementById('prog-wrap').style.display='block';
+  logEl = document.getElementById('log-area');
+  logEl.innerHTML = '';
+  logEl.style.display = 'block';
+  document.getElementById('prog-wrap').style.display = 'block';
   setProgress(0);
   await inserir();
 }
 
 async function inserir(){
-  const total=TODAS_TAREFAS.length;
-  log(`📦 Inserindo ${total} tarefas no Firebase...`,'info');
-  let ok=0,erros=0;
-  const LOTE=25;
+  const total = TODAS_TAREFAS.length;
+  log(`📦 Inserindo ${total} tarefas no Firebase...`, 'info');
+  log(`👥 Colaboradores: ${[...new Set(TODAS_TAREFAS.map(t=>t.colaborador))].join(', ')}`, 'info');
+  let ok = 0, erros = 0;
+  const LOTE = 25;
 
-  for(let i=0;i<total;i+=LOTE){
-    const lote=TODAS_TAREFAS.slice(i,i+LOTE);
-    const updates={};
-    lote.forEach((t,idx)=>{
-      const id=geraId()+'_'+(i+idx);
-      updates['tarefas/'+id]={
+  for(let i=0; i<total; i+=LOTE){
+    const lote = TODAS_TAREFAS.slice(i, i+LOTE);
+    const updates = {};
+    lote.forEach((t, idx)=>{
+      const id = geraId()+'_'+(i+idx);
+      updates['tarefas/'+id] = {
         id,
-        colaborador:t.colaborador,
-        turno:t.turno,
-        dia_semana:t.dia_semana,
-        categoria:t.categoria,
-        item:t.item,
-        quantidade:t.quantidade,
-        quantidade_padrao:t.quantidade_padrao,
-        unidade:t.unidade,
-        ordem:t.ordem||(i+idx),
-        created_at:Date.now(),
-        updated_at:Date.now()
+        colaborador:    t.colaborador,
+        turno:          t.turno,
+        dia_semana:     t.dia_semana,
+        categoria:      t.categoria,
+        item:           t.item,
+        quantidade:     t.quantidade,
+        quantidade_padrao: t.quantidade_padrao,
+        unidade:        t.unidade,
+        ordem:          t.ordem||(i+idx),
+        created_at:     Date.now(),
+        updated_at:     Date.now()
       };
     });
     try{
       await db.ref().update(updates);
-      ok+=lote.length;
+      ok += lote.length;
       setProgress(Math.round((i+LOTE)/total*100));
       if(i%(LOTE*4)===0) log(`  ✅ ${ok}/${total} inseridas...`,'ok');
     }catch(e){
-      erros+=lote.length;
+      erros += lote.length;
       log(`  ❌ Erro lote ${i}: ${e.message}`,'err');
     }
     await new Promise(r=>setTimeout(r,80));
@@ -527,7 +1005,17 @@ async function inserir(){
     log(`⚠️ ${ok} inseridas, ${erros} com erro.`,'warn');
   }
   log('','info');
-  log('Colaboradores: '+[...new Set(TODAS_TAREFAS.map(t=>t.colaborador))].join(', '),'info');
+
+  // Relatório por colaborador
+  const porColab = {};
+  TODAS_TAREFAS.forEach(t=>{
+    if(!porColab[t.colaborador]) porColab[t.colaborador] = 0;
+    porColab[t.colaborador]++;
+  });
+  log('📊 Resumo por colaborador:','info');
+  Object.entries(porColab).sort((a,b)=>b[1]-a[1]).forEach(([col,cnt])=>{
+    log(`   ${col}: ${cnt} tarefas`,'info');
+  });
   log('','info');
   log('👉 Abra index.html para testar os cards!','info');
   setBtns(true);
@@ -535,19 +1023,18 @@ async function inserir(){
 
 /* Drag & drop */
 ['dia','noite'].forEach(turno=>{
-  const zone=document.getElementById('zone-'+turno);
-  zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag');});
-  zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));
-  zone.addEventListener('drop',e=>{
-    e.preventDefault();zone.classList.remove('drag');
-    const file=e.dataTransfer.files[0];
+  const zone = document.getElementById('zone-'+turno);
+  zone.addEventListener('dragover', e=>{e.preventDefault();zone.classList.add('drag');});
+  zone.addEventListener('dragleave', ()=>zone.classList.remove('drag'));
+  zone.addEventListener('drop', e=>{
+    e.preventDefault(); zone.classList.remove('drag');
+    const file = e.dataTransfer.files[0];
     if(!file) return;
-    const inp=document.getElementById('inp-'+turno);
-    // Simular seleção via DataTransfer
-    const dt=new DataTransfer();
+    const inp = document.getElementById('inp-'+turno);
+    const dt  = new DataTransfer();
     dt.items.add(file);
-    inp.files=dt.files;
-    onFile(inp,turno);
+    inp.files = dt.files;
+    onFile(inp, turno);
   });
 });
 </script>
