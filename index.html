@@ -72,23 +72,19 @@
     </button>
   </header>
   <main class="welcome-body">
-    <div class="welcome-hero">
-      <div class="hero-emoji">👨‍🍳</div>
-      <h2>Bem-vindo à cozinha!</h2>
-      <p>Confirme a data e selecione o turno</p>
+    <!-- SELETOR DE DATA — compacto -->
+    <div class="date-selector-wrap" style="cursor:pointer;" onclick="document.getElementById('work-date-input').showPicker&&document.getElementById('work-date-input').showPicker()">
+      <div class="date-selector-label">
+        <i class="fas fa-calendar-alt" style="color:var(--brand)"></i>
+        <span id="work-date-display" style="font-size:16px;font-weight:900;color:var(--dark)">Carregando...</span>
+      </div>
+      <input type="date" id="work-date-input" class="work-date-input"
+             onchange="onWorkDateChange()"
+             style="position:absolute;opacity:0;width:0;height:0;pointer-events:none"/>
     </div>
 
-    <!-- SELETOR DE DATA -->
-    <div class="date-selector-wrap">
-      <div class="date-selector-label">
-        <i class="fas fa-calendar-day"></i>
-        <span>Data de Trabalho</span>
-      </div>
-      <div class="date-selector-row">
-        <input type="date" id="work-date-input" class="work-date-input" onchange="onWorkDateChange()"/>
-        <div class="work-date-display" id="work-date-display"></div>
-      </div>
-    </div>
+    <!-- PROMPT TURNO -->
+    <p style="text-align:center;font-size:13px;color:var(--text2);font-weight:700;margin-bottom:12px;">Selecione o turno para iniciar</p>
 
     <!-- TURNO -->
     <div class="shift-grid">
@@ -260,6 +256,13 @@
       <span class="nav-chip chip-day" id="setor-day-chip">Segunda</span>
       <span class="nav-chip" id="setor-dept-chip" style="background:#f97316;color:#fff">🏭 Produção</span>
     </div>
+    <!-- Mini nav -->
+    <div class="header-mini-nav">
+      <button onclick="abrirResultados()" class="mini-nav-btn" title="Resultados"><i class="fas fa-chart-bar"></i></button>
+      <a href="medias.html" class="mini-nav-btn" title="Mídias"><i class="fas fa-photo-video"></i></a>
+      <a href="insumos.html" class="mini-nav-btn" title="Insumos"><i class="fas fa-boxes"></i></a>
+      <a href="dashboard.html" class="mini-nav-btn" title="Dashboard"><i class="fas fa-tachometer-alt"></i></a>
+    </div>
   </header>
   <main class="screen-body">
     <div class="screen-intro">
@@ -292,6 +295,12 @@
       <span class="nav-chip chip-day" id="s1-day-chip">Terça</span>
       <span class="nav-chip chip-user" id="s1-user-chip">👤 Colaborador</span>
     </div>
+    <!-- Mini nav -->
+    <div class="header-mini-nav">
+      <button onclick="abrirResultados()" class="mini-nav-btn" title="Resultados"><i class="fas fa-chart-bar"></i></button>
+      <a href="medias.html" class="mini-nav-btn" title="Mídias"><i class="fas fa-photo-video"></i></a>
+      <a href="insumos.html" class="mini-nav-btn" title="Insumos"><i class="fas fa-boxes"></i></a>
+    </div>
     <button class="btn-print-header hidden" id="btn-print-header" onclick="printColaborador()" title="Imprimir">
       <i class="fas fa-print"></i>
     </button>
@@ -317,29 +326,38 @@
   <!-- Lista de cards de tarefas -->
   <main class="tasks-scroll" id="s1-list"></main>
 
-  <!-- Footer -->
+  <!-- Footer compacto -->
   <footer class="tasks-footer" id="s1-footer">
     <div class="btn-pending-info" id="btn-pending-info">
       <i class="fas fa-info-circle"></i>
       <span id="pending-count-text">Toque nos cards acima para programar</span>
     </div>
 
-    <div class="s1-done-footer hidden" id="s1-done-footer">
-      <button class="btn-print-s1" onclick="doPrintDirect()">
-        <i class="fas fa-print"></i> Imprimir Folha
+    <!-- Botões de ação centralizados -->
+    <div class="s1-action-row" id="s1-action-row">
+      <div class="s1-done-footer hidden" id="s1-done-footer">
+        <button class="btn-sm-print" onclick="doPrintDirect()">
+          <i class="fas fa-print"></i> Imprimir
+        </button>
+        <button class="btn-sm-start" onclick="iniciarProducao()">
+          🚀 Iniciar
+        </button>
+      </div>
+
+      <button class="btn-sm-conclude hidden" id="btn-conclude" onclick="openFinishModal()">
+        🏁 Concluir Turno
       </button>
-      <button class="btn-start-prod" onclick="iniciarProducao()">
-        🚀 Iniciar Produção
-      </button>
+
+      <!-- Linha: Imprimir + Voltar -->
+      <div class="s1-bottom-row">
+        <button class="btn-sm-imprimir hidden" id="btn-imprimir-footer" onclick="doPrintDirect()">
+          <i class="fas fa-print"></i> Imprimir
+        </button>
+        <button class="btn-sm-voltar" id="btn-voltar" onclick="backToCollabScreen()">
+          ← Voltar
+        </button>
+      </div>
     </div>
-
-    <button class="btn-conclude hidden" id="btn-conclude" onclick="openFinishModal()">
-      🏁 Concluir Turno
-    </button>
-
-    <button class="btn-voltar-s1" id="btn-voltar" onclick="backToCollabScreen()">
-      ← Voltar
-    </button>
   </footer>
 </div>
 
