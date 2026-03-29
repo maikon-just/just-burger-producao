@@ -65,38 +65,41 @@
     <i class="fas fa-user-shield"></i>
   </button>
 
-  <main class="welcome-body" style="justify-content:center;padding-top:32px">
+  <main class="welcome-body" style="justify-content:center;padding-top:24px">
 
-    <!-- LOGO — acima do campo de data -->
-    <div style="text-align:center;margin-bottom:24px">
+    <!-- LOGO -->
+    <div style="text-align:center;margin-bottom:28px">
       <img src="images/logo-justburger.png"
            id="main-logo"
            alt="Just Burger Hamburgueria"
            onerror="this.onerror=null;this.style.display='none';document.getElementById('logo-text-fallback').style.display='flex';"
-           style="height:160px;width:auto;object-fit:contain;display:block;margin:0 auto"/>
+           style="height:110px;width:auto;object-fit:contain;display:block;margin:0 auto"/>
       <div id="logo-text-fallback"
            style="display:none;flex-direction:column;align-items:center;gap:4px;margin:0 auto">
-        <span style="font-size:48px">🍔</span>
-        <span style="font-size:22px;font-weight:900;color:#e8590c;letter-spacing:3px">JUST BURGER</span>
+        <span style="font-size:44px">🍔</span>
+        <span style="font-size:22px;font-weight:900;color:#111;letter-spacing:2px">JUST BURGER</span>
         <span style="font-size:11px;font-weight:700;color:#888;letter-spacing:4px">HAMBURGUERIA</span>
       </div>
     </div>
 
-    <!-- SELETOR DE DATA — compacto -->
-    <div class="date-selector-wrap" style="cursor:pointer;position:relative;"
-         onclick="var inp=document.getElementById('work-date-input');if(inp.showPicker)inp.showPicker();else inp.click();">
-      <div class="date-selector-label">
-        <i class="fas fa-calendar-alt" style="color:var(--brand)"></i>
-        <span id="work-date-display" style="font-size:16px;font-weight:900;color:var(--dark)">Carregando...</span>
-        <i class="fas fa-chevron-down" style="font-size:11px;color:#aaa;margin-left:4px"></i>
+    <!-- SELETOR DE DATA — novo design -->
+    <div class="date-selector-wrap">
+      <div class="date-selector-label-top">
+        <i class="fas fa-calendar-alt"></i>
+        <span>DATA DE TRABALHO</span>
       </div>
-      <input type="date" id="work-date-input" class="work-date-input"
-             onchange="onWorkDateChange()"
-             style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2"/>
+      <div class="date-selector-row-new">
+        <input type="date" id="work-date-input"
+               onchange="onWorkDateChange()"
+               class="date-input-box"/>
+        <div class="date-info-text">
+          <span id="work-date-display">Carregando...</span>
+        </div>
+      </div>
     </div>
 
     <!-- PROMPT TURNO -->
-    <p style="text-align:center;font-size:13px;color:var(--text2);font-weight:700;margin:0 0 12px;">Selecione o turno para iniciar</p>
+    <p style="text-align:center;font-size:13px;color:#6b7280;font-weight:700;margin:0 0 16px;">Selecione o turno para iniciar</p>
 
     <!-- TURNO -->
     <div class="shift-grid">
