@@ -296,7 +296,11 @@ function abrirSeedFrame() {
   }, 100);
 }
 
-/* ══ TURNO ═══════════════════════════════════════════════ */
+/* ══ TURNO ═══════════════════════════════════════════════
+ * Data já escolhida no calendário da home → detecta dia
+ * automaticamente e vai DIRETO para o departamento,
+ * sem mostrar a tela de seleção de dia da semana.
+ * ═══════════════════════════════════════════════════════ */
 function selectTurno(turno) {
   if (!S.dataTrabalho) {
     const inp=document.getElementById('work-date-input');
@@ -304,11 +308,11 @@ function selectTurno(turno) {
   }
   _invalidarCache();
   S.turno=turno;
-  const dt=new Date(S.dataTrabalho+'T12:00:00');
-  S.dia=DIA_JS_MAP[dt.getDay()];
-  const chip=document.getElementById('day-turno-chip');
-  if (chip) chip.textContent=(turno==='dia'?'☀️':'🌙')+' Turno '+(turno==='dia'?'Dia':'Noite');
-  showScreen('screen-day');
+  // Detecta dia da semana a partir da data escolhida (local, sem UTC)
+  const [_y,_m,_d]=S.dataTrabalho.split('-').map(Number);
+  S.dia=DIA_JS_MAP[new Date(_y,_m-1,_d).getDay()];
+  // Pula a tela de seleção de dia → vai direto para departamento
+  _irParaDept();
 }
 
 /* ══ DIA ══════════════════════════════════════════════════ */
@@ -450,8 +454,10 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
     if (tipoFalta&&S.leaderOk)  acao=`_gerenciarFalta('${ne}','${tipoFalta}','remover')`;
     else if (jaFinaliz)          acao=`_clickColab('${ne}','__reabrir__')`;
     else                         acao=`_clickColab('${ne}','__selecionar__')`;
-    const btnFalta=(S.leaderOk&&!tipoFalta&&!jaFinaliz)
-      ?`<div class="collab-falta-row"><button class="btn-falta-card" onclick="event.stopPropagation();_abrirModalFalta('${ne}')">🚫 Registrar Falta</button></div>`:'';
+    // Botão Falta aparece sempre (exceto se já há falta ou finalizou)
+    // Ao clicar, pede senha do líder se não estiver logado
+    const btnFalta=(!tipoFalta&&!jaFinaliz)
+      ?`<div class="collab-falta-row"><button class="btn-falta-card" onclick="event.stopPropagation();_abrirFaltaComSenha('${ne}')">🚫 Registrar Falta</button></div>`:'';
     return `<div class="${wrapClass}">
       <button class="collab-card ${cor}${jaFinaliz?' collab-done':''}${isEtapa1Ok?' collab-etapa1':''}${tipoFalta?' collab-falta':''}" onclick="${acao}">
         <div class="collab-emoji">${em}</div>
@@ -545,6 +551,12 @@ async function _reabrirTurnoColab(nome) {
 }
 
 /* ══ FALTAS ══════════════════════════════════════════════ */
+function _abrirFaltaComSenha(nome) {
+  // Se líder já logado, abre direto; senão pede senha
+  if (S.leaderOk) { _abrirModalFalta(nome); return; }
+  _abrirModalSenha('🔐','Confirmar Liderança','Senha do líder para registrar falta',LEADER_PASSWORD,()=>_abrirModalFalta(nome));
+}
+
 function _abrirModalFalta(nome) {
   let ov=document.getElementById('_modal_falta');
   if (!ov) {
@@ -567,13 +579,39 @@ function _abrirModalFalta(nome) {
 async function _registrarFalta(nome,tipo) {
   const dt=S.dataTrabalho||today();
   try {
+    // 1. Registra a falta
     await _fbPost('faltas',{colaborador:nome,data:dt,turno:S.turno,dia_semana:S.dia,tipo});
+
+    // 2. Busca todas as tarefas do colaborador para este turno/dia
+    const todasTarefas=_cache.tarefas||await _fbGetAll('tarefas');
+    const tarefasColab=todasTarefas.filter(t=>
+      t.colaborador===nome && t.turno===S.turno && t.dia_semana===S.dia
+    );
+
+    // 3. Para cada tarefa, cria uma pendência nos resultados
+    for (const t of tarefasColab) {
+      await _fbPost('pendencias',{
+        data:dt, turno:S.turno, dia_semana:S.dia,
+        colaborador:nome,
+        item:t.item,
+        categoria:t.categoria||'',
+        quantidade_programada:t.quantidade_padrao||0,
+        quantidade_produzida:0,
+        status:'nao_finalizado',
+        motivo:tipo==='nao_justificada'?'🚫 Falta não justificada':'📋 Falta justificada',
+        vistoriado:0,
+        origem_falta:tipo,
+        tarefa_id:t.id||'',
+      });
+    }
+
     const ov=document.getElementById('_modal_falta');
     if (ov) ov.style.display='none';
     _invalidarCache(); _cache._faltas=null;
-    showToast('✅ Falta registrada!');
+    const tipoLabel=tipo==='nao_justificada'?'Falta N/J':'Falta Justificada';
+    showToast(`✅ ${tipoLabel} registrada! ${tarefasColab.length} pend${tarefasColab.length!==1?'ências':'ência'} criada${tarefasColab.length!==1?'s':''} nos Resultados.`);
     _mostrarTelaSetor(_deptAtual);
-  } catch(e) { showToast('❌ Erro ao registrar falta'); }
+  } catch(e) { showToast('❌ Erro ao registrar falta: '+e.message); }
 }
 
 async function _gerenciarFalta(nome,tipo,acao) {
@@ -1379,14 +1417,20 @@ function _resRenderTasks(itens,slug) {
   }).join('');
 }
 
-/* ══ TRANSFERIR TAREFA — FLUXO 3 PASSOS ═══════════════════ */
-/* Dados internos do fluxo */
+/* ══ TRANSFERIR TAREFA — 1 PASSO (usa data/dia/turno já definidos) ══════════ */
 let _trCtx={};
 
 function _resAbrirTransferir(pendId,itemNome,origem,cat,motivo,qProg,qFeit,tarefaId) {
   const qRest=Math.max(0,(qProg||0)-(qFeit||0));
+  // Usa exatamente os mesmos data/turno/dia que estão nos filtros de resultado
+  const dataAtual  = (document.getElementById('res-data')||{}).value || today();
+  const turnoAtual = (document.getElementById('res-turno')||{}).value || S.turno || 'dia';
+  const [_y,_m,_d] = dataAtual.split('-').map(Number);
+  const diaAtual   = DIA_JS_MAP[new Date(_y,_m-1,_d).getDay()];
+
   _trCtx={pendId,itemNome,origem,cat,motivo,qProg,qFeit,tarefaId,qRest,
-    turnoEscolhido:'',diaEscolhido:'',destinoEscolhido:'',dataEscolhida:today()};
+    turnoEscolhido:turnoAtual, diaEscolhido:diaAtual,
+    dataEscolhida:dataAtual,  destinoEscolhido:''};
 
   let ov=document.getElementById('_modal_transferir_embutido');
   if (!ov) {
@@ -1394,132 +1438,76 @@ function _resAbrirTransferir(pendId,itemNome,origem,cat,motivo,qProg,qFeit,taref
     ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
     document.body.appendChild(ov);
   }
-  _trRenderPasso1(ov);
+  _trRenderPasso1(ov); // agora é passo único — só escolhe destino
   ov.style.display='flex';
 }
 
+/* Modal de 1 passo: apenas escolher o colaborador destino.
+   Data / turno / dia já vêm de _trCtx (definidos no momento de abrir). */
 function _trRenderPasso1(ov) {
-  const {itemNome,origem,cat,qProg,qFeit,qRest}=_trCtx;
-  ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:22px 20px;width:100%;max-width:380px;
-    box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:inherit">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-      <div style="font-size:28px">🔄</div>
-      <div><div style="font-size:16px;font-weight:900">Transferir Tarefa</div>
-        <div style="font-size:11px;color:#888">De: <strong>${origem}</strong></div></div>
+  const {itemNome,origem,cat,qProg,qFeit,qRest,turnoEscolhido,diaEscolhido,dataEscolhida}=_trCtx;
+  const diaObj  = DIAS_LIST.find(d=>d.key===diaEscolhido)||{short:diaEscolhido,label:diaEscolhido};
+  const turnoLbl= turnoEscolhido==='dia'?'☀️ Dia':'🌙 Noite';
+  // Data formatada para exibição
+  const [dy,dm,dd]= dataEscolhida.split('-');
+  const dataFmt   = `${dd}/${dm}/${dy}`;
+
+  // Lista de todos os colaboradores (de ambos os turnos) exceto o de origem
+  const todosColabs=Object.keys(COLLAB_EMOJI).filter(n=>n!==origem&&n!=='').sort();
+  const btns=todosColabs.map(n=>`
+    <button onclick="_trSelecionarDestino('${n.replace(/'/g,"\\'")}')"
+      style="padding:10px 12px;border-radius:12px;border:2px solid #e2e6f0;background:#fff;
+             font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;color:#374151;
+             display:flex;align-items:center;gap:8px;text-align:left;transition:all .15s"
+      onmouseover="this.style.borderColor='#e8590c';this.style.background='#fff7ed'"
+      onmouseout="this.style.borderColor='#e2e6f0';this.style.background='#fff'">
+      <span style="font-size:18px">${COLLAB_EMOJI[n]||'👤'}</span>
+      <span>${n}</span>
+    </button>`).join('');
+
+  ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:20px;width:100%;max-width:380px;
+    box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:inherit;max-height:92vh;overflow-y:auto">
+    <!-- Cabeçalho -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div style="font-size:26px">🔄</div>
+      <div>
+        <div style="font-size:15px;font-weight:900">Transferir Tarefa</div>
+        <div style="font-size:11px;color:#888">De: <strong>${origem}</strong></div>
+      </div>
       <button onclick="document.getElementById('_modal_transferir_embutido').style.display='none'"
         style="margin-left:auto;background:none;border:none;font-size:20px;cursor:pointer;color:#999">✕</button>
     </div>
-    <div style="background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:11px;margin-bottom:16px;font-size:13px">
+
+    <!-- Info da tarefa -->
+    <div style="background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:10px;margin-bottom:12px;font-size:13px">
       <strong>${itemNome}</strong>
-      ${cat?`<div style="color:#888;font-size:11px;margin-top:3px">🏷️ ${cat}</div>`:''}
-      ${qProg>0?`<div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap">
+      ${cat?`<div style="color:#888;font-size:11px;margin-top:2px">🏷️ ${cat}</div>`:''}
+      ${qProg>0?`<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
         <span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">📋 ${qProg}</span>
         ${qFeit>0?`<span style="background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">✅ ${qFeit}</span>`:''}
         ${qRest>0?`<span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">⬇️ falta ${qRest}</span>`:''}
       </div>`:''}
     </div>
-    <!-- PASSO 1: Data + Turno -->
-    <div style="font-size:11px;font-weight:900;color:#6b7280;text-transform:uppercase;margin-bottom:10px;letter-spacing:.5px">
-      Passo 1 de 3 — Data e Turno</div>
-    <div style="margin-bottom:12px">
-      <label style="font-size:11px;font-weight:800;color:#374151;display:block;margin-bottom:4px">📅 Data</label>
-      <input type="date" id="_tr_data" value="${today()}"
-        style="width:100%;padding:10px;border:2px solid #e2e6f0;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;outline:none"/>
-    </div>
-    <label style="font-size:11px;font-weight:800;color:#374151;display:block;margin-bottom:8px">⏰ Turno de destino</label>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
-      <button onclick="_trSelecionarTurno('dia')" id="_tr_btn_dia"
-        style="padding:14px;border-radius:14px;border:2px solid #f97316;background:#fff7ed;
-               font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;color:#f97316">
-        ☀️ Dia</button>
-      <button onclick="_trSelecionarTurno('noite')" id="_tr_btn_noite"
-        style="padding:14px;border-radius:14px;border:2px solid #6366f1;background:#eef2ff;
-               font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;color:#6366f1">
-        🌙 Noite</button>
-    </div>
-    <button onclick="document.getElementById('_modal_transferir_embutido').style.display='none'"
-      style="width:100%;padding:11px;border-radius:12px;border:2px solid #e2e6f0;background:#f9fafb;
-             font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;color:#6b7280">Cancelar</button>
-  </div>`;
-}
 
-function _trSelecionarTurno(turno) {
-  _trCtx.turnoEscolhido=turno;
-  _trCtx.dataEscolhida=document.getElementById('_tr_data')?.value||today();
-  const ov=document.getElementById('_modal_transferir_embutido');
-  _trRenderPasso2(ov);
-}
-
-function _trRenderPasso2(ov) {
-  const {turnoEscolhido}=_trCtx;
-  const turnoLabel=turnoEscolhido==='dia'?'☀️ Dia':'🌙 Noite';
-  const diasBtns=DIAS_LIST.map(d=>`
-    <button onclick="_trSelecionarDia('${d.key}')"
-      style="padding:12px 6px;border-radius:12px;border:2px solid #e2e6f0;background:#fff;
-             font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;color:#374151;
-             display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s"
-      onmouseover="this.style.borderColor='#3b82f6';this.style.background='#eff6ff'"
-      onmouseout="this.style.borderColor='#e2e6f0';this.style.background='#fff'">
-      <span style="font-size:18px">${d.icon}</span>
-      <span>${d.short}</span>
-      <span style="font-size:10px;color:#9ca3af;font-weight:600">${d.label.split('-')[0].trim()}</span>
-    </button>`).join('');
-  ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:22px 20px;width:100%;max-width:380px;
-    box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:inherit">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-      <button onclick="_trRenderPasso1(document.getElementById('_modal_transferir_embutido'))"
-        style="background:#f3f4f6;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px">← Voltar</button>
-      <div style="font-size:15px;font-weight:900">🔄 Transferir — Turno ${turnoLabel}</div>
+    <!-- Data/turno/dia (fixos, derivados do calendário) -->
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:8px 12px;margin-bottom:14px;
+                font-size:12px;color:#166534;font-weight:700;display:flex;gap:12px;flex-wrap:wrap">
+      <span>📅 ${dataFmt}</span>
+      <span>${turnoLbl}</span>
+      <span>📆 ${diaObj.short}</span>
     </div>
-    <div style="font-size:11px;font-weight:900;color:#6b7280;text-transform:uppercase;margin-bottom:12px;letter-spacing:.5px">
-      Passo 2 de 3 — Dia da Semana</div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px">
-      ${diasBtns}
-    </div>
-    <button onclick="document.getElementById('_modal_transferir_embutido').style.display='none'"
-      style="width:100%;padding:11px;border-radius:12px;border:2px solid #e2e6f0;background:#f9fafb;
-             font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;color:#6b7280">Cancelar</button>
-  </div>`;
-}
 
-function _trSelecionarDia(dia) {
-  _trCtx.diaEscolhido=dia;
-  const ov=document.getElementById('_modal_transferir_embutido');
-  _trRenderPasso3(ov);
-}
-
-function _trRenderPasso3(ov) {
-  const {turnoEscolhido,diaEscolhido,origem}=_trCtx;
-  const diaObj=DIAS_LIST.find(d=>d.key===diaEscolhido)||{label:diaEscolhido,short:diaEscolhido};
-  /* Filtra colaboradores do turno e dia escolhidos */
-  const TODOS_DIA=['GABRIEL KHALYL','JOÃO','PABLO','MATEUS','DINA','ALAN RICARDO','GABRIEL LEITE','LOHAINE','RHUAN','SAMUEL'];
-  const TODOS_NOITE=['SANDRO','NOITE - CHAPEIRO','NOITE - MONTADOR','NOITE - FRITADEIRA','ATENDIMENTO / DESPACHO'];
-  const lista=(turnoEscolhido==='dia'?TODOS_DIA:TODOS_NOITE).filter(n=>n!==origem);
-  const btnEstilo=n=>`padding:12px;border-radius:12px;border:2px solid #e2e6f0;background:#fff;
-    font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;color:#374151;
-    text-align:center;transition:all .15s;display:flex;align-items:center;gap:8px`;
-  const btns=lista.map(n=>`
-    <button onclick="_trSelecionarDestino('${n.replace(/'/g,"\\'")}','${n.replace(/'/g,"\\'")}',this)"
-      style="${btnEstilo(n)}">
-      <span style="font-size:18px">${COLLAB_EMOJI[n]||'👤'}</span>
-      <span>${n}</span>
-    </button>`).join('');
-  ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:22px 20px;width:100%;max-width:380px;
-    box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:inherit;max-height:88vh;overflow-y:auto">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-      <button onclick="_trRenderPasso2(document.getElementById('_modal_transferir_embutido'))"
-        style="background:#f3f4f6;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px">← Voltar</button>
-      <div style="font-size:14px;font-weight:900">🔄 ${diaObj.short} — ${turnoEscolhido==='dia'?'☀️ Dia':'🌙 Noite'}</div>
-    </div>
-    <div style="font-size:11px;font-weight:900;color:#6b7280;text-transform:uppercase;margin-bottom:12px;letter-spacing:.5px">
-      Passo 3 de 3 — Colaborador destino</div>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">${btns}</div>
+    <!-- Observação -->
     <label style="font-size:11px;font-weight:800;color:#374151;display:block;margin-bottom:4px">📝 Observação (opcional)</label>
     <input type="text" id="_tr_obs" placeholder="Motivo da transferência..."
-      style="width:100%;padding:10px;border:2px solid #e2e6f0;border-radius:10px;font-family:inherit;font-size:14px;margin-bottom:14px;outline:none"/>
-    <button onclick="document.getElementById('_modal_transferir_embutido').style.display='none'"
-      style="width:100%;padding:11px;border-radius:12px;border:2px solid #e2e6f0;background:#f9fafb;
-             font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;color:#6b7280">Cancelar</button>
+      style="width:100%;padding:9px 12px;border:2px solid #e2e6f0;border-radius:10px;font-family:inherit;font-size:13px;margin-bottom:14px;outline:none;box-sizing:border-box"/>
+
+    <!-- Lista de colaboradores destino -->
+    <div style="font-size:11px;font-weight:900;color:#6b7280;text-transform:uppercase;margin-bottom:8px;letter-spacing:.5px">
+      👤 Transferir para</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${btns}
+    </div>
   </div>`;
 }
 
@@ -1534,50 +1522,69 @@ async function _resConfirmarTransferir(pendId,itemNome,origem,tarefaId,qProg,qFe
   const obs    =obsParam||(document.getElementById('_tr_obs')||{}).value?.trim()||'';
   if (!destino) { showToast('⚠️ Selecione o colaborador destino!'); return; }
 
+  const turno=_trCtx.turnoEscolhido||S.turno||'dia';
+  const dia  =_trCtx.diaEscolhido  ||S.dia  ||'segunda';
+  const data =_trCtx.dataEscolhida ||today();
+  const qRest=Math.max(0,(qProg||0)-(qFeit||0));
+  const qtdFinal=qRest>0?qRest:(qProg||0);
+
+  // Mostra spinner no botão clicado
+  const btns=[...document.querySelectorAll('#_modal_transferir_embutido button')];
+  btns.forEach(b=>{b.disabled=true;});
+
   try {
-    /*
-     * COMPORTAMENTO CORRETO:
-     * 1. Marca a pendência original como vistoriada (vistoriado=1) → some da tela
-     * 2. Registra para quem foi transferida (apenas como log no Firebase)
-     * 3. NÃO cria nova pendência para o destino — o destino ainda vai finalizar
-     *    sua tarefa normalmente pela tela de produção.
-     */
-    await _fbPatch('pendencias', pendId, {
-      vistoriado: 1,
-      transferido_para: destino,
-      obs_transferencia: obs || `Transferido para ${destino}`,
-      transferido_em: today(),
+    /* 1. Marca pendência original como transferida/vistoriada → some do card */
+    await _fbPatch('pendencias',pendId,{
+      vistoriado:1,
+      transferido_para:destino,
+      obs_transferencia:obs||`Transferido para ${destino}`,
+      transferido_em:data,
+    });
+
+    /* 2. Cria nova pendência para o DESTINO — aparece nos Resultados */
+    await _fbPost('pendencias',{
+      data, turno, dia_semana:dia,
+      colaborador:destino,
+      item:itemNome,
+      categoria:_trCtx.cat||'',
+      quantidade_programada:qtdFinal,
+      quantidade_produzida:0,
+      status:'nao_finalizado',
+      motivo:obs||`Transferido de ${origem}`,
+      vistoriado:0,
+      origem_transferencia:origem,
+      tarefa_id:tarefaId||'',
     });
 
     /* Fecha o modal */
     const ov=document.getElementById('_modal_transferir_embutido');
     if (ov) ov.style.display='none';
 
-    showToast(`✅ Transferido para ${destino}! Item removido das pendências.`);
+    showToast(`✅ Transferido para ${destino}! Pendência criada para o destino.`);
 
     /* Remove item do DOM com animação suave */
-    const el = document.getElementById(`rti-${pendId}`);
+    const el=document.getElementById(`rti-${pendId}`);
     if (el) {
-      el.style.transition = 'opacity 0.35s, transform 0.35s, max-height 0.4s, padding 0.4s';
-      el.style.opacity    = '0';
-      el.style.transform  = 'translateX(50px)';
-      const h = el.offsetHeight;
-      el.style.maxHeight  = h + 'px';
-      el.style.overflow   = 'hidden';
-      void el.offsetHeight; // forçar reflow
-      el.style.maxHeight  = '0';
-      el.style.padding    = '0';
-      el.style.marginTop  = '0';
-      const origemSlug = _resSlug(origem);
-      setTimeout(() => {
+      el.style.transition='opacity 0.35s, transform 0.35s, max-height 0.4s, padding 0.4s';
+      el.style.opacity='0';
+      el.style.transform='translateX(50px)';
+      el.style.maxHeight=el.offsetHeight+'px';
+      el.style.overflow='hidden';
+      void el.offsetHeight;
+      el.style.maxHeight='0';
+      el.style.padding='0';
+      el.style.marginTop='0';
+      setTimeout(()=>{
         el.remove();
-        _resVerificaVazio(origemSlug);
+        _resVerificaVazio(_resSlug(origem));
         _resAtualizaSummary();
-      }, 420);
+      },420);
     }
-
     _invalidarCache();
-  } catch(e) { showToast('❌ Erro ao transferir: '+e.message); }
+  } catch(e) {
+    btns.forEach(b=>{b.disabled=false;});
+    showToast('❌ Erro ao transferir: '+e.message);
+  }
 }
 
 function _resToggle(slug) {
