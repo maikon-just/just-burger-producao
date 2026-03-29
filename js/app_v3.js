@@ -288,14 +288,12 @@ function switchLeaderTab(tab) {
 }
 
 function abrirSeedFrame() {
-  const wrap  = document.getElementById('seed-frame-wrap');
-  const frame = document.getElementById('seed-iframe');
-  if (!wrap || !frame) return;
+  const wrap = document.getElementById('seed-frame-wrap');
+  if (!wrap) return;
   wrap.style.display = 'block';
-  if (!frame.src || frame.src === window.location.href) {
-    frame.src = 'seed_tarefas_v3.html';
-  }
-  wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => {
+    wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
 }
 
 /* ══ TURNO ═══════════════════════════════════════════════ */
@@ -1222,8 +1220,38 @@ function abrirResultados() {
   const resTurnoEl=document.getElementById('res-turno'); if (resTurnoEl) resTurnoEl.value=turnoAtual;
   const rdBtn=document.getElementById('resbtn-dia'); if (rdBtn) rdBtn.classList.toggle('active',turnoAtual==='dia');
   const rnBtn=document.getElementById('resbtn-noite'); if (rnBtn) rnBtn.classList.toggle('active',turnoAtual==='noite');
-  setResDia(diaAtual);
+  const diaEl=document.getElementById('res-dia'); if (diaEl) diaEl.value=diaAtual;
+  // Atualiza display do campo de data
+  _resAtualizaDisplayData(dataRef, diaAtual);
   showScreen('screen-resultados');
+  loadResultados();
+}
+
+/* Atualiza display visual do campo de data na tela de resultados embutida */
+function _resAtualizaDisplayData(dataVal, diaKey) {
+  const el = document.getElementById('res-data-texto');
+  if (!el) return;
+  const NOMES = {segunda:'Segunda-feira',terca:'Terça-feira',quarta:'Quarta-feira',
+                 quinta:'Quinta-feira',sexta:'Sexta-feira',sabado:'Sábado',domingo:'Domingo'};
+  const hj = today();
+  if (dataVal === hj) {
+    el.textContent = `Hoje, ${NOMES[diaKey]||diaKey}`;
+  } else {
+    const [y,m,d] = dataVal.split('-');
+    el.textContent = `${d}/${m}/${y} · ${NOMES[diaKey]||diaKey}`;
+  }
+}
+
+/* Chamada quando o usuário muda a data no calendário da tela embutida */
+function onResDataChange() {
+  const dataVal = (document.getElementById('res-data')||{}).value;
+  if (!dataVal) return;
+  const [y,m,d] = dataVal.split('-').map(Number);
+  const jsDay  = new Date(y, m-1, d).getDay();
+  const diaKey = DIA_JS_MAP[jsDay];
+  const diaEl  = document.getElementById('res-dia');
+  if (diaEl) diaEl.value = diaKey;
+  _resAtualizaDisplayData(dataVal, diaKey);
   loadResultados();
 }
 
@@ -1251,7 +1279,8 @@ async function loadResultados() {
   const data =((document.getElementById('res-data')||{}).value)||today();
   try {
     const [pendencias,sessoes]=await Promise.all([_fbGetAll('pendencias'),_fbGetAll('sessoes')]);
-    const pends=pendencias.filter(p=>(!data||p.data===data)&&(!turno||p.turno===turno)&&(!dia||p.dia_semana===dia));
+    // Filtra apenas pendências ativas (não vistoriadas/transferidas)
+    const pends=pendencias.filter(p=>(!data||p.data===data)&&(!turno||p.turno===turno)&&(!dia||p.dia_semana===dia)&&!(p.vistoriado==1));
     const sess =sessoes.filter(s=>(!data||s.data===data)&&(!turno||s.turno===turno)&&(!dia||s.dia_semana===dia));
     const pendAtivos=pends.filter(p=>!(p.vistoriado==1));
     const collabNomes=[...new Set([...sess.map(s=>s.colaborador_nome).filter(Boolean),...pends.map(p=>p.colaborador).filter(Boolean)])];
@@ -1497,57 +1526,50 @@ async function _resConfirmarTransferir(pendId,itemNome,origem,tarefaId,qProg,qFe
   const destino=_trCtx.destinoEscolhido||'';
   const obs    =obsParam||(document.getElementById('_tr_obs')||{}).value?.trim()||'';
   if (!destino) { showToast('⚠️ Selecione o colaborador destino!'); return; }
-  const turno=_trCtx.turnoEscolhido||(document.getElementById('res-turno')||{}).value||'dia';
-  const dia  =_trCtx.diaEscolhido  ||(document.getElementById('res-dia')||{}).value||'segunda';
-  const data =_trCtx.dataEscolhida ||((document.getElementById('res-data')||{}).value)||today();
-  const qRest=Math.max(0,(qProg||0)-(qFeit||0));
-  const qtdFinal=qRest>0?qRest:qProg;
-  /* Busca categoria da tarefa original para manter contexto */
-  let catOriginal='';
-  let unidadeOriginal='un';
-  try {
-    if (tarefaId) {
-      const tOrig=await _fbGetOne('tarefas',tarefaId);
-      if (tOrig) { catOriginal=tOrig.categoria||''; unidadeOriginal=tOrig.unidade||'un'; }
-    }
-  } catch(e) {}
-  try {
-    /* 1. Marca pendência original como transferida/vistoriada */
-    await _fbPatch('pendencias',pendId,{vistoriado:1,transferido_para:destino,obs_transferencia:obs||`Transferido para ${destino}`});
 
-    /* 2. Cria nova entrada em TAREFAS para o colaborador destino (tarefa temporária do dia) */
-    const novaTarefa=await _fbPost('tarefas',{
-      turno, dia_semana:dia,
-      colaborador:destino,
-      categoria:catOriginal||'Transferência',
-      item:itemNome,
-      quantidade_padrao:qtdFinal,
-      unidade:unidadeOriginal,
-      ordem:99,
-      transferida_de:origem,
-      transferida_em:data,
-      transferida_sessao:pendId,
+  try {
+    /*
+     * COMPORTAMENTO CORRETO:
+     * 1. Marca a pendência original como vistoriada (vistoriado=1) → some da tela
+     * 2. Registra para quem foi transferida (apenas como log no Firebase)
+     * 3. NÃO cria nova pendência para o destino — o destino ainda vai finalizar
+     *    sua tarefa normalmente pela tela de produção.
+     */
+    await _fbPatch('pendencias', pendId, {
+      vistoriado: 1,
+      transferido_para: destino,
+      obs_transferencia: obs || `Transferido para ${destino}`,
+      transferido_em: today(),
     });
 
-    /* 3. Cria pendência para o destino com referência à nova tarefa */
-    await _fbPost('pendencias',{
-      data,turno,dia_semana:dia,colaborador:destino,
-      item:itemNome+(obs?` (transf. de ${origem}: ${obs})`:`(transferido de ${origem})`),
-      categoria:catOriginal||'Transferência',
-      quantidade_programada:qtdFinal,
-      quantidade_produzida:0,
-      status:'nao_finalizado',
-      motivo:obs||`Transferido de ${origem}`,
-      vistoriado:0,
-      origem_transferencia:origem,
-      tarefa_id:novaTarefa?.id||tarefaId||'',
-    });
-
+    /* Fecha o modal */
     const ov=document.getElementById('_modal_transferir_embutido');
     if (ov) ov.style.display='none';
-    showToast(`✅ Tarefa transferida para ${destino}! (tarefa criada no turno)`);
+
+    showToast(`✅ Transferido para ${destino}! Item removido das pendências.`);
+
+    /* Remove item do DOM com animação suave */
+    const el = document.getElementById(`rti-${pendId}`);
+    if (el) {
+      el.style.transition = 'opacity 0.35s, transform 0.35s, max-height 0.4s, padding 0.4s';
+      el.style.opacity    = '0';
+      el.style.transform  = 'translateX(50px)';
+      const h = el.offsetHeight;
+      el.style.maxHeight  = h + 'px';
+      el.style.overflow   = 'hidden';
+      void el.offsetHeight; // forçar reflow
+      el.style.maxHeight  = '0';
+      el.style.padding    = '0';
+      el.style.marginTop  = '0';
+      const origemSlug = _resSlug(origem);
+      setTimeout(() => {
+        el.remove();
+        _resVerificaVazio(origemSlug);
+        _resAtualizaSummary();
+      }, 420);
+    }
+
     _invalidarCache();
-    setTimeout(()=>loadResultados(),600);
   } catch(e) { showToast('❌ Erro ao transferir: '+e.message); }
 }
 
@@ -1564,7 +1586,18 @@ async function _resCiente(id,slug) {
   try {
     await _fbPatch('pendencias',id,{vistoriado:1});
     const el=document.getElementById(`rti-${id}`);
-    if (el) { el.style.transition='all .3s'; el.style.opacity='0'; el.style.maxHeight='0'; el.style.overflow='hidden'; setTimeout(()=>{ el.remove(); _resVerificaVazio(slug); },300); }
+    if (el) {
+      el.style.transition='opacity 0.3s, max-height 0.3s, padding 0.3s';
+      el.style.opacity='0';
+      el.style.maxHeight='0';
+      el.style.overflow='hidden';
+      el.style.padding='0';
+      setTimeout(()=>{
+        el.remove();
+        _resVerificaVazio(slug);
+        _resAtualizaSummary();
+      },320);
+    }
     showToast('✅ Ciente registrado!');
   } catch(e) { showToast('❌ Erro ao registrar ciência'); }
 }
@@ -1573,10 +1606,39 @@ function _resVerificaVazio(slug) {
   const tl=document.getElementById(`rtl-${slug}`);
   const cb=document.getElementById(`rcc-${slug}`);
   if (!tl||!cb) return;
-  if (tl.querySelectorAll('.res-task-item').length===0) {
-    cb.classList.add('res-all-done');
-    const meta=cb.querySelector('.res-card-meta');
-    if (meta) meta.textContent='✅ Todos os itens com ciência';
+  const restantes = tl.querySelectorAll('.res-task-item').length;
+  if (restantes === 0) {
+    /* Anima e remove o card inteiro do DOM */
+    cb.style.transition = 'opacity 0.4s, transform 0.4s, max-height 0.4s';
+    cb.style.opacity    = '0';
+    cb.style.transform  = 'scale(0.95)';
+    cb.style.overflow   = 'hidden';
+    cb.style.maxHeight  = cb.offsetHeight + 'px';
+    void cb.offsetHeight;
+    cb.style.maxHeight  = '0';
+    setTimeout(() => {
+      cb.remove();
+      _resAtualizaSummary();
+    }, 420);
+  }
+}
+
+function _resAtualizaSummary() {
+  const cards   = document.querySelectorAll('.res-collab-card').length;
+  const itens   = document.querySelectorAll('.res-task-item').length;
+  const summBar = document.getElementById('res-summary-bar');
+  if (!summBar) return;
+  const scOrange = summBar.querySelector('.res-sum-orange .res-sum-val');
+  const scBlue   = summBar.querySelector('.res-sum-blue .res-sum-val');
+  const scRed    = summBar.querySelector('.res-sum-red .res-sum-val');
+  if (scOrange) scOrange.textContent = itens;
+  if (scBlue)   scBlue.textContent   = cards;
+  if (scRed)    scRed.textContent    = itens;
+  if (cards === 0) {
+    const container = document.getElementById('res-lista');
+    if (container) {
+      container.innerHTML = '<div style="padding:40px;text-align:center;color:#16a34a;font-size:16px;font-weight:700"><div style="font-size:48px;margin-bottom:12px">✅</div>Tudo ciente! Nenhuma pendência ativa.</div>';
+    }
   }
 }
 
