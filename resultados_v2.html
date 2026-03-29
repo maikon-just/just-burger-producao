@@ -555,6 +555,7 @@ function switchTab(tab) {
 
 /* ── INIT ── */
 window.addEventListener('DOMContentLoaded', () => {
+  // Sempre abre na data de HOJE e detecta o dia da semana automaticamente
   const hoje   = new Date().toISOString().slice(0, 10);
   const diaKey = DIA_JS_MAP[new Date().getDay()];
 
@@ -563,7 +564,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   renderDiasBtns(diaKey);
   preencherSelectColaboradores();
-  _renderTransfDiasBtns('segunda'); /* inicializa botões de dia no modal transfer */
+  _renderTransfDiasBtns('segunda');
   loadResultados();
 });
 
@@ -589,11 +590,20 @@ function preencherSelectColaboradores() {
 function onResDataChange() {
   const dataVal = document.getElementById('res-data').value;
   if (dataVal) {
+    // Detecta dia da semana sem ajuste de fuso horário
     const [y,m,d] = dataVal.split('-').map(Number);
-    const jsDay = new Date(y, m-1, d).getDay();
+    const jsDay  = new Date(y, m-1, d).getDay(); // local, sem UTC
     const diaKey = DIA_JS_MAP[jsDay];
     document.getElementById('res-dia').value = diaKey;
     renderDiasBtns(diaKey);
+    // Atualiza também o header sub para mostrar a data selecionada
+    const subEl = document.getElementById('header-sub');
+    if (subEl) {
+      const NOMES = {segunda:'Segunda-feira',terca:'Terça-feira',quarta:'Quarta-feira',
+                    quinta:'Quinta-feira',sexta:'Sexta-feira',sabado:'Sábado',domingo:'Domingo'};
+      const [yy,mm,dd] = dataVal.split('-');
+      subEl.textContent = `${dd}/${mm}/${yy} · ${NOMES[diaKey]||diaKey}`;
+    }
   }
   loadResultados();
 }
@@ -793,8 +803,16 @@ async function _ciente(id, slug) {
     await fbPatch('pendencias', id, { vistoriado: 1 });
     const el = document.getElementById(`ti-${id}`);
     if (el) {
+      el.style.transition = 'opacity 0.3s, max-height 0.3s, padding 0.3s';
       el.style.opacity = '0';
-      setTimeout(() => { el.remove(); _verificaVazio(slug); }, 300);
+      el.style.maxHeight = '0';
+      el.style.overflow  = 'hidden';
+      el.style.padding   = '0';
+      setTimeout(() => {
+        el.remove();
+        _verificaVazio(slug);
+        _atualizaSummary();
+      }, 320);
     }
     showToast('✅ Ciente registrado!');
   } catch(e) {
@@ -807,12 +825,21 @@ function _verificaVazio(slug) {
   const tl = document.getElementById(`tl-${slug}`);
   const cb = document.getElementById(`rcc-${slug}`);
   if (!tl || !cb) return;
+  // Conta task-items que ainda não foram removidos do DOM
   const restantes = tl.querySelectorAll('.task-item').length;
   if (restantes === 0) {
-    cb.style.transition = 'opacity 0.4s, transform 0.4s';
-    cb.style.opacity = '0';
-    cb.style.transform = 'scale(0.95)';
-    setTimeout(() => { cb.remove(); _atualizaSummary(); }, 400);
+    cb.style.transition = 'opacity 0.4s, transform 0.4s, max-height 0.4s';
+    cb.style.opacity    = '0';
+    cb.style.transform  = 'scale(0.95)';
+    cb.style.overflow   = 'hidden';
+    cb.style.maxHeight  = cb.offsetHeight + 'px';
+    // Força reflow para animar
+    void cb.offsetHeight;
+    cb.style.maxHeight  = '0';
+    setTimeout(() => {
+      cb.remove();
+      _atualizaSummary();
+    }, 420);
   }
 }
 
@@ -1066,19 +1093,22 @@ async function confirmarTransferencia() {
     /* Remove item do DOM imediatamente (sem reload) */
     const el = document.getElementById(`ti-${pendId}`);
     if (el) {
-      el.style.transition = 'opacity 0.35s, transform 0.35s';
-      el.style.opacity = '0';
-      el.style.transform = 'translateX(40px)';
+      el.style.transition = 'opacity 0.35s, transform 0.35s, max-height 0.35s, padding 0.35s';
+      el.style.opacity    = '0';
+      el.style.transform  = 'translateX(40px)';
+      el.style.maxHeight  = el.offsetHeight + 'px';
+      el.style.overflow   = 'hidden';
+      void el.offsetHeight; // reflow
+      el.style.maxHeight  = '0';
+      el.style.padding    = '0';
+      const origemSlug = _slug(origem);
       setTimeout(() => {
         el.remove();
-        /* Verifica se o card do colaborador ficou vazio */
-        const origem2 = document.getElementById(`transferir-origem`) && document.getElementById(`transferir-origem`).value;
-        /* slug do colaborador de origem */
-        const origemSlug = _slug(origem);
+        /* Verifica se o card do colaborador ficou vazio e o remove */
         _verificaVazio(origemSlug);
         /* Atualiza summary bar */
         _atualizaSummary();
-      }, 350);
+      }, 370);
     }
 
   } catch(e) {
