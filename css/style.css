@@ -507,6 +507,45 @@ body:not(.has-bottom-nav) .tasks-footer { bottom:0; }
 .s1-done-footer.hidden { display:none !important; }
 .s1-bottom-row { display:flex; gap:8px; justify-content:center; }
 
+/* ── Nova linha única: Iniciar + Imprimir + Voltar ── */
+.s1-btns-row {
+  display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:wrap;
+}
+.s1-btns-row.hidden { display:none !important; }
+
+/* Botões de ação do footer — tamanho padrão concluir turno */
+.btn-footer-action {
+  padding:10px 18px; border-radius:10px;
+  font-size:12px; font-weight:900; cursor:pointer;
+  font-family:inherit; display:inline-flex; align-items:center;
+  gap:6px; transition:all .2s; white-space:nowrap;
+  border:none; letter-spacing:.3px;
+}
+.btn-footer-action:active { transform:scale(.96); }
+.btn-footer-start {
+  background:linear-gradient(135deg,#f97316,#ea580c);
+  color:#fff; box-shadow:0 3px 10px rgba(249,115,22,.35);
+}
+.btn-footer-start:hover { opacity:.9; }
+.btn-footer-print {
+  background:#f9fafb; border:2px solid var(--border)!important; color:var(--text);
+}
+.btn-footer-print:hover { background:var(--border); }
+.btn-footer-back {
+  background:none; border:2px solid var(--border)!important; color:var(--text2);
+}
+.btn-footer-back:hover { background:var(--bg); }
+
+/* Display de data clicável no painel líder */
+.date-clickable-display {
+  background:#f9fafb; border:2px solid var(--border); border-radius:8px;
+  padding:8px 12px; font-size:13px; font-weight:800; color:var(--text);
+  font-family:inherit; cursor:pointer; user-select:none;
+  display:flex; align-items:center; gap:6px; min-height:38px;
+  transition:border-color .2s;
+}
+.date-clickable-display:hover { border-color:#e8590c; }
+
 /* Botões pequenos e centralizados */
 .btn-sm-print, .btn-sm-start, .btn-sm-conclude, .btn-sm-imprimir, .btn-sm-voltar {
   padding:9px 18px; border-radius:var(--radius-sm);
@@ -538,6 +577,20 @@ body:not(.has-bottom-nav) .tasks-footer { bottom:0; }
   background:none; border:2px solid var(--border); color:var(--text2);
 }
 .btn-sm-voltar:hover { background:var(--bg); }
+
+/* ── Botão Voltar centralizado no rodapé de telas ── */
+.screen-bottom-back {
+  display:flex; justify-content:center; align-items:center;
+  padding:20px 16px 80px; /* 80px para não ficar atrás da nav */
+}
+.btn-bottom-back {
+  background:none; border:2px solid var(--border); color:var(--text2);
+  padding:11px 32px; border-radius:20px; font-size:13px; font-weight:800;
+  cursor:pointer; font-family:inherit; transition:all .2s;
+  display:inline-flex; align-items:center; gap:6px;
+}
+.btn-bottom-back:hover { background:var(--bg); border-color:var(--text2); }
+.btn-bottom-back:active { transform:scale(.97); }
 
 /* Manter compatibilidade com estilos antigos */
 .btn-print-s1 {
