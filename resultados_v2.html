@@ -1075,22 +1075,32 @@ async function confirmarTransferencia() {
       transferido_em: _hoje(),
     });
 
-    /* 2. Cria nova pendência para o DESTINO — aparece imediatamente nos Resultados */
-    await fbPost('pendencias', {
-      data, turno, dia_semana: dia,
-      colaborador: destino,
-      item: itemNome,
-      categoria: categoria,
-      quantidade_programada: qtdFinal,
-      quantidade_produzida: 0,
-      status: 'nao_finalizado',
-      motivo: obs || `Transferido de ${origem}`,
-      vistoriado: 0,
-      origem_transferencia: origem,
-    });
+    /* 2. Cria tarefa no card de produção do DESTINO naquela data/turno/dia.
+       NÃO cria pendência — o colaborador vai executar normalmente pelo card.
+       Se já existir tarefa idêntica para ele, não duplica. */
+    const tarefasExist = await fbGetAll('tarefas');
+    const jaExiste = tarefasExist.some(t =>
+      t.colaborador === destino && t.turno === turno &&
+      t.dia_semana === dia && (t.item||'').toLowerCase() === (itemNome||'').toLowerCase()
+    );
+    if (!jaExiste) {
+      await fbPost('tarefas', {
+        turno, dia_semana: dia,
+        colaborador: destino,
+        item: itemNome,
+        categoria: categoria,
+        quantidade_padrao: qtdFinal,
+        unidade: 'un',
+        ordem: 99,
+        ativa: 1,
+        transferida_de: origem,
+        transferida_em: data,
+        obs: obs || '',
+      });
+    }
 
     fecharModalTransferir();
-    showToast(`✅ Transferido para ${destino}! Pendência criada para o destino.`);
+    showToast(`✅ Transferido para ${destino}! Tarefa adicionada ao card de ${destino}.`);
 
     /* Remove item do DOM com animação */
     const el = document.getElementById(`ti-${pendId}`);
