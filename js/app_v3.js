@@ -136,7 +136,11 @@ let JB_SESSION = null;
   } catch(e) { JB_SESSION = null; }
 })();
 
+function _isColaborador() {
+  return JB_SESSION && JB_SESSION.papel === 'colaborador';
+}
 function _isColaboradorRestrito() {
+  /* Colaborador COM card vinculado → fluxo totalmente automático */
   return JB_SESSION && JB_SESSION.papel === 'colaborador' && !!JB_SESSION.nome_card;
 }
 function _isLider() {
@@ -194,35 +198,77 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ── Restrições visuais (DOM) ── */
   _aplicarRestricoesDom();
 
+  /* ── Barra de usuário logado na home ── */
+  _renderUserBar();
+
   /* ── Fluxo por papel ── */
   if (_isColaboradorRestrito()) {
+    /* Colaborador com card definido → fluxo automático direto ao card */
     _iniciarFluxoColaborador();
+  } else if (_isColaborador()) {
+    /* Colaborador SEM card definido → mostra home normal mas restrita */
+    showScreen('screen-welcome');
+    /* Filtra grade de colaboradores para só mostrar os do departamento dele */
   } else {
     showScreen('screen-welcome');
     /* Lider logado: já está autenticado, ocultar botão líder e deixar painel acessível */
     if (_isLider()) {
       S.leaderOk = true;
-      /* Oculta o botão flutuante de login do líder (não precisa mais de senha) */
       const btnLider = document.querySelector('.btn-leader-access');
       if (btnLider) btnLider.style.display = 'none';
-      /* Adiciona botão "Painel Líder" direto na welcome */
       _injetarBotaoLiderNaHome();
     }
   }
 });
 
+/* ── Barra de usuário logado na home ───────────────────
+   Mostra nome + botão Sair quando há sessão ativa (portal)
+──────────────────────────────────────────────────────── */
+function _renderUserBar() {
+  if (!JB_SESSION) return;
+  const bar   = document.getElementById('welcome-user-bar');
+  const nEl   = document.getElementById('welcome-user-nome');
+  const pEl   = document.getElementById('welcome-user-papel');
+  const eEl   = document.getElementById('welcome-user-emoji');
+  const main  = document.getElementById('welcome-body-main');
+  if (!bar) return;
+
+  const papelLabel = { admin:'👑 Administrador', lider:'🎖️ Líder', colaborador:'👷 Colaborador' };
+  const papelEmoji = { admin:'👑', lider:'🎖️', colaborador:'👷' };
+
+  if (nEl) nEl.textContent = JB_SESSION.nome || JB_SESSION.username || '—';
+  if (pEl) pEl.textContent = papelLabel[JB_SESSION.papel] || JB_SESSION.papel;
+  if (eEl) eEl.textContent = papelEmoji[JB_SESSION.papel] || '👤';
+
+  bar.style.display = 'flex';
+
+  /* Empurra o conteúdo da home para baixo para não ficar atrás da barra */
+  if (main) main.style.paddingTop = '72px';
+}
+
+function _sairDoPortal() {
+  sessionStorage.removeItem('jb_user');
+  JB_SESSION = null;
+  window.location.href = 'portal.html';
+}
+
 /* ── Aplica restrições visuais para colaborador ─────── */
 function _aplicarRestricoesDom() {
-  if (!_isColaboradorRestrito()) return;
-  /* Oculta rodapé de navegação */
+  if (!_isColaborador()) return;  // só age se for colaborador
+
+  /* Oculta rodapé de navegação global */
   const nav = document.getElementById('global-bottom-nav');
   if (nav) nav.style.display = 'none';
   document.body.classList.remove('has-bottom-nav');
+
   /* Oculta botão flutuante do líder */
   const btnLider = document.querySelector('.btn-leader-access');
   if (btnLider) btnLider.style.display = 'none';
-  /* Adiciona botão "Voltar ao Portal" discreto */
-  _injetarBotaoPortal();
+
+  /* Para colaborador COM card: injeta botão sair no canto (redundante mas garante) */
+  if (_isColaboradorRestrito()) {
+    _injetarBotaoPortal();
+  }
 }
 
 /* Botão discreto de saída para o colaborador */
@@ -548,7 +594,17 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
     if (t.turno===S.turno && matchDia && _getDept(t.colaborador)===dept)
       map[t.colaborador]=(map[t.colaborador]||0)+1;
   });
-  const nomes=Object.keys(map).sort();
+  let nomes=Object.keys(map).sort();
+  /* Colaborador com card definido: filtra para mostrar SÓ o card dele */
+  if (_isColaboradorRestrito() && JB_SESSION.nome_card) {
+    const card = JB_SESSION.nome_card.toUpperCase();
+    nomes = nomes.filter(n => n.toUpperCase() === card);
+    if (!nomes.length) {
+      /* Card está neste dept mas sem tarefa hoje → mostra aviso amigável */
+      grid.innerHTML='<div style="padding:40px;text-align:center"><div style="font-size:40px">😊</div><p style="font-weight:700;margin-top:8px">Sem tarefas para hoje!</p></div>';
+      return;
+    }
+  }
   if (!nomes.length) {
     grid.innerHTML='<div style="padding:40px;text-align:center"><div style="font-size:40px">😕</div><strong>Nenhum colaborador neste setor hoje</strong></div>';
     return;
