@@ -568,9 +568,18 @@ function switchTab(tab) {
 }
 
 /* ── INIT ── */
+/* Data local do dispositivo (evita erro UTC no Brasil) */
+function _hoje() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd= String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   // Sempre abre na data de HOJE e detecta o dia da semana automaticamente
-  const hoje   = new Date().toISOString().slice(0, 10);
+  const hoje   = _hoje();
   const diaKey = DIA_JS_MAP[new Date().getDay()];
 
   document.getElementById('res-data').value = hoje;
@@ -589,7 +598,7 @@ function _atualizaDisplayData(dataVal, diaKey) {
   if (!el) return;
   const NOMES = {segunda:'Segunda-feira',terca:'Terça-feira',quarta:'Quarta-feira',
                  quinta:'Quinta-feira',sexta:'Sexta-feira',sabado:'Sábado',domingo:'Domingo'};
-  const hj = new Date().toISOString().slice(0,10);
+  const hj = _hoje();
   if (dataVal === hj) {
     el.textContent = `Hoje, ${NOMES[diaKey]||diaKey}`;
   } else {
@@ -692,8 +701,13 @@ async function loadResultados() {
   if (summBar) summBar.innerHTML = '';
 
   const turno = document.getElementById('res-turno').value || 'dia';
-  const dia   = document.getElementById('res-dia').value   || 'segunda';
-  const data  = document.getElementById('res-data').value  || new Date().toISOString().slice(0, 10);
+  const data  = document.getElementById('res-data').value  || _hoje();
+  // dia_semana derivado da data (não mais de botão separado)
+  const [_y,_m,_d] = data.split('-').map(Number);
+  const dia = DIA_JS_MAP[new Date(_y, _m-1, _d).getDay()];
+  // Sincroniza hidden input
+  const diaEl = document.getElementById('res-dia');
+  if (diaEl) diaEl.value = dia;
 
   try {
     const [pendencias, sessoes] = await Promise.all([
@@ -701,13 +715,20 @@ async function loadResultados() {
       fbGetAll('sessoes')
     ]);
 
-    // Filtra apenas pendências ativas (não vistoriadas e não transferidas)
-    const pends = pendencias.filter(p =>
-      p.data === data && p.turno === turno && p.dia_semana === dia &&
-      !(p.vistoriado == 1)
+    // Filtra por data e turno — pendências ativas (não vistoriadas)
+    let pends = pendencias.filter(p =>
+      p.data === data && p.turno === turno && !(p.vistoriado == 1)
     );
+
+    // Se não achar nada no turno selecionado, mostra todos os turnos do dia
+    if (pends.length === 0) {
+      pends = pendencias.filter(p =>
+        p.data === data && !(p.vistoriado == 1)
+      );
+    }
+
     const sess = sessoes.filter(s =>
-      s.data === data && s.turno === turno && s.dia_semana === dia &&
+      s.data === data &&
       (s.status_geral === 'completo' || s.status_geral === 'parcial')
     );
 
@@ -1047,7 +1068,7 @@ async function confirmarTransferencia() {
       vistoriado: 1,
       transferido_para: destino,
       obs_transferencia: obs || '',
-      transferido_em: new Date().toISOString().slice(0,10),
+      transferido_em: _hoje(),
     });
 
     fecharModalTransferir();
@@ -1092,7 +1113,7 @@ async function loadHistorico() {
 
   const turno  = document.getElementById('res-turno').value || 'dia';
   const dia    = document.getElementById('res-dia').value   || 'segunda';
-  const data   = document.getElementById('res-data').value  || new Date().toISOString().slice(0, 10);
+  const data   = document.getElementById('res-data').value  || _hoje();
   const colab  = (document.getElementById('hist-colaborador')||{}).value || '';
   const status = (document.getElementById('hist-status')||{}).value || '';
 
