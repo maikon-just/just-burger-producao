@@ -715,17 +715,35 @@ async function _salvarPrimeiraSenha() {
 
 /* ══ ENTRAR NO HUB ══ */
 function _entrarHub() {
-  /* Persiste sessão */
+  const papel     = _usr.papel || 'colaborador';
+  const sistemasU = Array.isArray(_usr.sistemas) ? _usr.sistemas : [];
+
+  /* Persiste sessão completa */
   sessionStorage.setItem('jb_user', JSON.stringify({
-    username:     _usr.username,
-    nome:         _usr.nome_display,
-    papel:        _usr.papel,
-    nome_card:    _usr.nome_card    || '',
-    departamento: _usr.departamento || 'TODOS',
-    sistemas:     _usr.sistemas     || [],
+    username:        _usr.username,
+    nome:            _usr.nome_display,
+    papel:           papel,
+    nome_card:       _usr.nome_card       || '',
+    departamento:    _usr.departamento    || 'TODOS',
+    sistemas:        sistemasU,
+    turno_preferido: _usr.turno_preferido || '',
   }));
 
-  /* Preenche nome e badge de papel */
+  /* ─────────────────────────────────────────────
+     REDIRECIONAMENTO AUTOMÁTICO
+     Colaborador com 1 único sistema ativo → vai direto
+  ───────────────────────────────────────────── */
+  if (papel === 'colaborador' && sistemasU.length === 1) {
+    const sis = SISTEMAS.find(s => s.id === sistemasU[0]);
+    if (sis && sis.status === 'active') {
+      _abrirSistema(sis.url, sis.id);
+      return;
+    }
+  }
+
+  /* ─────────────────────────────────────────────
+     MOSTRAR HUB
+  ───────────────────────────────────────────── */
   document.getElementById('hub-nome').textContent =
     _usr.nome_display || _usr.username;
 
@@ -734,14 +752,14 @@ function _entrarHub() {
     lider:       { label: '🎖️ Líder',         cls: 'role-lider' },
     colaborador: { label: '👷 Colaborador',   cls: 'role-colab' },
   };
-  const rp = PAPEIS[_usr.papel] || { label: _usr.papel, cls: 'role-colab' };
+  const rp = PAPEIS[papel] || { label: papel, cls: 'role-colab' };
   const pill = document.getElementById('hub-role-pill');
   pill.textContent = rp.label;
   pill.className   = 'role-pill ' + rp.cls;
 
   /* Botão configurações (admin/lider) */
   const cfgBtn = document.getElementById('btn-config-link');
-  cfgBtn.style.display = ['admin','lider'].includes(_usr.papel) ? 'flex' : 'none';
+  cfgBtn.style.display = ['admin','lider'].includes(papel) ? 'flex' : 'none';
 
   /* Renderiza sistemas */
   _renderSistemas();
@@ -756,40 +774,38 @@ function _renderSistemas() {
   const grid      = document.getElementById('sys-grid');
 
   grid.innerHTML = SISTEMAS.map(s => {
-    /* Regras de acesso:
-       - admin: vê tudo
-       - lider: vê se papel está na lista de acesso OU se o sistema está em sistemasU
-       - colaborador: vê se 'todos' OU se está explicitamente em sistemasU
+    /*
+      Regras de visibilidade:
+      - admin: vê TODOS os sistemas sem restrição
+      - lider com sistemas[] vazio: vê tudo que o papel permite (acesso por papel)
+      - lider com sistemas[] preenchido: vê só os listados
+      - colaborador: vê só os que estão em sistemasU
     */
-    let temAcesso = papel === 'admin';
-    if (!temAcesso) {
-      const acessoPapel = s.acesso === 'todos' || s.acesso.includes(papel);
-      const acessoExplicito = sistemasU.includes(s.id);
-      temAcesso = acessoPapel || acessoExplicito;
+    let temAcesso;
+    if (papel === 'admin') {
+      temAcesso = true;
+    } else if (papel === 'lider') {
+      if (sistemasU.length === 0) {
+        temAcesso = s.acesso === 'todos' || s.acesso.includes('lider');
+      } else {
+        temAcesso = sistemasU.includes(s.id);
+      }
+    } else {
+      temAcesso = sistemasU.includes(s.id);
     }
 
-    /* Oculta completamente se não tem acesso E não é admin */
-    if (!temAcesso && papel !== 'admin') return '';
+    if (!temAcesso) return '';
 
-    const locked   = !temAcesso && papel !== 'admin';
-    const isSoon   = s.status === 'soon';
-
-    let extraClass = '';
-    if (locked)  extraClass = 'locked';
-    else if (isSoon) extraClass = 'coming-soon';
+    const isSoon     = s.status === 'soon';
+    const extraClass = isSoon ? 'coming-soon' : '';
 
     const badgeHtml = s.badge
       ? `<span class="sys-badge ${s.badge.cls}">${s.badge.label}</span>`
       : '';
 
-    let onclickAttr;
-    if (locked) {
-      onclickAttr = `onclick="_sistemaLocked('${s.nome}')"`;
-    } else if (isSoon) {
-      onclickAttr = `onclick="_sistemaSoon('${s.nome}')"`;
-    } else {
-      onclickAttr = `onclick="_abrirSistema('${s.url}','${s.id}')"`;
-    }
+    const onclickAttr = isSoon
+      ? `onclick="_sistemaSoon('${s.nome}')"`
+      : `onclick="_abrirSistema('${s.url}','${s.id}')"`;
 
     return `
       <div class="sys-card ${s.cor} ${extraClass}" ${onclickAttr}>
@@ -838,12 +854,13 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const saved = JSON.parse(raw);
       _usr = {
-        username:      saved.username,
-        nome_display:  saved.nome,
-        papel:         saved.papel,
-        nome_card:     saved.nome_card    || '',
-        departamento:  saved.departamento || 'TODOS',
-        sistemas:      saved.sistemas     || [],
+        username:        saved.username,
+        nome_display:    saved.nome,
+        papel:           saved.papel,
+        nome_card:       saved.nome_card        || '',
+        departamento:    saved.departamento     || 'TODOS',
+        sistemas:        saved.sistemas         || [],
+        turno_preferido: saved.turno_preferido  || '',
         primeiro_acesso: false,
         ativo: true,
       };
