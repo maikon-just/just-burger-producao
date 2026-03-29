@@ -564,9 +564,13 @@ body:not(.has-bottom-nav) .tasks-footer { bottom:0; }
 .btn-sm-start:hover { opacity:.9; }
 .btn-sm-conclude {
   background:linear-gradient(135deg,#22c55e,#16a34a);
-  color:#fff; border:none; align-self:center; width:auto;
+  color:#fff; border:none; align-self:center;
+  /* Ocupa toda a largura disponível como o botão Iniciar */
+  width:100%; justify-content:center;
+  padding:13px 20px; font-size:14px; font-weight:900;
+  border-radius:12px; box-shadow:0 4px 14px rgba(34,197,94,.35);
 }
-.btn-sm-conclude:hover { opacity:.9; }
+.btn-sm-conclude:hover { opacity:.9; transform:translateY(-1px); }
 .btn-sm-conclude.hidden { display:none !important; }
 .btn-sm-imprimir {
   background:#f9fafb; border:2px solid var(--border); color:var(--text);
