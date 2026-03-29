@@ -59,29 +59,40 @@
      TELA 1 — BOAS-VINDAS / TURNO
 ══════════════════════════════════════════ -->
 <div id="screen-welcome" class="screen">
-  <header class="welcome-header">
-    <img src="images/logo-justburger-dark.svg" alt="Just Burger — Controle de Produção"
-         id="main-logo"
-         onerror="this.onerror=null;this.src='images/logo-justburger.svg';this.onerror=function(){this.onerror=null;this.src='images/logo-justburger.png';this.onerror=function(){this.style.display='none';document.getElementById('logo-emoji-fallback').style.display='flex';};}"
-         style="height:44px;object-fit:contain;margin:0 auto;display:block"/>
-    <div id="logo-emoji-fallback" style="display:none;align-items:center;gap:8px;justify-content:center;margin:0 auto">
-      <span style="font-size:28px">🍔</span>
-      <span style="font-size:18px;font-weight:900;color:var(--brand)">Just Burger</span>
+  <!-- Botão líder flutuante no canto superior direito -->
+  <button class="btn-leader-access" onclick="goToLeaderLogin()" title="Painel do Líder"
+    style="position:fixed;right:16px;top:16px;z-index:200">
+    <i class="fas fa-user-shield"></i>
+  </button>
+
+  <main class="welcome-body" style="justify-content:center;padding-top:32px">
+
+    <!-- LOGO — acima do campo de data -->
+    <div style="text-align:center;margin-bottom:24px">
+      <img src="images/logo-justburger.png"
+           id="main-logo"
+           alt="Just Burger Hamburgueria"
+           onerror="this.onerror=null;this.style.display='none';document.getElementById('logo-text-fallback').style.display='flex';"
+           style="height:160px;width:auto;object-fit:contain;display:block;margin:0 auto"/>
+      <div id="logo-text-fallback"
+           style="display:none;flex-direction:column;align-items:center;gap:4px;margin:0 auto">
+        <span style="font-size:48px">🍔</span>
+        <span style="font-size:22px;font-weight:900;color:#e8590c;letter-spacing:3px">JUST BURGER</span>
+        <span style="font-size:11px;font-weight:700;color:#888;letter-spacing:4px">HAMBURGUERIA</span>
+      </div>
     </div>
-    <button class="btn-leader-access" onclick="goToLeaderLogin()" title="Painel do Líder" style="position:absolute;right:16px;top:50%;transform:translateY(-50%)">
-      <i class="fas fa-user-shield"></i>
-    </button>
-  </header>
-  <main class="welcome-body">
+
     <!-- SELETOR DE DATA — compacto -->
-    <div class="date-selector-wrap" style="cursor:pointer;" onclick="document.getElementById('work-date-input').showPicker&&document.getElementById('work-date-input').showPicker()">
+    <div class="date-selector-wrap" style="cursor:pointer;position:relative;"
+         onclick="var inp=document.getElementById('work-date-input');if(inp.showPicker)inp.showPicker();else inp.click();">
       <div class="date-selector-label">
         <i class="fas fa-calendar-alt" style="color:var(--brand)"></i>
         <span id="work-date-display" style="font-size:16px;font-weight:900;color:var(--dark)">Carregando...</span>
+        <i class="fas fa-chevron-down" style="font-size:11px;color:#aaa;margin-left:4px"></i>
       </div>
       <input type="date" id="work-date-input" class="work-date-input"
              onchange="onWorkDateChange()"
-             style="position:absolute;opacity:0;width:0;height:0;pointer-events:none"/>
+             style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2"/>
     </div>
 
     <!-- PROMPT TURNO -->
@@ -118,31 +129,35 @@
   </header>
 
   <!-- Filtros -->
-  <div class="res-filter-bar">
-    <div class="res-filter-group">
-      <label>⏰ Turno</label>
+  <div class="res-filter-bar" style="display:flex;flex-direction:column;gap:10px;padding:12px 16px">
+
+    <!-- Campo de data clicável em toda a área -->
+    <div>
+      <label style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">📅 Data — clique para selecionar</label>
+      <div style="position:relative;cursor:pointer"
+           onclick="var inp=document.getElementById('res-data');if(inp.showPicker)inp.showPicker();else inp.click();">
+        <div id="res-data-display"
+             style="background:#f9fafb;border:2px solid #e2e6f0;border-radius:10px;padding:11px 16px;
+                    font-family:inherit;font-size:15px;font-weight:900;color:#1a1a2e;
+                    display:flex;align-items:center;gap:10px;user-select:none;transition:border-color .2s">
+          <i class="fas fa-calendar-alt" style="color:#e8590c;font-size:16px"></i>
+          <span id="res-data-texto">Carregando...</span>
+          <i class="fas fa-chevron-down" style="font-size:11px;color:#aaa;margin-left:auto"></i>
+        </div>
+        <input type="date" id="res-data" onchange="onResDataChange()"
+               style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2"/>
+      </div>
+    </div>
+
+    <!-- Turno -->
+    <div>
+      <label style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">⏰ Turno</label>
       <div class="tar-toggle-group">
         <button class="tar-toggle active" id="resbtn-dia"   onclick="setResTurno('dia')">☀️ Dia</button>
         <button class="tar-toggle"        id="resbtn-noite" onclick="setResTurno('noite')">🌙 Noite</button>
       </div>
     </div>
-    <div class="res-filter-group">
-      <label>📅 Dia</label>
-      <div class="tar-dias-group">
-        <button class="tar-dia-btn active" data-rdia="segunda" onclick="setResDia('segunda')">SEG</button>
-        <button class="tar-dia-btn" data-rdia="terca"   onclick="setResDia('terca')">TER</button>
-        <button class="tar-dia-btn" data-rdia="quarta"  onclick="setResDia('quarta')">QUA</button>
-        <button class="tar-dia-btn" data-rdia="quinta"  onclick="setResDia('quinta')">QUI</button>
-        <button class="tar-dia-btn" data-rdia="sexta"   onclick="setResDia('sexta')">SEX</button>
-        <button class="tar-dia-btn" data-rdia="sabado"  onclick="setResDia('sabado')">SAB</button>
-        <button class="tar-dia-btn" data-rdia="domingo" onclick="setResDia('domingo')">DOM</button>
-      </div>
-    </div>
-    <div class="res-filter-group">
-      <label>📅 Data</label>
-      <input type="date" id="res-data" onchange="loadResultados()"
-             style="padding:7px 10px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:13px;font-weight:700"/>
-    </div>
+
   </div>
 
   <!-- Resumo -->
@@ -601,19 +616,12 @@
 
         <!-- Botão principal de abertura -->
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
-          <button onclick="abrirSeedFrame()"
+          <a href="seed_tarefas_v3.html" target="_blank"
             style="flex:1;min-width:200px;background:linear-gradient(135deg,#e8590c,#ff7b2f);color:#fff;border:none;
                    padding:16px 22px;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;
                    font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;
-                   box-shadow:0 4px 16px rgba(232,89,12,.35);transition:opacity .2s">
-            📤 Abrir Importador de Planilhas
-          </button>
-          <a href="seed_tarefas_v3.html" target="_blank"
-            style="background:#21262d;color:#e6edf3;border:1px solid #30363d;
-                   padding:16px 18px;border-radius:12px;font-size:13px;font-weight:700;
-                   text-decoration:none;display:flex;align-items:center;gap:6px;white-space:nowrap;
-                   transition:background .2s">
-            <i class="fas fa-external-link-alt"></i> Abrir em nova aba
+                   box-shadow:0 4px 16px rgba(232,89,12,.35);transition:opacity .2s;text-decoration:none">
+            <i class="fas fa-external-link-alt"></i> 📤 Abrir Importador de Planilhas
           </a>
         </div>
 
@@ -643,20 +651,11 @@
           </div>
         </div>
 
-        <!-- Frame iframe do seed -->
-        <div id="seed-frame-wrap" style="display:none">
-          <div style="font-size:13px;font-weight:700;color:#8b949e;margin-bottom:8px">📂 Importador (seed_tarefas_v3.html):</div>
-          <div style="border:2px solid #30363d;border-radius:12px;overflow:hidden;background:#0d1117">
-            <div style="background:#161b22;border-bottom:1px solid #21262d;padding:8px 14px;display:flex;align-items:center;gap:8px">
-              <span style="font-size:11px;color:#6e7681;font-weight:700">seed_tarefas_v3.html</span>
-              <button onclick="document.getElementById('seed-frame-wrap').style.display='none'"
-                style="margin-left:auto;background:none;border:1px solid #30363d;color:#8b949e;
-                       border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;font-family:inherit">
-                ✕ Fechar
-              </button>
-            </div>
-            <iframe id="seed-iframe" src="" style="width:100%;height:680px;border:none;display:block"
-                    title="Importador de Tarefas"></iframe>
+        <!-- Aviso de uso -->
+        <div style="background:#0d1117;border:2px solid #30363d;border-radius:12px;padding:16px 18px;margin-top:8px">
+          <div style="font-size:12px;color:#8b949e;text-align:center">
+            <i class="fas fa-info-circle" style="color:#ffa657"></i>
+            O importador abre em uma nova aba. Certifique-se de que os arquivos XLSX estão prontos antes de iniciar.
           </div>
         </div>
 
