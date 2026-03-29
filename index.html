@@ -16,7 +16,7 @@
   <!-- CSS principal -->
   <link rel="stylesheet" href="css/style.css"/>
 </head>
-<body>
+<body class="has-bottom-nav">
 
 <!-- LOADING -->
 <div id="loading-overlay" class="loading-overlay hidden">
@@ -59,36 +59,67 @@
      TELA 1 — BOAS-VINDAS / TURNO
 ══════════════════════════════════════════ -->
 <div id="screen-welcome" class="screen">
-  <header class="welcome-header">
-    <div class="welcome-brand">
-      <span class="welcome-emoji">🍔</span>
+  <!-- Botão Sair (volta ao portal) — aparece só quando há sessão ativa -->
+  <div id="welcome-user-bar" style="display:none;
+    position:fixed;left:0;right:0;top:0;z-index:190;
+    background:rgba(26,26,46,.96);backdrop-filter:blur(10px);
+    padding:8px 16px;display:none;align-items:center;justify-content:space-between;gap:10px;
+    border-bottom:1px solid rgba(255,255,255,.1);">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:18px" id="welcome-user-emoji">👤</span>
       <div>
-        <h1>Just Burger</h1>
-        <p>Controle de Produção</p>
+        <div style="font-size:12px;font-weight:900;color:#fff;line-height:1.2" id="welcome-user-nome">—</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.45);font-weight:700" id="welcome-user-papel">—</div>
       </div>
     </div>
-    <button class="btn-leader-access" onclick="goToLeaderLogin()" title="Painel do Líder">
-      <i class="fas fa-user-shield"></i>
+    <button onclick="_sairDoPortal()" style="
+      background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.4);
+      color:#fca5a5;padding:7px 14px;border-radius:20px;cursor:pointer;
+      font-family:inherit;font-size:12px;font-weight:800;
+      display:flex;align-items:center;gap:6px;transition:all .2s;"
+      onmouseenter="this.style.background='rgba(220,38,38,.35)'"
+      onmouseleave="this.style.background='rgba(220,38,38,.2)'">
+      <i class="fas fa-sign-out-alt"></i> Sair
     </button>
-  </header>
-  <main class="welcome-body">
-    <div class="welcome-hero">
-      <div class="hero-emoji">👨‍🍳</div>
-      <h2>Bem-vindo à cozinha!</h2>
-      <p>Confirme a data e selecione o turno</p>
+  </div>
+
+  <main class="welcome-body" id="welcome-body-main" style="justify-content:center;padding-top:24px">
+
+    <!-- LOGO -->
+    <div style="text-align:center;margin-bottom:28px">
+      <img src="images/logo-justburger.png"
+           id="main-logo"
+           alt="Just Burger Hamburgueria"
+           onerror="this.onerror=null;this.style.display='none';document.getElementById('logo-text-fallback').style.display='flex';"
+           style="height:110px;width:auto;object-fit:contain;display:block;margin:0 auto"/>
+      <div id="logo-text-fallback"
+           style="display:none;flex-direction:column;align-items:center;gap:4px;margin:0 auto">
+        <span style="font-size:44px">🍔</span>
+        <span style="font-size:22px;font-weight:900;color:#111;letter-spacing:2px">JUST BURGER</span>
+        <span style="font-size:11px;font-weight:700;color:#888;letter-spacing:4px">HAMBURGUERIA</span>
+      </div>
     </div>
 
-    <!-- SELETOR DE DATA -->
+    <!-- SELETOR DE DATA — novo design -->
     <div class="date-selector-wrap">
-      <div class="date-selector-label">
-        <i class="fas fa-calendar-day"></i>
-        <span>Data de Trabalho</span>
+      <div class="date-selector-label-top">
+        <i class="fas fa-calendar-alt"></i>
+        <span>DATA DE TRABALHO</span>
       </div>
-      <div class="date-selector-row">
-        <input type="date" id="work-date-input" class="work-date-input" onchange="onWorkDateChange()"/>
-        <div class="work-date-display" id="work-date-display"></div>
+      <div class="date-selector-row-new">
+        <!-- Input de data visível e clicável -->
+        <input type="date" id="work-date-input"
+               onchange="onWorkDateChange()"
+               class="date-input-box"/>
+        <!-- Display de dia da semana + badge hoje -->
+        <div class="date-info-text">
+          <span id="work-date-display">Carregando...</span>
+        </div>
       </div>
     </div>
+
+    <!-- PROMPT TURNO -->
+    <p style="text-align:center;font-size:13px;color:#6b7280;font-weight:700;margin:0 0 16px;">Selecione o turno para iniciar</p>
 
     <!-- TURNO -->
     <div class="shift-grid">
@@ -106,27 +137,7 @@
       </button>
     </div>
   </main>
-  <footer class="welcome-footer">
-    <div class="footer-links-row">
-      <button onclick="abrirResultados()" class="footer-link-btn footer-link-blue" id="btn-resultados">
-        <i class="fas fa-chart-bar"></i>
-        Resultados
-        <span class="notif-badge" id="badge-pendencias" style="display:none">!</span>
-      </button>
-      <a href="medias.html" class="footer-link-btn footer-link-green">
-        <i class="fas fa-photo-video"></i>
-        Mídias
-      </a>
-      <a href="dashboard.html" class="footer-link-btn footer-link-export">
-        <i class="fas fa-tachometer-alt"></i>
-        Dashboard
-      </a>
-      <a href="exportar.html" class="footer-link-btn" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff">
-        <i class="fas fa-database"></i>
-        Insumos
-      </a>
-    </div>
-  </footer>
+  <footer class="welcome-footer" style="display:none"></footer>
 </div>
 
 <!-- ══════════════════════════════════════════
@@ -141,42 +152,49 @@
   </header>
 
   <!-- Filtros -->
-  <div class="res-filter-bar">
-    <div class="res-filter-group">
-      <label>⏰ Turno</label>
+  <div class="res-filter-bar" style="display:flex;flex-direction:column;gap:10px;padding:12px 16px">
+
+    <!-- Campo de data clicável em toda a área -->
+    <div>
+      <label style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">📅 Data — clique para selecionar</label>
+      <div style="position:relative;cursor:pointer"
+           onclick="var inp=document.getElementById('res-data');if(inp.showPicker)inp.showPicker();else inp.click();">
+        <div id="res-data-display"
+             style="background:#f9fafb;border:2px solid #e2e6f0;border-radius:10px;padding:11px 16px;
+                    font-family:inherit;font-size:15px;font-weight:900;color:#1a1a2e;
+                    display:flex;align-items:center;gap:10px;user-select:none;transition:border-color .2s">
+          <i class="fas fa-calendar-alt" style="color:#e8590c;font-size:16px"></i>
+          <span id="res-data-texto">Carregando...</span>
+          <i class="fas fa-chevron-down" style="font-size:11px;color:#aaa;margin-left:auto"></i>
+        </div>
+        <input type="date" id="res-data" onchange="onResDataChange()"
+               style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2"/>
+      </div>
+    </div>
+
+    <!-- Turno -->
+    <div>
+      <label style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">⏰ Turno</label>
       <div class="tar-toggle-group">
         <button class="tar-toggle active" id="resbtn-dia"   onclick="setResTurno('dia')">☀️ Dia</button>
         <button class="tar-toggle"        id="resbtn-noite" onclick="setResTurno('noite')">🌙 Noite</button>
       </div>
     </div>
-    <div class="res-filter-group">
-      <label>📅 Dia</label>
-      <div class="tar-dias-group">
-        <button class="tar-dia-btn active" data-rdia="segunda" onclick="setResDia('segunda')">SEG</button>
-        <button class="tar-dia-btn" data-rdia="terca"   onclick="setResDia('terca')">TER</button>
-        <button class="tar-dia-btn" data-rdia="quarta"  onclick="setResDia('quarta')">QUA</button>
-        <button class="tar-dia-btn" data-rdia="quinta"  onclick="setResDia('quinta')">QUI</button>
-        <button class="tar-dia-btn" data-rdia="sexta"   onclick="setResDia('sexta')">SEX</button>
-        <button class="tar-dia-btn" data-rdia="sabado"  onclick="setResDia('sabado')">SAB</button>
-        <button class="tar-dia-btn" data-rdia="domingo" onclick="setResDia('domingo')">DOM</button>
-      </div>
-    </div>
-    <div class="res-filter-group">
-      <label>📅 Data</label>
-      <input type="date" id="res-data" onchange="loadResultados()"
-             style="padding:7px 10px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:13px;font-weight:700"/>
-    </div>
+
   </div>
 
   <!-- Resumo -->
   <div class="res-summary-bar" id="res-summary-bar"></div>
 
-  <!-- Lista -->
-  <main class="tasks-scroll" id="res-lista" style="padding:12px 16px"></main>
+  <!-- Lista centralizada -->
+  <main id="res-lista" style="flex:1;overflow-y:auto;padding:14px 16px 80px;max-width:700px;margin:0 auto;width:100%"></main>
 
   <!-- Hidden state inputs -->
   <input type="hidden" id="res-turno" value="dia"/>
   <input type="hidden" id="res-dia"   value="segunda"/>
+  <div class="screen-bottom-back" style="padding:16px">
+    <button class="btn-bottom-back" onclick="goBack('screen-welcome')">← Voltar</button>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════
@@ -196,6 +214,7 @@
       <p>Selecione o dia da semana</p>
     </div>
     <div class="day-grid" id="day-grid"></div>
+    <div class="screen-bottom-back"><button class="btn-bottom-back" onclick="goBack('screen-welcome')">← Voltar</button></div>
   </main>
 </div>
 
@@ -204,7 +223,7 @@
 ══════════════════════════════════════════ -->
 <div id="screen-dept" class="screen hidden">
   <header class="nav-header">
-    <button class="btn-back-circle" onclick="goBack('screen-day')"><i class="fas fa-arrow-left"></i></button>
+    <button class="btn-back-circle" onclick="goToWelcome()"><i class="fas fa-arrow-left"></i></button>
     <div class="nav-chips">
       <span class="nav-chip" id="dept-turno-chip">☀️ Dia</span>
       <span class="nav-chip chip-day" id="dept-day-chip">Segunda</span>
@@ -219,18 +238,30 @@
     <div class="dept-btn-grid">
       <button class="dept-btn dept-btn-producao" onclick="_abrirSetorCards('PRODUCAO')">
         <span class="dept-btn-emoji">🏭</span>
-        <span class="dept-btn-nome">Produção</span>
+        <div style="flex:1;text-align:left">
+          <span class="dept-btn-nome">Produção</span>
+          <div class="dept-btn-sub">Cozinha · Preparo · Montagem</div>
+        </div>
+        <span style="font-size:22px;opacity:.45">›</span>
       </button>
       <button class="dept-btn dept-btn-operacao" onclick="_abrirSetorCards('OPERACAO')">
         <span class="dept-btn-emoji">⚙️</span>
-        <span class="dept-btn-nome">Operação</span>
+        <div style="flex:1;text-align:left">
+          <span class="dept-btn-nome">Operação</span>
+          <div class="dept-btn-sub">Ilha · Fritadeira · Chapeiro</div>
+        </div>
+        <span style="font-size:22px;opacity:.45">›</span>
       </button>
       <button class="dept-btn dept-btn-atendimento" onclick="_abrirSetorCards('ATENDIMENTO')">
         <span class="dept-btn-emoji">🎯</span>
-        <span class="dept-btn-nome">Atendimento</span>
+        <div style="flex:1;text-align:left">
+          <span class="dept-btn-nome">Atendimento</span>
+          <div class="dept-btn-sub">Caixa · Despacho · Delivery</div>
+        </div>
         <span class="dept-btn-lock">🔒</span>
       </button>
     </div>
+    <div class="screen-bottom-back"><button class="btn-bottom-back" onclick="goToWelcome()">← Voltar</button></div>
   </main>
 </div>
 
@@ -244,6 +275,13 @@
       <span class="nav-chip" id="setor-turno-chip">☀️ Dia</span>
       <span class="nav-chip chip-day" id="setor-day-chip">Segunda</span>
       <span class="nav-chip" id="setor-dept-chip" style="background:#f97316;color:#fff">🏭 Produção</span>
+    </div>
+    <!-- Mini nav -->
+    <div class="header-mini-nav">
+      <button onclick="abrirResultados()" class="mini-nav-btn" title="Resultados"><i class="fas fa-chart-bar"></i></button>
+      <a href="medias.html" class="mini-nav-btn" title="Mídias"><i class="fas fa-photo-video"></i></a>
+      <a href="insumos.html" class="mini-nav-btn" title="Insumos"><i class="fas fa-boxes"></i></a>
+      <a href="dashboard.html" class="mini-nav-btn" title="Dashboard"><i class="fas fa-tachometer-alt"></i></a>
     </div>
   </header>
   <main class="screen-body">
@@ -277,6 +315,12 @@
       <span class="nav-chip chip-day" id="s1-day-chip">Terça</span>
       <span class="nav-chip chip-user" id="s1-user-chip">👤 Colaborador</span>
     </div>
+    <!-- Mini nav -->
+    <div class="header-mini-nav">
+      <button onclick="abrirResultados()" class="mini-nav-btn" title="Resultados"><i class="fas fa-chart-bar"></i></button>
+      <a href="medias.html" class="mini-nav-btn" title="Mídias"><i class="fas fa-photo-video"></i></a>
+      <a href="insumos.html" class="mini-nav-btn" title="Insumos"><i class="fas fa-boxes"></i></a>
+    </div>
     <button class="btn-print-header hidden" id="btn-print-header" onclick="printColaborador()" title="Imprimir">
       <i class="fas fa-print"></i>
     </button>
@@ -302,29 +346,36 @@
   <!-- Lista de cards de tarefas -->
   <main class="tasks-scroll" id="s1-list"></main>
 
-  <!-- Footer -->
+  <!-- Footer compacto -->
   <footer class="tasks-footer" id="s1-footer">
     <div class="btn-pending-info" id="btn-pending-info">
       <i class="fas fa-info-circle"></i>
       <span id="pending-count-text">Toque nos cards acima para programar</span>
     </div>
 
-    <div class="s1-done-footer hidden" id="s1-done-footer">
-      <button class="btn-print-s1" onclick="doPrintDirect()">
-        <i class="fas fa-print"></i> Imprimir Folha
-      </button>
-      <button class="btn-start-prod" onclick="iniciarProducao()">
+    <!-- Botões de ação da produção -->
+    <div class="s1-action-row" id="s1-action-row">
+
+      <!-- FASE 1: Botão Iniciar (linha 1, igual ao Concluir Turno) -->
+      <button class="btn-sm-conclude" id="btn-sm-start-footer" onclick="iniciarProducao()" style="background:linear-gradient(135deg,#f97316,#ea580c);box-shadow:0 4px 14px rgba(249,115,22,.35)">
         🚀 Iniciar Produção
       </button>
+
+      <!-- FASE 2: Botão Concluir Turno (linha 1) -->
+      <button class="btn-sm-conclude hidden" id="btn-conclude" onclick="openFinishModal()">
+        🏁 Concluir Turno
+      </button>
+
+      <!-- Linha 2: Imprimir + Voltar (ambas as fases) -->
+      <div class="s1-bottom-row">
+        <button class="btn-footer-action btn-footer-print" id="btn-imprimir-footer" onclick="doPrintDirect()">
+          <i class="fas fa-print"></i> Imprimir
+        </button>
+        <button class="btn-footer-action btn-footer-back" onclick="backToCollabScreen()" id="btn-voltar">
+          ← Voltar
+        </button>
+      </div>
     </div>
-
-    <button class="btn-conclude hidden" id="btn-conclude" onclick="openFinishModal()">
-      🏁 Concluir Turno
-    </button>
-
-    <button class="btn-voltar-s1" id="btn-voltar" onclick="backToCollabScreen()">
-      ← Voltar
-    </button>
   </footer>
 </div>
 
@@ -340,7 +391,7 @@
     <a href="resultados_v2.html"
        style="background:rgba(59,130,246,0.2);border:1px solid #3b82f6;color:#93c5fd;padding:7px 12px;
               border-radius:8px;text-decoration:none;font-size:12px;font-weight:700;
-              display:flex;align-items:center;gap:5px" title="Resultados">
+              display:flex;align-items:center;gap:5px" title="Ver Resultados">
       <i class="fas fa-chart-bar"></i> Resultados
     </a>
     <button class="btn-print-header" onclick="printLeaderReport()" title="Imprimir relatório">
@@ -355,6 +406,7 @@
     <button class="leader-tab" id="tab-espelho"           onclick="switchLeaderTab('espelho')">🔎 Espelho</button>
     <button class="leader-tab" id="tab-relatorio"         onclick="switchLeaderTab('relatorio')">📊 Relatório</button>
     <button class="leader-tab" id="tab-tarefas"           onclick="switchLeaderTab('tarefas')">⚙️ Tarefas</button>
+    <button class="leader-tab" id="tab-seed"              onclick="switchLeaderTab('seed')">📤 Seed</button>
   </div>
 
   <main class="leader-body">
@@ -362,13 +414,25 @@
     <!-- FILTROS COMPARTILHADOS -->
     <div class="filter-card">
       <div class="filter-row">
+        <!-- Data De — clicável em toda a área -->
         <div class="filter-group">
           <label>📅 De</label>
-          <input type="date" id="filter-start"/>
+          <div style="position:relative;cursor:pointer"
+               onclick="var i=document.getElementById('filter-start');if(i.showPicker)i.showPicker();else i.click()">
+            <div class="date-clickable-display" id="filter-start-display">Selecionar...</div>
+            <input type="date" id="filter-start" onchange="_syncDateDisplay('filter-start')"
+                   style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2"/>
+          </div>
         </div>
+        <!-- Data Até — clicável em toda a área -->
         <div class="filter-group">
           <label>📅 Até</label>
-          <input type="date" id="filter-end"/>
+          <div style="position:relative;cursor:pointer"
+               onclick="var i=document.getElementById('filter-end');if(i.showPicker)i.showPicker();else i.click()">
+            <div class="date-clickable-display" id="filter-end-display">Selecionar...</div>
+            <input type="date" id="filter-end" onchange="_syncDateDisplay('filter-end')"
+                   style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2"/>
+          </div>
         </div>
         <div class="filter-group">
           <label>⏰ Turno</label>
@@ -376,6 +440,15 @@
             <option value="">Todos</option>
             <option value="dia">☀️ Dia</option>
             <option value="noite">🌙 Noite</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>🔖 Status</label>
+          <select id="filter-status">
+            <option value="">Todos</option>
+            <option value="total">✅ Finalizada</option>
+            <option value="parcial">⚠️ Parcial</option>
+            <option value="nao_finalizado">❌ Não executada</option>
           </select>
         </div>
         <div class="filter-group">
@@ -569,6 +642,78 @@
       <input type="hidden" id="tar-filter-dia"   value="segunda"/>
     </div>
 
+    <!-- ABA: SEED DE TAREFAS -->
+    <div id="leader-panel-seed" class="leader-panel hidden">
+      <div style="max-width:700px;margin:0 auto;padding:8px 0 40px">
+        <!-- Cabeçalho -->
+        <div style="background:linear-gradient(135deg,#1a2a3a,#0d1117);border:1px solid #30363d;border-radius:14px;padding:20px 22px;margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+            <span style="font-size:30px">🍔</span>
+            <div>
+              <div style="font-size:17px;font-weight:900;color:#ffa657">Seed de Tarefas</div>
+              <div style="font-size:12px;color:#8b949e">Importar planilhas de tarefas para o Firebase</div>
+            </div>
+            <span style="margin-left:auto;background:#1a3a0a;color:#7ee787;font-size:10px;padding:3px 10px;border-radius:12px;font-weight:700;border:1px solid #2ea043">v3 FINAL</span>
+          </div>
+          <p style="font-size:12px;color:#6e7681;margin:0">
+            Faça upload das planilhas <strong style="color:#e6edf3">1-TAREFAS DIA DINÁ.xlsx</strong> e <strong style="color:#e6edf3">2-TAREFAS NOITE SANDRO.xlsx</strong>
+            para importar todas as tarefas dos colaboradores para o banco de dados.
+          </p>
+        </div>
+
+        <!-- Botão principal de abertura -->
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+          <a href="seed_tarefas_v3.html" target="_blank"
+            style="flex:1;min-width:200px;background:linear-gradient(135deg,#e8590c,#ff7b2f);color:#fff;border:none;
+                   padding:16px 22px;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;
+                   font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;
+                   box-shadow:0 4px 16px rgba(232,89,12,.35);transition:opacity .2s;text-decoration:none">
+            <i class="fas fa-external-link-alt"></i> 📤 Abrir Importador de Planilhas
+          </a>
+        </div>
+
+        <!-- Instruções rápidas -->
+        <div style="background:#161b22;border:1px solid #21262d;border-radius:12px;padding:16px 18px;margin-bottom:14px">
+          <div style="font-size:13px;font-weight:800;color:#79c0ff;margin-bottom:10px">📋 Como usar:</div>
+          <div style="font-size:12px;color:#c9d1d9;display:flex;flex-direction:column;gap:7px">
+            <div>1️⃣ Clique em <strong style="color:#ffa657">Abrir Importador</strong> (abre abaixo)</div>
+            <div>2️⃣ Arraste o arquivo <strong>1-TAREFAS DIA DINÁ.xlsx</strong> para a zona ☀️ Dia</div>
+            <div>3️⃣ Arraste o arquivo <strong>2-TAREFAS NOITE SANDRO.xlsx</strong> para a zona 🌙 Noite</div>
+            <div>4️⃣ Verifique o preview (~21 colaboradores · ~1617 tarefas)</div>
+            <div>5️⃣ Clique em <strong style="color:#da3633">Limpar e Reinserir Tarefas</strong></div>
+          </div>
+        </div>
+
+        <!-- Resumo de colaboradores -->
+        <div style="background:#161b22;border:1px solid #21262d;border-radius:12px;padding:14px 18px;margin-bottom:14px">
+          <div style="font-size:12px;font-weight:800;color:#8b949e;margin-bottom:8px;text-transform:uppercase">Colaboradores mapeados (21)</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px">
+            ${['☀️ ALINE','☀️ DINA','☀️ PABLO','☀️ MATEUS','☀️ JOÃO','☀️ ALAN RICARDO',
+               '☀️ GABRIEL LEITE','☀️ RHUAN','☀️ GABRIEL KHALYL','☀️ SERGIO CAMARAS',
+               '☀️ WESLEY MOTORISTA','☀️ FAXINA',
+               '🌙 ANTONIEL','🌙 MARCUS','🌙 DESPACHO','🌙 SANDRO','🌙 PEDRO',
+               '🌙 DAVI','🌙 FABIO','🌙 HENRIQUE','🌙 JOSÉ BRUNO']
+               .map(n=>`<span style="background:#21262d;border:1px solid #30363d;border-radius:16px;padding:3px 8px;font-size:10px;font-weight:700;color:#c9d1d9">${n}</span>`)
+               .join('')}
+          </div>
+        </div>
+
+        <!-- Aviso de uso -->
+        <div style="background:#0d1117;border:2px solid #30363d;border-radius:12px;padding:16px 18px;margin-top:8px">
+          <div style="font-size:12px;color:#8b949e;text-align:center">
+            <i class="fas fa-info-circle" style="color:#ffa657"></i>
+            O importador abre em uma nova aba. Certifique-se de que os arquivos XLSX estão prontos antes de iniciar.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Botão Voltar centralizado no rodapé do painel líder -->
+    <div class="screen-bottom-back" style="padding:16px 0 44px">
+      <button class="btn-bottom-back" onclick="goToWelcome()">← Voltar ao Início</button>
+    </div>
+
   </main>
 </div>
 
@@ -651,15 +796,18 @@
     </div>
     <div class="modal-body modal-body-compact">
 
-      <!-- Modo CHECKLIST -->
+      <!-- Modo EXECUTAR (tarefas sem quantidade) -->
       <div id="s1-checklist-mode" class="hidden">
         <div class="checklist-prompt">
-          <div class="checklist-icon">✅</div>
-          <p>Esta tarefa é de <strong>execução</strong>.<br>Confirme que vai realizar.</p>
+          <div class="checklist-icon">🔧</div>
+          <div style="text-align:center">
+            <strong style="display:block;font-size:15px;font-weight:900;color:#1a1a2e;margin-bottom:6px">Tarefa de Execução</strong>
+            <p style="font-size:13px;color:#6b7280;line-height:1.5">Toque em <strong>Confirmar</strong> para marcar que esta tarefa será realizada no turno.</p>
+          </div>
         </div>
       </div>
 
-      <!-- Modo QUANTIDADE -->
+      <!-- Modo QUANTIDADE (tarefas com quantidade) -->
       <div id="s1-qty-mode">
         <div class="calc-card">
           <div class="calc-row-item calc-highlight">
@@ -668,7 +816,7 @@
           </div>
         </div>
 
-        <div class="field-label" style="margin-top:12px;text-align:center">📦 Estoque atual</div>
+        <div class="field-label" style="margin-top:12px;text-align:center">📦 Informe a qtd em estoque abaixo</div>
         <div class="qty-row compact" style="justify-content:center;flex-wrap:wrap;gap:6px">
           <button class="qty-btn" onclick="adjField('estoque',-100)">-100</button>
           <button class="qty-btn" onclick="adjField('estoque',-10)">-10</button>
@@ -711,22 +859,27 @@
       <div class="info-boxes" id="s2-ref-box">
         <div class="info-box" style="flex:1">
           <span class="info-box-label">🎯 PROGRAMADO</span>
-          <span class="info-box-val" id="modal-s2-prog">—</span>
-          <span class="info-box-unit" id="modal-s2-unit-lbl">un</span>
+          <div style="display:flex;align-items:baseline;gap:4px;justify-content:center">
+            <span class="info-box-val" id="modal-s2-prog">—</span>
+            <span class="info-box-unit" id="modal-s2-unit-lbl" style="font-size:14px;font-weight:900;color:var(--brand)">un</span>
+          </div>
         </div>
       </div>
 
-      <!-- Botões de status -->
+      <!-- Botões de status: 3 em 1 linha + maior qtd abaixo -->
       <div class="field-label">📊 Como ficou?</div>
-      <div class="status-btns">
-        <button class="sbtn sbtn-total"   data-status="total"          onclick="selectStatus('total')">✅ Executado 100%</button>
+      <div class="status-btns-row3">
+        <button class="sbtn sbtn-total"   data-status="total"          onclick="selectStatus('total')">✅ 100%</button>
         <button class="sbtn sbtn-parcial" data-status="parcial"        onclick="selectStatus('parcial')">⚠️ Parcial</button>
-        <button class="sbtn sbtn-nao"     data-status="nao_finalizado" onclick="selectStatus('nao_finalizado')">❌ Não Executado</button>
+        <button class="sbtn sbtn-nao"     data-status="nao_finalizado" onclick="selectStatus('nao_finalizado')">❌ Não Exec.</button>
+      </div>
+      <div class="status-btns-row1" style="margin-top:6px">
+        <button class="sbtn sbtn-maior"   data-status="maior_qtd"      onclick="selectStatus('maior_qtd')" style="width:100%">➕ Maior Quantidade Produzida</button>
       </div>
 
-      <!-- Quantidade produzida (só parcial) -->
+      <!-- Quantidade produzida (parcial ou maior_qtd) -->
       <div id="qty-prod-wrap" class="hidden">
-        <div class="field-label">📦 Quantidade Produzida</div>
+        <div class="field-label" id="qty-prod-label">📦 Quantidade Produzida</div>
         <div class="qty-row big">
           <button class="qty-btn minus" onclick="adjField('produzida',-10)">-10</button>
           <button class="qty-btn minus" onclick="adjField('produzida',-1)">-1</button>
@@ -737,23 +890,25 @@
         </div>
       </div>
 
-      <!-- Motivos -->
+      <!-- Motivos (parcial, nao_finalizado, maior_qtd) -->
       <div id="motivos-wrap" class="hidden">
         <div class="field-label">💬 Motivo <span class="required-mark">*obrigatório</span></div>
-        <div class="motivo-btns">
+        <div class="motivo-btns-grid">
           <button class="motivo-btn" onclick="selectMotivo('⏰ Tempo insuficiente')">⏰ Tempo</button>
-          <button class="motivo-btn" onclick="selectMotivo('🔧 Equipamento com problema')">🔧 Equipamento</button>
+          <button class="motivo-btn" onclick="selectMotivo('🔧 Equipamento')">🔧 Equip.</button>
           <button class="motivo-btn" onclick="selectMotivo('📦 Falta de insumos')">📦 Insumos</button>
           <button class="motivo-btn" onclick="selectMotivo('✅ Estoque já completo')">✅ Estoque OK</button>
-          <button class="motivo-btn" onclick="selectMotivo('🔄 Outros')">🔄 Outros</button>
+          <button class="motivo-btn" onclick="selectMotivo('🎉 Feriado')">🎉 Feriado</button>
+          <button class="motivo-btn" onclick="selectMotivo('⚡ Ação especial')">⚡ Ação</button>
+          <button class="motivo-btn" data-motivo-outros onclick="selectMotivo('Outros')">🔄 Outros</button>
         </div>
-        <textarea id="motivo-custom" class="motivo-input" placeholder="Descreva o motivo..." rows="2"></textarea>
+        <textarea id="motivo-custom" class="motivo-input hidden" placeholder="Descreva o motivo..." rows="2"></textarea>
       </div>
 
     </div>
-    <div class="modal-footer">
+    <div class="modal-footer" id="s2-modal-footer">
       <button class="btn-modal-cancel" onclick="closeModal('modal-s2')">Cancelar</button>
-      <button class="btn-modal-confirm" onclick="confirmS2()">💾 Salvar</button>
+      <button class="btn-modal-confirm" id="btn-s2-salvar" onclick="confirmS2()">💾 Salvar</button>
     </div>
   </div>
 </div>
@@ -769,13 +924,38 @@
     </div>
     <div class="modal-body modal-body-compact">
       <div class="finish-summary" id="finish-summary"></div>
-      <div class="field-label">📝 Observação (opcional)</div>
-      <textarea id="finish-obs" class="motivo-input" placeholder="Alguma observação para o líder?" rows="2"></textarea>
     </div>
     <div class="modal-footer">
       <button class="btn-modal-cancel" onclick="closeModal('modal-finish')">Voltar</button>
       <button class="btn-modal-finish" onclick="finalizarTurno()">🏁 Confirmar</button>
     </div>
+  </div>
+</div>
+
+<!-- ══ BOTTOM NAV GLOBAL ══ -->
+<div class="global-bottom-nav" id="global-bottom-nav">
+  <div class="footer-links-row">
+    <button onclick="typeof abrirResultados==='function'?abrirResultados():window.location.href='resultados_v2.html'" class="footer-link-btn footer-link-blue" id="btn-resultados">
+      <i class="fas fa-chart-bar"></i>
+      Resultados
+      <span class="notif-badge" id="badge-pendencias" style="display:none">!</span>
+    </button>
+    <a href="medias.html" class="footer-link-btn footer-link-media">
+      <i class="fas fa-photo-video"></i>
+      Mídias
+    </a>
+    <a href="insumos.html" class="footer-link-btn footer-link-insumos">
+      <i class="fas fa-boxes"></i>
+      Insumos
+    </a>
+    <a href="dashboard.html" class="footer-link-btn footer-link-dash">
+      <i class="fas fa-tachometer-alt"></i>
+      Dashboard
+    </a>
+    <button onclick="typeof goToLeaderLogin==='function'?goToLeaderLogin():null" class="footer-link-btn footer-link-export">
+      <i class="fas fa-user-shield"></i>
+      Líder
+    </button>
   </div>
 </div>
 
