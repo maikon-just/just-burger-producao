@@ -1453,20 +1453,31 @@ function _resAbrirTransferir(pendId,itemNome,origem,cat,motivo,qProg,qFeit,taref
   ov.style.display='flex';
 }
 
+/* Atualiza turno no contexto e re-renderiza botões visualmente */
 function _trSetTurno(t) {
   _trCtx.turnoEscolhido=t;
-  const rb=document.querySelectorAll('._tr_turno_btn');
-  rb.forEach(b=>{ b.style.background=b.dataset.t===t?(t==='dia'?'#FDE68A':'#1E2235'):'#f3f4f6';
-    b.style.color=b.dataset.t===t?(t==='dia'?'#111':'#fff'):'#374151';
-    b.style.borderColor=b.dataset.t===t?(t==='dia'?'#EAB308':'#4f46e5'):'#e2e6f0'; });
+  document.querySelectorAll('._tr_turno_btn').forEach(b=>{
+    const isActive=b.dataset.t===t;
+    if (b.dataset.t==='dia') {
+      b.style.background=isActive?'#FDE68A':'#f3f4f6';
+      b.style.color=isActive?'#111':'#374151';
+      b.style.borderColor=isActive?'#EAB308':'#e2e6f0';
+    } else {
+      b.style.background=isActive?'#1E2235':'#f3f4f6';
+      b.style.color=isActive?'#fff':'#374151';
+      b.style.borderColor=isActive?'#4f46e5':'#e2e6f0';
+    }
+  });
 }
 
+/* Atualiza data/dia no ctx quando o input de data muda no modal */
 function _trOnDataChange() {
   const inp=document.getElementById('_tr_data_input');
   if (!inp||!inp.value) return;
   const [y,m,d]=inp.value.split('-').map(Number);
   _trCtx.dataEscolhida=inp.value;
   _trCtx.diaEscolhido=DIA_JS_MAP[new Date(y,m-1,d).getDay()];
+  // Atualiza label do dia no modal
   const lbl=document.getElementById('_tr_dia_label');
   if (lbl) {
     const dObj=DIAS_LIST.find(x=>x.key===_trCtx.diaEscolhido)||{short:_trCtx.diaEscolhido};
@@ -1477,153 +1488,182 @@ function _trOnDataChange() {
 function _trRenderModal(ov) {
   const {itemNome,origem,cat,qProg,qFeit,qRest,turnoEscolhido,diaEscolhido,dataEscolhida}=_trCtx;
   const diaObj=DIAS_LIST.find(d=>d.key===diaEscolhido)||{short:diaEscolhido};
-  const todosColabs=Object.keys(COLLAB_EMOJI).filter(n=>n&&n!==origem).sort();
+
+  /* ── Lista de colaboradores exceto origem (usa TODOS_COLABS ordenado) ── */
+  const todosColabs=TODOS_COLABS.filter(n=>n&&n!==origem);
   const btns=todosColabs.map(n=>`
     <button class="_tr_dest_btn" data-nome="${n.replace(/"/g,'&quot;')}"
       onclick="_trSelecionarDestino(this)"
       style="padding:10px 12px;border-radius:12px;border:2px solid #e2e6f0;background:#fff;
              font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;color:#374151;
-             display:flex;align-items:center;gap:8px;text-align:left;transition:all .15s;width:100%"
+             display:flex;align-items:center;gap:8px;text-align:left;transition:all .15s;width:100%;box-sizing:border-box"
       onmouseover="this.style.borderColor='#e8590c';this.style.background='#fff7ed'"
       onmouseout="this.style.borderColor='#e2e6f0';this.style.background='#fff'">
       <span style="font-size:18px">${COLLAB_EMOJI[n]||'👤'}</span>
       <span>${n}</span>
     </button>`).join('');
 
-  ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:20px;width:100%;max-width:400px;
-    box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:'Nunito','Segoe UI',sans-serif;max-height:92vh;overflow-y:auto">
+  ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:20px;width:100%;max-width:420px;
+    box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:'Nunito','Segoe UI',sans-serif;max-height:92vh;overflow-y:auto;box-sizing:border-box">
+
+    <!-- Cabeçalho -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
       <div style="font-size:26px">🔄</div>
-      <div><div style="font-size:15px;font-weight:900">Transferir Tarefa</div>
-        <div style="font-size:11px;color:#888">De: <strong>${origem}</strong></div></div>
+      <div>
+        <div style="font-size:15px;font-weight:900">Transferir Tarefa</div>
+        <div style="font-size:11px;color:#888">De: <strong>${origem}</strong></div>
+      </div>
       <button onclick="document.getElementById('_modal_transferir_embutido').style.display='none'"
         style="margin-left:auto;background:none;border:none;font-size:22px;cursor:pointer;color:#aaa;line-height:1">✕</button>
     </div>
+
+    <!-- Info da tarefa -->
     <div style="background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:10px;margin-bottom:14px;font-size:13px">
       <strong style="font-size:14px">${itemNome}</strong>
       ${cat?`<div style="color:#888;font-size:11px;margin-top:3px">🏷️ ${cat}</div>`:''}
       ${qProg>0?`<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
-        <span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">📋 ${qProg}</span>
-        ${qFeit>0?`<span style="background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">✅ ${qFeit}</span>`:''}
-        ${qRest>0?`<span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">⬇️ falta ${qRest}</span>`:''}
+        <span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">📋 Prog: ${qProg}</span>
+        ${qFeit>0?`<span style="background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">✅ Feito: ${qFeit}</span>`:''}
+        ${qRest>0?`<span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">⬇️ Restam: ${qRest}</span>`:''}
       </div>`:''}
     </div>
+
+    <!-- Data do destino (EDITÁVEL — campo livre) -->
     <div style="margin-bottom:14px">
-      <label style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">📅 Data para o destino</label>
+      <label style="font-size:11px;font-weight:800;color:#e8590c;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">
+        📅 Data para o destino <span style="color:#aaa;font-weight:400;text-transform:none">(pode alterar)</span></label>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <input type="date" id="_tr_data_input" value="${dataEscolhida}"
           onchange="_trOnDataChange()"
-          style="border:2px solid #e2e6f0;border-radius:10px;padding:9px 12px;font-family:inherit;
-                 font-size:14px;font-weight:800;outline:none;background:#f9fafb;color:#111;cursor:pointer;
-                 transition:border-color .2s;flex:1;min-width:140px"/>
+          style="border:2px solid #EAB308;border-radius:10px;padding:9px 12px;font-family:inherit;
+                 font-size:14px;font-weight:800;outline:none;background:#FFFBE6;color:#111;cursor:pointer;
+                 transition:border-color .2s;flex:1;min-width:140px;box-sizing:border-box"/>
         <span id="_tr_dia_label" style="font-size:13px;font-weight:800;color:#4b5563;background:#f3f4f6;
               padding:7px 12px;border-radius:10px;white-space:nowrap">📆 ${diaObj.short}</span>
       </div>
     </div>
+
+    <!-- Turno do destino (EDITÁVEL) -->
     <div style="margin-bottom:14px">
-      <label style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">⏰ Turno</label>
+      <label style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">⏰ Turno do destino</label>
       <div style="display:flex;gap:8px">
         <button class="_tr_turno_btn" data-t="dia" onclick="_trSetTurno('dia')"
           style="flex:1;padding:9px;border-radius:12px;border:2px solid ${turnoEscolhido==='dia'?'#EAB308':'#e2e6f0'};
                  background:${turnoEscolhido==='dia'?'#FDE68A':'#f3f4f6'};color:${turnoEscolhido==='dia'?'#111':'#374151'};
-                 font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">☀️ Dia</button>
+                 font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;transition:all .15s">☀️ Dia</button>
         <button class="_tr_turno_btn" data-t="noite" onclick="_trSetTurno('noite')"
           style="flex:1;padding:9px;border-radius:12px;border:2px solid ${turnoEscolhido==='noite'?'#4f46e5':'#e2e6f0'};
                  background:${turnoEscolhido==='noite'?'#1E2235':'#f3f4f6'};color:${turnoEscolhido==='noite'?'#fff':'#374151'};
-                 font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">🌙 Noite</button>
+                 font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;transition:all .15s">🌙 Noite</button>
       </div>
     </div>
+
+    <!-- Observação -->
     <label style="font-size:11px;font-weight:800;color:#374151;display:block;margin-bottom:4px">📝 Observação (opcional)</label>
     <input type="text" id="_tr_obs" placeholder="Motivo da transferência..."
       style="width:100%;padding:9px 12px;border:2px solid #e2e6f0;border-radius:10px;
              font-family:inherit;font-size:13px;margin-bottom:16px;outline:none;box-sizing:border-box"/>
+
+    <!-- Lista de colaboradores destino -->
     <div style="font-size:11px;font-weight:900;color:#6b7280;text-transform:uppercase;margin-bottom:8px;letter-spacing:.5px">
-      👤 Transferir para</div>
-    <div style="display:flex;flex-direction:column;gap:6px">${btns}</div>
+      👤 Selecione o colaborador destino</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${btns}
+    </div>
   </div>`;
 }
 
 function _trSelecionarDestino(btn) {
-  const destino=btn.dataset.nome||btn.textContent.trim();
-  _trCtx.destinoEscolhido=destino;
+  /* Lê data/turno atuais do modal — o usuário pode ter editado */
   const inpData=document.getElementById('_tr_data_input');
   if (inpData&&inpData.value) {
     _trCtx.dataEscolhida=inpData.value;
     const [y,m,d]=inpData.value.split('-').map(Number);
     _trCtx.diaEscolhido=DIA_JS_MAP[new Date(y,m-1,d).getDay()];
   }
+  /* Destino selecionado */
+  const destino=btn.dataset.nome||btn.textContent.trim();
+  _trCtx.destinoEscolhido=destino;
+  /* Feedback visual */
+  document.querySelectorAll('._tr_dest_btn').forEach(b=>{ b.style.borderColor='#e2e6f0'; b.style.background='#fff'; });
+  btn.style.borderColor='#16a34a'; btn.style.background='#dcfce7';
   const obs=(document.getElementById('_tr_obs')||{}).value?.trim()||'';
   _resConfirmarTransferir(_trCtx.pendId,_trCtx.itemNome,_trCtx.origem,_trCtx.tarefaId,_trCtx.qProg,_trCtx.qFeit,obs);
 }
 
 async function _resConfirmarTransferir(pendId,itemNome,origem,tarefaId,qProg,qFeit,obsParam) {
-  const destino=_trCtx.destinoEscolhido||'';
-  const obs    =obsParam||(document.getElementById('_tr_obs')||{}).value?.trim()||'';
+  const destino   = _trCtx.destinoEscolhido||'';
+  const obs       = obsParam||(document.getElementById('_tr_obs')||{}).value?.trim()||'';
   if (!destino) { showToast('⚠️ Selecione o colaborador destino!'); return; }
 
-  const turno=_trCtx.turnoEscolhido||S.turno||'dia';
-  const dia  =_trCtx.diaEscolhido  ||S.dia  ||'segunda';
-  const data =_trCtx.dataEscolhida ||today();
-  const qRest=Math.max(0,(qProg||0)-(qFeit||0));
-  const qtdFinal=qRest>0?qRest:(qProg||0);
+  const turno    = _trCtx.turnoEscolhido || S.turno || 'dia';
+  const dia      = _trCtx.diaEscolhido   || S.dia   || 'segunda';
+  const data     = _trCtx.dataEscolhida  || today();
+  const qRest    = Math.max(0,(qProg||0)-(qFeit||0));
+  const qtdFinal = qRest>0 ? qRest : (qProg||1);
+  const obsTexto = obs || `Transferido de ${origem} para ${destino}`;
 
-  // Mostra spinner no botão clicado
-  const btns=[...document.querySelectorAll('#_modal_transferir_embutido button')];
-  btns.forEach(b=>{b.disabled=true;});
+  /* Desabilita todos os botões do modal para evitar double-submit */
+  const btnsModal=[...document.querySelectorAll('#_modal_transferir_embutido button')];
+  btnsModal.forEach(b=>{ b.disabled=true; });
 
   try {
-    /* 1. Marca pendência original como transferida/vistoriada → some do card */
-    await _fbPatch('pendencias',pendId,{
-      vistoriado:1,
-      transferido_para:destino,
-      obs_transferencia:obs||`Transferido para ${destino}`,
-      transferido_em:data,
+    /* ═══ 1. Marca a pendência ORIGINAL como vistoriada + transferida ═══
+       Remove o item do card de resultados do ORIGEM                        */
+    await _fbPatch('pendencias', pendId, {
+      vistoriado       : 1,
+      transferido_para : destino,
+      obs_transferencia: obsTexto,
+      transferido_em   : data,
     });
 
-    /* 2. Cria tarefa no card de produção do DESTINO — data_especifica garante
-       que aparece SOMENTE nesta data específica, não toda semana. */
+    /* ═══ 2. Cria TAREFA no card de produção do DESTINO ═══════════════
+       data_especifica garante que só aparece nesta data, não toda semana.
+       Anti-duplicata: verifica por colaborador+turno+data+item           */
     const tarefasExist = await _fbGetAll('tarefas');
-    const itemLower = (itemNome||'').toLowerCase().trim();
-    const jaExiste = tarefasExist.some(t =>
-      t.colaborador===destino &&
-      t.turno===turno &&
-      (t.data_especifica===data || (!t.data_especifica && t.dia_semana===dia)) &&
-      (t.item||'').toLowerCase().trim()===itemLower
+    _cache.tarefas     = null; /* invalida para próxima leitura */
+    const itemLower    = (itemNome||'').toLowerCase().trim();
+
+    const jaExisteTarefa = tarefasExist.some(t =>
+      t.colaborador === destino &&
+      t.turno       === turno   &&
+      (t.data_especifica === data || (!t.data_especifica && t.dia_semana === dia)) &&
+      (t.item||'').toLowerCase().trim() === itemLower
     );
-    console.log('[Transferir] destino=',destino,'turno=',turno,'dia=',dia,'data=',data,'item=',itemNome,'jaExiste=',jaExiste);
-    if (!jaExiste) {
-      const novaTarefa = await _fbPost('tarefas',{
+
+    if (!jaExisteTarefa) {
+      await _fbPost('tarefas', {
         turno,
-        dia_semana: dia,
-        data_especifica: data,
-        colaborador: destino,
-        item: itemNome,
-        categoria: _trCtx.cat||'',
-        quantidade_padrao: qtdFinal||1,
-        unidade: 'un',
-        ordem: 99,
-        ativa: 1,
-        transferida_de: origem,
-        transferida_em: data,
-        obs: obs||'',
+        dia_semana      : dia,
+        data_especifica : data,        /* aparece SOMENTE nesta data */
+        colaborador     : destino,
+        item            : itemNome,
+        categoria       : _trCtx.cat || '',
+        quantidade_padrao: qtdFinal,
+        unidade         : 'un',
+        ordem           : 99,
+        ativa           : 1,
+        transferida_de  : origem,
+        transferida_em  : data,
+        obs             : obs || '',
       });
-      console.log('[Transferir] tarefa criada:', novaTarefa);
+      console.log('[Transferir] ✅ Tarefa criada para', destino, 'em', data, turno);
     } else {
-      console.log('[Transferir] tarefa já existe, não duplicada');
+      console.log('[Transferir] Tarefa já existe para', destino, '— não duplicada');
     }
 
-    /* Fecha o modal */
+    /* ═══ 3. Fecha modal ═══════════════════════════════════════════════ */
     const ov=document.getElementById('_modal_transferir_embutido');
     if (ov) ov.style.display='none';
 
-    showToast(`✅ Transferido para ${destino}! Tarefa adicionada ao card de ${destino}.`);
+    showToast(`✅ Transferido para ${destino}! Card de produção atualizado.`);
 
-    /* Remove item do DOM com animação suave */
+    /* ═══ 4. Remove item do card de resultados do ORIGEM (animação) ═══ */
     const el=document.getElementById(`rti-${pendId}`);
     if (el) {
-      el.style.transition='opacity 0.35s, transform 0.35s, max-height 0.4s, padding 0.4s';
+      el.style.transition='opacity 0.35s, transform 0.35s, max-height 0.4s, padding 0.4s, margin 0.4s';
       el.style.opacity='0';
-      el.style.transform='translateX(50px)';
+      el.style.transform='translateX(60px)';
       el.style.maxHeight=el.offsetHeight+'px';
       el.style.overflow='hidden';
       void el.offsetHeight;
@@ -1634,11 +1674,14 @@ async function _resConfirmarTransferir(pendId,itemNome,origem,tarefaId,qProg,qFe
         el.remove();
         _resVerificaVazio(_resSlug(origem));
         _resAtualizaSummary();
-      },420);
+      }, 420);
     }
+
     _invalidarCache();
+
   } catch(e) {
-    btns.forEach(b=>{b.disabled=false;});
+    console.error('[Transferir] Erro:', e);
+    btnsModal.forEach(b=>{ b.disabled=false; });
     showToast('❌ Erro ao transferir: '+e.message);
   }
 }
