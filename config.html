@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Just Burger — Configurações</title>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
+  <script src="js/firebase_v2.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --brand: #e8590c; --dark: #1a1a2e; --dark2: #16213e;
+      --bg: #f4f6fb; --border: #e2e6f0; --radius: 16px;
+      --shadow: 0 4px 24px rgba(0,0,0,.10);
+    }
+    body { font-family: 'Nunito','Segoe UI',sans-serif; background: var(--bg); color: var(--dark); min-height:100vh; }
+
+    /* ── LOGIN OVERLAY ── */
+    #login-overlay {
+      position:fixed; inset:0; background:linear-gradient(135deg,#1a1a2e,#16213e);
+      display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px;
+    }
+    #login-overlay.hidden { display:none !important; }
+    .login-box {
+      background:#fff; border-radius:24px; padding:36px 28px;
+      max-width:360px; width:100%; text-align:center;
+      box-shadow:0 20px 60px rgba(0,0,0,.4);
+    }
+    .login-box h1 { font-size:22px; font-weight:900; margin:12px 0 4px; }
+    .login-box p  { font-size:13px; color:#6b7280; margin-bottom:24px; }
+    .inp { width:100%; padding:13px 16px; border:2px solid #e2e6f0; border-radius:12px;
+           font-family:inherit; font-size:15px; outline:none; transition:border-color .2s; margin-bottom:10px; }
+    .inp:focus { border-color:#e8590c; }
+    .btn-primary { width:100%; padding:14px; border-radius:12px; border:none;
+                   background:linear-gradient(135deg,#e8590c,#ff7b2f); color:#fff;
+                   font-family:inherit; font-size:15px; font-weight:800; cursor:pointer; }
+    .btn-primary:hover { opacity:.9; }
+    .err-msg { color:#dc2626; font-size:13px; font-weight:700; min-height:20px; margin-bottom:8px; }
+
+    /* ── HEADER ── */
+    header {
+      background:linear-gradient(135deg,#1a1a2e,#16213e);
+      padding:14px 20px; display:flex; align-items:center; gap:14px;
+      box-shadow:0 2px 16px rgba(0,0,0,.3);
+    }
+    header img { height:38px; }
+    header h1  { font-size:18px; font-weight:900; color:#fff; flex:1; }
+    .btn-logout {
+      background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2);
+      color:#fff; padding:8px 14px; border-radius:10px; cursor:pointer;
+      font-family:inherit; font-size:13px; font-weight:700;
+    }
+
+    /* ── TABS ── */
+    .tabs { display:flex; background:#fff; border-bottom:2px solid var(--border); overflow-x:auto; }
+    .tab-btn {
+      padding:14px 20px; border:none; background:none; font-family:inherit;
+      font-size:13px; font-weight:800; cursor:pointer; color:#6b7280;
+      border-bottom:3px solid transparent; white-space:nowrap; transition:all .2s;
+    }
+    .tab-btn.active { color:#e8590c; border-bottom-color:#e8590c; }
+
+    /* ── CORPO ── */
+    .tab-content { display:none; padding:20px; max-width:900px; margin:0 auto; }
+    .tab-content.active { display:block; }
+
+    /* ── CARDS ── */
+    .card { background:#fff; border-radius:var(--radius); box-shadow:var(--shadow); padding:20px; margin-bottom:16px; }
+    .card h2 { font-size:16px; font-weight:900; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+
+    /* ── FORM GRID ── */
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media(max-width:600px){ .form-grid { grid-template-columns:1fr; } }
+    .form-group { display:flex; flex-direction:column; gap:5px; }
+    .form-group label { font-size:11px; font-weight:800; color:#6b7280; text-transform:uppercase; }
+    .form-inp {
+      padding:10px 13px; border:2px solid var(--border); border-radius:10px;
+      font-family:inherit; font-size:14px; outline:none; transition:border-color .2s;
+      background:#f9fafb;
+    }
+    .form-inp:focus { border-color:#e8590c; background:#fff; }
+    select.form-inp { cursor:pointer; }
+    .form-full { grid-column:1/-1; }
+    .btn-save {
+      background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff;
+      border:none; padding:11px 22px; border-radius:10px;
+      font-family:inherit; font-size:14px; font-weight:800; cursor:pointer;
+    }
+    .btn-save:hover { opacity:.9; }
+    .btn-cancel {
+      background:#f9fafb; border:2px solid var(--border); color:#374151;
+      padding:11px 22px; border-radius:10px;
+      font-family:inherit; font-size:14px; font-weight:800; cursor:pointer;
+    }
+
+    /* ── TABELA DE USUÁRIOS ── */
+    .user-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .user-table th { background:#f8faff; padding:10px 12px; font-size:11px; font-weight:800; color:#6b7280; text-transform:uppercase; text-align:left; border-bottom:2px solid var(--border); }
+    .user-table td { padding:11px 12px; border-bottom:1px solid #f0f4ff; vertical-align:middle; }
+    .user-table tr:hover td { background:#fafbff; }
+    .badge-papel {
+      display:inline-block; padding:3px 10px; border-radius:20px;
+      font-size:11px; font-weight:800;
+    }
+    .bp-admin  { background:#fef3c7; color:#d97706; }
+    .bp-lider  { background:#dbeafe; color:#1d4ed8; }
+    .bp-colab  { background:#f0fdf4; color:#16a34a; }
+    .badge-status-on  { background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:800; }
+    .badge-status-off { background:#fee2e2; color:#dc2626; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:800; }
+    .action-btns { display:flex; gap:5px; }
+    .btn-edit  { background:#dbeafe; border:none; color:#1d4ed8; width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:13px; }
+    .btn-reset { background:#fef3c7; border:none; color:#d97706; width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:13px; }
+    .btn-toggle{ background:#f0fdf4; border:none; color:#16a34a; width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:13px; }
+    .btn-del   { background:#fee2e2; border:none; color:#dc2626; width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:13px; }
+
+    /* ── PRIMEIRO ACESSO badge ── */
+    .badge-first { background:#fff7ed; color:#c2410c; padding:3px 8px; border-radius:20px; font-size:10px; font-weight:800; }
+
+    /* ── MODAL ── */
+    .modal-ov {
+      position:fixed; inset:0; background:rgba(0,0,0,.6);
+      display:flex; align-items:center; justify-content:center;
+      z-index:9000; padding:20px;
+    }
+    .modal-ov.hidden { display:none !important; }
+    .modal-box {
+      background:#fff; border-radius:20px; padding:24px;
+      width:100%; max-width:480px; max-height:90vh; overflow-y:auto;
+      box-shadow:0 20px 60px rgba(0,0,0,.4);
+    }
+    .modal-box h3 { font-size:17px; font-weight:900; margin-bottom:16px; }
+    .modal-footer { display:flex; gap:10px; margin-top:16px; }
+
+    /* ── TOAST ── */
+    #toast {
+      position:fixed; bottom:24px; left:50%;
+      transform:translateX(-50%) translateY(80px);
+      background:#1a1a2e; color:#fff; padding:12px 22px;
+      border-radius:30px; font-size:14px; font-weight:700;
+      opacity:0; transition:all .3s; z-index:9999;
+      pointer-events:none; white-space:nowrap;
+    }
+    #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+    /* ── LOADING ── */
+    .loading-row { text-align:center; padding:40px; color:#6b7280; font-size:15px; }
+
+    /* ── SEARCH ── */
+    .search-bar { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:center; }
+    .search-inp {
+      flex:1; min-width:180px; padding:10px 14px;
+      border:2px solid var(--border); border-radius:10px;
+      font-family:inherit; font-size:14px; outline:none;
+    }
+    .search-inp:focus { border-color:#e8590c; }
+    .btn-add {
+      background:linear-gradient(135deg,#e8590c,#ff7b2f); color:#fff;
+      border:none; padding:10px 18px; border-radius:10px;
+      font-family:inherit; font-size:13px; font-weight:800; cursor:pointer;
+      display:flex; align-items:center; gap:6px;
+    }
+
+    .pass-wrap { position:relative; }
+    .pass-wrap .form-inp { padding-right:44px; }
+    .pass-eye {
+      position:absolute; right:12px; top:50%; transform:translateY(-50%);
+      background:none; border:none; cursor:pointer; font-size:16px; color:#6b7280;
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- LOGIN OVERLAY -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div style="font-size:48px">🍔</div>
+    <h1>Just Burger — Config</h1>
+    <p>Acesso restrito a administradores</p>
+    <input class="inp" type="text"     id="cfg-user" placeholder="Usuário (ex: justadm)" autocomplete="username"/>
+    <div class="pass-wrap" style="margin-bottom:10px">
+      <input class="inp" type="password" id="cfg-pass" placeholder="Senha" autocomplete="current-password"
+             style="margin-bottom:0" onkeydown="if(event.key==='Enter')_cfgLogin()"/>
+      <button class="pass-eye" onclick="_cfgTogglePass()">👁️</button>
+    </div>
+    <p class="err-msg" id="login-err"></p>
+    <button class="btn-primary" onclick="_cfgLogin()">🚀 Entrar</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <img src="images/logo-justburger.png" alt="Just Burger"
+       onerror="this.style.display='none'"/>
+  <h1>⚙️ Configurações</h1>
+  <button class="btn-logout" onclick="_cfgLogout()"><i class="fas fa-sign-out-alt"></i> Sair</button>
+</header>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="_cfgTab('usuarios')" id="tab-usuarios">👥 Usuários</button>
+  <button class="tab-btn" onclick="_cfgTab('sistemas')"  id="tab-sistemas">🖥️ Sistemas</button>
+</div>
+
+<!-- ═══ ABA: USUÁRIOS ═══ -->
+<div id="content-usuarios" class="tab-content active">
+  <div class="card">
+    <div class="search-bar">
+      <input class="search-inp" type="search" id="search-user"
+             placeholder="🔍 Buscar por nome, usuário, papel..." oninput="_filtrarUsuarios()"/>
+      <button class="btn-add" onclick="_abrirModalNovoUser()">
+        <i class="fas fa-plus"></i> Novo Usuário
+      </button>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="user-table" id="user-table">
+        <thead>
+          <tr>
+            <th>Usuário</th>
+            <th>Nome</th>
+            <th>Papel</th>
+            <th>Card / Dept</th>
+            <th>Sistemas</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="user-tbody">
+          <tr><td colspan="6" class="loading-row">⏳ Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ABA: SISTEMAS ═══ -->
+<div id="content-sistemas" class="tab-content">
+  <div class="card">
+    <h2>🖥️ Sistemas disponíveis</h2>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:16px">
+      Defina quais sistemas aparecem na tela inicial. Em breve: escala de motoboys, performance e pagamentos.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:14px;display:flex;align-items:center;gap:14px">
+        <span style="font-size:28px">🍔</span>
+        <div style="flex:1"><strong>Controle de Produção</strong><br><span style="font-size:12px;color:#6b7280">Sistema atual — tarefas, resultados, painel líder</span></div>
+        <span style="background:#dcfce7;color:#16a34a;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:800">✅ Ativo</span>
+      </div>
+      <div style="background:#f9fafb;border:2px solid var(--border);border-radius:12px;padding:14px;display:flex;align-items:center;gap:14px;opacity:.6">
+        <span style="font-size:28px">🛵</span>
+        <div style="flex:1"><strong>Escala de Motoboys</strong><br><span style="font-size:12px;color:#6b7280">Em desenvolvimento</span></div>
+        <span style="background:#f3f4f6;color:#6b7280;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:800">🔒 Em breve</span>
+      </div>
+      <div style="background:#f9fafb;border:2px solid var(--border);border-radius:12px;padding:14px;display:flex;align-items:center;gap:14px;opacity:.6">
+        <span style="font-size:28px">📊</span>
+        <div style="flex:1"><strong>Performance & Pagamentos</strong><br><span style="font-size:12px;color:#6b7280">Em desenvolvimento</span></div>
+        <span style="background:#f3f4f6;color:#6b7280;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:800">🔒 Em breve</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: CRIAR / EDITAR USUÁRIO ═══ -->
+<div id="modal-user" class="modal-ov hidden">
+  <div class="modal-box">
+    <h3 id="modal-user-title">➕ Novo Usuário</h3>
+    <input type="hidden" id="edit-user-id"/>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Usuário (login)</label>
+        <input class="form-inp" type="text" id="f-username" placeholder="ex: joao"
+               autocomplete="off" oninput="this.value=this.value.toLowerCase().replace(/\s/g,'')"/>
+      </div>
+      <div class="form-group">
+        <label>Nome de exibição</label>
+        <input class="form-inp" type="text" id="f-nome" placeholder="ex: João Silva"/>
+      </div>
+      <div class="form-group">
+        <label>Senha inicial</label>
+        <div class="pass-wrap">
+          <input class="form-inp" type="password" id="f-senha" placeholder="mínimo 4 caracteres" autocomplete="new-password"/>
+          <button class="pass-eye" onclick="_togglePassModal()">👁️</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Papel</label>
+        <select class="form-inp" id="f-papel" onchange="_onPapelChange()">
+          <option value="colaborador">👷 Colaborador</option>
+          <option value="lider">🎖️ Líder</option>
+          <option value="admin">👑 Admin</option>
+        </select>
+      </div>
+      <div class="form-group" id="f-card-group">
+        <label>Card vinculado (nome exato)</label>
+        <select class="form-inp" id="f-card">
+          <option value="">— nenhum —</option>
+        </select>
+      </div>
+      <div class="form-group" id="f-dept-group">
+        <label>Departamento</label>
+        <select class="form-inp" id="f-dept">
+          <option value="PRODUCAO">🏭 Produção</option>
+          <option value="OPERACAO">⚙️ Operação</option>
+          <option value="ATENDIMENTO">🎯 Atendimento</option>
+          <option value="TODOS">🌐 Todos</option>
+        </select>
+      </div>
+      <div class="form-group form-full">
+        <label><input type="checkbox" id="f-primeiro-acesso" checked/> &nbsp;Forçar troca de senha no primeiro acesso</label>
+      </div>
+      <!-- PERMISSÕES POR SISTEMA -->
+      <div class="form-group form-full" id="f-sistemas-group" style="display:none">
+        <label style="margin-bottom:8px;display:block">🔐 Acesso aos sistemas</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <label style="display:flex;align-items:center;gap:6px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:700">
+            <input type="checkbox" id="fs-producao" value="producao" style="accent-color:#16a34a"/> 🍔 Produção
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:700">
+            <input type="checkbox" id="fs-motoboys" value="motoboys" style="accent-color:#d97706"/> 🛵 Motoboys
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;background:#f5f3ff;border:1.5px solid #c4b5fd;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:700">
+            <input type="checkbox" id="fs-dashboard" value="dashboard" style="accent-color:#7c3aed"/> 📊 Dashboard
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:700">
+            <input type="checkbox" id="fs-financeiro" value="financeiro" style="accent-color:#15803d"/> 💰 Financeiro
+          </label>
+        </div>
+        <p style="font-size:11px;color:#6b7280;margin-top:6px">✳️ Colaboradores têm acesso somente aos sistemas marcados. Líderes e admins têm acesso total.</p>
+      </div>
+    </div>
+    <p class="err-msg" id="modal-user-err"></p>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="_fecharModalUser()">Cancelar</button>
+      <button class="btn-save"   onclick="_salvarUser()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: RESET DE SENHA ═══ -->
+<div id="modal-reset" class="modal-ov hidden">
+  <div class="modal-box">
+    <h3>🔑 Redefinir Senha</h3>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:16px">
+      Usuário: <strong id="reset-user-nome"></strong>
+    </p>
+    <input type="hidden" id="reset-user-id"/>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Nova senha</label>
+      <div class="pass-wrap">
+        <input class="form-inp" type="password" id="reset-nova-senha" placeholder="Nova senha..."
+               autocomplete="new-password" onkeydown="if(event.key==='Enter')_confirmarReset()"/>
+        <button class="pass-eye" onclick="_togglePassReset()">👁️</button>
+      </div>
+    </div>
+    <p class="err-msg" id="reset-err"></p>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="document.getElementById('modal-reset').classList.add('hidden')">Cancelar</button>
+      <button class="btn-save"   onclick="_confirmarReset()">✅ Redefinir</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ══ LISTA DE CARDS DISPONÍVEIS ══ */
+const TODOS_CARDS = [
+  'ALAN RICARDO','ALINE','ALINE INICIO','ALINE FINALIZAÇÃO',
+  'ANTONIEL','ANTONIEL INICIO','ANTONIEL FINALIZAÇÃO',
+  'ATENDIMENTO / DESPACHO','ABC','DAVI','DESPACHO','DINA','FABIO','FERNANDO',
+  'FRITADEIRA','GABRIEL KHALYL','GABRIEL LEITE','HENRIQUE','JOÃO','JOSÉ BRUNO',
+  'LOHAINE','LUCAS','MARCUS','MARCUS INICIO','MARCUS FINALIZAÇÃO',
+  'MATEUS','MATEUS PRODUÇÃO','NOITE - CHAPEIRO','NOITE - FRITADEIRA',
+  'NOITE - MONTADOR','PABLO','PEDRO','RHUAN','SAMUEL','SANDRO',
+  'SERGIO CAMARAS','WESLEY MOTORISTA','FAXINA',
+  'ESTAGIARIO HENRIQUE','ESTÁGIO PEDRO','ESTÁGIO DAVI',
+];
+
+/* ══ ADMIN LOCAL (fallback enquanto não há usuários no Firebase) ══ */
+const ADMIN_USER = 'justadm';
+const ADMIN_PASS_HASH = btoa('lider12345*'); // base64 simples
+
+/* ══ SESSÃO ══ */
+let _cfgLogado = false;
+let _todosUsuarios = [];
+
+function _cfgHash(s){ return btoa(unescape(encodeURIComponent(s))); }
+function _cfgUnhash(s){ try{ return decodeURIComponent(escape(atob(s))); }catch(e){ return s; } }
+
+/* ══ LOGIN ══ */
+async function _cfgLogin() {
+  const u = document.getElementById('cfg-user').value.trim().toLowerCase();
+  const p = document.getElementById('cfg-pass').value;
+  const err = document.getElementById('login-err');
+  if (!u||!p){ err.textContent='Preencha usuário e senha'; return; }
+
+  // Testa admin hardcoded primeiro
+  if (u === ADMIN_USER && _cfgHash(p) === ADMIN_PASS_HASH) {
+    _cfgEntrar();
+    return;
+  }
+  // Testa no Firebase
+  try {
+    const todos = await fbv2_getAll('usuarios');
+    const usr = todos.find(x => x.username===u && x.papel==='admin' && x.ativo!==false);
+    if (usr && _cfgUnhash(usr.senha||'') === p) {
+      _cfgEntrar();
+    } else {
+      err.textContent = '❌ Usuário ou senha incorretos';
+    }
+  } catch(e) {
+    err.textContent = '❌ Erro de conexão';
+  }
+}
+
+function _cfgEntrar() {
+  sessionStorage.setItem('cfg_ok','1');
+  document.getElementById('login-overlay').classList.add('hidden');
+  _cfgLogado = true;
+  _carregarUsuarios();
+}
+
+function _cfgLogout() {
+  sessionStorage.removeItem('cfg_ok');
+  location.reload();
+}
+
+function _cfgTogglePass() {
+  const i = document.getElementById('cfg-pass');
+  i.type = i.type==='password'?'text':'password';
+}
+
+/* ══ TABS ══ */
+function _cfgTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('content-'+tab).classList.add('active');
+}
+
+/* ══ CARREGAR USUÁRIOS ══ */
+async function _carregarUsuarios() {
+  const tbody = document.getElementById('user-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" class="loading-row">⏳ Carregando...</td></tr>';
+  try {
+    _todosUsuarios = await fbv2_getAll('usuarios');
+    _renderUsuarios(_todosUsuarios);
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="6" class="loading-row">❌ Erro: ${e.message}</td></tr>`;
+  }
+}
+
+function _renderUsuarios(lista) {
+  const tbody = document.getElementById('user-tbody');
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="loading-row">📭 Nenhum usuário cadastrado ainda.</td></tr>';
+    return;
+  }
+  const papelCls = { admin:'bp-admin', lider:'bp-lider', colaborador:'bp-colab' };
+  const papelLabel = { admin:'👑 Admin', lider:'🎖️ Líder', colaborador:'👷 Colaborador' };
+  tbody.innerHTML = lista.map(u => `
+    <tr>
+      <td><strong>${u.username||'—'}</strong>
+        ${u.primeiro_acesso?'<br><span class="badge-first">1º acesso</span>':''}</td>
+      <td>${u.nome_display||'—'}</td>
+      <td><span class="badge-papel ${papelCls[u.papel]||'bp-colab'}">${papelLabel[u.papel]||u.papel}</span></td>
+      <td><small style="color:#6b7280">${u.nome_card||'—'}</small><br>
+          <small style="color:#aaa">${u.departamento||'—'}</small></td>
+      <td>${_renderSistemasCell(u)}</td>
+      <td>${u.ativo===false
+        ?'<span class="badge-status-off">🔴 Inativo</span>'
+        :'<span class="badge-status-on">🟢 Ativo</span>'}</td>
+      <td>
+        <div class="action-btns">
+          <button class="btn-edit"   title="Editar"         onclick="_editarUser('${u.id}')"><i class="fas fa-edit"></i></button>
+          <button class="btn-reset"  title="Resetar senha"  onclick="_abrirReset('${u.id}')"><i class="fas fa-key"></i></button>
+          <button class="btn-toggle" title="${u.ativo===false?'Ativar':'Desativar'}"
+                  onclick="_toggleAtivo('${u.id}',${u.ativo!==false})"
+                  style="${u.ativo===false?'background:#fee2e2;color:#dc2626':''}">
+            <i class="fas fa-${u.ativo===false?'user-check':'user-slash'}"></i></button>
+          <button class="btn-del"    title="Excluir"        onclick="_deletarUser('${u.id}','${(u.username||'').replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function _filtrarUsuarios() {
+  const q = document.getElementById('search-user').value.toLowerCase();
+  const filtrado = _todosUsuarios.filter(u =>
+    (u.username||'').toLowerCase().includes(q) ||
+    (u.nome_display||'').toLowerCase().includes(q) ||
+    (u.papel||'').toLowerCase().includes(q) ||
+    (u.nome_card||'').toLowerCase().includes(q)
+  );
+  _renderUsuarios(filtrado);
+}
+
+/* ══ MODAL NOVO / EDITAR ══ */
+function _abrirModalNovoUser() {
+  document.getElementById('modal-user-title').textContent = '➕ Novo Usuário';
+  document.getElementById('edit-user-id').value = '';
+  document.getElementById('f-username').value = '';
+  document.getElementById('f-nome').value = '';
+  document.getElementById('f-senha').value = '';
+  document.getElementById('f-papel').value = 'colaborador';
+  document.getElementById('f-dept').value = 'PRODUCAO';
+  document.getElementById('f-primeiro-acesso').checked = true;
+  document.getElementById('modal-user-err').textContent = '';
+  // Reset permissões de sistemas
+  ['fs-producao','fs-motoboys','fs-dashboard','fs-financeiro'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = id === 'fs-producao'; // Produção marcado por padrão
+  });
+  _popularSelectCards('');
+  _onPapelChange();
+  document.getElementById('modal-user').classList.remove('hidden');
+}
+
+function _editarUser(id) {
+  const u = _todosUsuarios.find(x=>x.id===id);
+  if (!u) return;
+  document.getElementById('modal-user-title').textContent = '✏️ Editar Usuário';
+  document.getElementById('edit-user-id').value = id;
+  document.getElementById('f-username').value = u.username||'';
+  document.getElementById('f-nome').value = u.nome_display||'';
+  document.getElementById('f-senha').value = '';
+  document.getElementById('f-papel').value = u.papel||'colaborador';
+  document.getElementById('f-dept').value = u.departamento||'PRODUCAO';
+  document.getElementById('f-primeiro-acesso').checked = u.primeiro_acesso===true;
+  document.getElementById('modal-user-err').textContent = '';
+  // Restaura permissões de sistemas
+  const sistUser = Array.isArray(u.sistemas) ? u.sistemas : ['producao'];
+  ['fs-producao','fs-motoboys','fs-dashboard','fs-financeiro'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = sistUser.includes(el.value);
+  });
+  _popularSelectCards(u.nome_card||'');
+  _onPapelChange();
+  document.getElementById('modal-user').classList.remove('hidden');
+}
+
+function _fecharModalUser() {
+  document.getElementById('modal-user').classList.add('hidden');
+}
+
+function _popularSelectCards(selecionado) {
+  const sel = document.getElementById('f-card');
+  sel.innerHTML = '<option value="">— nenhum —</option>' +
+    TODOS_CARDS.map(c=>`<option value="${c}" ${c===selecionado?'selected':''}>${c}</option>`).join('');
+}
+
+function _onPapelChange() {
+  const p = document.getElementById('f-papel').value;
+  const cardG = document.getElementById('f-card-group');
+  const deptG = document.getElementById('f-dept-group');
+  const sistG = document.getElementById('f-sistemas-group');
+  if (p==='colaborador') {
+    cardG.style.display=''; deptG.style.display='';
+    sistG.style.display='';
+    document.getElementById('f-dept').value = document.getElementById('f-dept').value||'PRODUCAO';
+  } else {
+    // lider/admin vê tudo — sem restrição de sistema
+    cardG.style.display='none'; deptG.style.display='none';
+    sistG.style.display='none';
+    document.getElementById('f-card').value='';
+    document.getElementById('f-dept').value='TODOS';
+  }
+}
+
+async function _salvarUser() {
+  const err = document.getElementById('modal-user-err');
+  const id  = document.getElementById('edit-user-id').value;
+  const username = document.getElementById('f-username').value.trim().toLowerCase();
+  const nome     = document.getElementById('f-nome').value.trim();
+  const senha    = document.getElementById('f-senha').value;
+  const papel    = document.getElementById('f-papel').value;
+  const card     = document.getElementById('f-card').value;
+  const dept     = document.getElementById('f-dept').value;
+  const prim     = document.getElementById('f-primeiro-acesso').checked;
+
+  if (!username){ err.textContent='Nome de usuário obrigatório'; return; }
+  if (!nome)    { err.textContent='Nome de exibição obrigatório'; return; }
+  if (!id && !senha){ err.textContent='Senha obrigatória para novo usuário'; return; }
+  if (senha && senha.length < 4){ err.textContent='Senha mínima de 4 caracteres'; return; }
+
+  // Verifica duplicata de username
+  const dup = _todosUsuarios.find(u=>u.username===username && u.id!==id);
+  if (dup){ err.textContent='Este nome de usuário já existe'; return; }
+
+  // Coleta sistemas permitidos (só relevante para colaborador)
+  const sistSelecionados = ['producao','motoboys','dashboard','financeiro']
+    .filter(id => {
+      const el = document.getElementById('fs-'+id);
+      return el && el.checked;
+    });
+
+  const dados = {
+    username, nome_display:nome, papel,
+    nome_card: papel==='colaborador'?card:'',
+    departamento: papel==='colaborador'?dept:'TODOS',
+    sistemas: papel==='colaborador' ? sistSelecionados : [],
+    primeiro_acesso: prim,
+    ativo: true,
+  };
+  if (senha) dados.senha = _cfgHash(senha);
+
+  try {
+    if (id) {
+      await fbv2_patch('usuarios', id, dados);
+      _toast('✅ Usuário atualizado!');
+    } else {
+      await fbv2_post('usuarios', dados);
+      _toast('✅ Usuário criado!');
+    }
+    _fecharModalUser();
+    await _carregarUsuarios();
+  } catch(e) {
+    err.textContent = '❌ Erro: '+e.message;
+  }
+}
+
+/* ══ RESET DE SENHA ══ */
+function _abrirReset(id) {
+  const u = _todosUsuarios.find(x=>x.id===id);
+  if (!u) return;
+  document.getElementById('reset-user-id').value = id;
+  document.getElementById('reset-user-nome').textContent = `${u.nome_display} (${u.username})`;
+  document.getElementById('reset-nova-senha').value = '';
+  document.getElementById('reset-err').textContent = '';
+  document.getElementById('modal-reset').classList.remove('hidden');
+}
+
+async function _confirmarReset() {
+  const id    = document.getElementById('reset-user-id').value;
+  const senha = document.getElementById('reset-nova-senha').value;
+  const err   = document.getElementById('reset-err');
+  if (!senha || senha.length<4){ err.textContent='Senha mínima de 4 caracteres'; return; }
+  try {
+    await fbv2_patch('usuarios', id, { senha: _cfgHash(senha), primeiro_acesso: false });
+    document.getElementById('modal-reset').classList.add('hidden');
+    _toast('🔑 Senha redefinida com sucesso!');
+    await _carregarUsuarios();
+  } catch(e) {
+    err.textContent = '❌ Erro: '+e.message;
+  }
+}
+
+function _togglePassModal() {
+  const i = document.getElementById('f-senha');
+  i.type = i.type==='password'?'text':'password';
+}
+function _togglePassReset() {
+  const i = document.getElementById('reset-nova-senha');
+  i.type = i.type==='password'?'text':'password';
+}
+
+/* ══ ATIVAR / DESATIVAR ══ */
+async function _toggleAtivo(id, estaAtivo) {
+  if (!confirm(estaAtivo?'Desativar este usuário?':'Reativar este usuário?')) return;
+  try {
+    await fbv2_patch('usuarios', id, { ativo: !estaAtivo });
+    _toast(estaAtivo?'🔴 Usuário desativado':'🟢 Usuário reativado');
+    await _carregarUsuarios();
+  } catch(e) { _toast('❌ Erro: '+e.message); }
+}
+
+/* ══ DELETAR ══ */
+async function _deletarUser(id, username) {
+  if (!confirm(`Excluir o usuário "${username}" permanentemente?`)) return;
+  try {
+    await fbv2_delete('usuarios', id);
+    _toast('🗑️ Usuário excluído');
+    await _carregarUsuarios();
+  } catch(e) { _toast('❌ Erro: '+e.message); }
+}
+
+/* ══ RENDERIZAR SISTEMAS NA TABELA ══ */
+function _renderSistemasCell(u) {
+  if (u.papel !== 'colaborador') {
+    return '<small style="color:#aaa">Acesso total</small>';
+  }
+  const sist = Array.isArray(u.sistemas) ? u.sistemas : ['producao'];
+  if (!sist.length) return '<small style="color:#dc2626">Nenhum</small>';
+  const icons = { producao:'🍔', motoboys:'🛵', dashboard:'📊', financeiro:'💰' };
+  return sist.map(s => `<span title="${s}" style="font-size:15px">${icons[s]||s}</span>`).join(' ');
+}
+
+/* ══ TOAST ══ */
+let _toastTm;
+function _toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(_toastTm);
+  _toastTm = setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+/* ══ INIT ══ */
+document.addEventListener('DOMContentLoaded', () => {
+  // Preenche o select de cards
+  _popularSelectCards('');
+  // Verifica sessão
+  if (sessionStorage.getItem('cfg_ok')==='1') {
+    document.getElementById('login-overlay').classList.add('hidden');
+    _cfgLogado = true;
+    _carregarUsuarios();
+  }
+  // Enter no login
+  document.getElementById('cfg-pass').addEventListener('keydown', e=>{
+    if (e.key==='Enter') _cfgLogin();
+  });
+});
+</script>
+</body>
+</html>
