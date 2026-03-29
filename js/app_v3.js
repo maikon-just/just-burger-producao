@@ -1275,13 +1275,20 @@ async function loadResultados() {
   container.innerHTML='<div style="padding:30px;text-align:center;color:#888"><div style="font-size:28px;margin-bottom:8px">⏳</div>Carregando...</div>';
   if (summBar) summBar.innerHTML='';
   const turno=(document.getElementById('res-turno')||{}).value||'dia';
-  const dia  =(document.getElementById('res-dia')||{}).value||'segunda';
   const data =((document.getElementById('res-data')||{}).value)||today();
+  // dia_semana derivado da data (local, sem UTC)
+  const [_ry,_rm,_rd]=data.split('-').map(Number);
+  const dia=DIA_JS_MAP[new Date(_ry,_rm-1,_rd).getDay()];
+  const diaEl=document.getElementById('res-dia'); if(diaEl) diaEl.value=dia;
   try {
     const [pendencias,sessoes]=await Promise.all([_fbGetAll('pendencias'),_fbGetAll('sessoes')]);
-    // Filtra apenas pendências ativas (não vistoriadas/transferidas)
-    const pends=pendencias.filter(p=>(!data||p.data===data)&&(!turno||p.turno===turno)&&(!dia||p.dia_semana===dia)&&!(p.vistoriado==1));
-    const sess =sessoes.filter(s=>(!data||s.data===data)&&(!turno||s.turno===turno)&&(!dia||s.dia_semana===dia));
+    // Filtra por data e turno — apenas pendências ativas (não vistoriadas)
+    let pends=pendencias.filter(p=>p.data===data&&p.turno===turno&&!(p.vistoriado==1));
+    // Se não achar nada no turno selecionado, mostra todos os turnos do dia
+    if(pends.length===0){
+      pends=pendencias.filter(p=>p.data===data&&!(p.vistoriado==1));
+    }
+    const sess=sessoes.filter(s=>s.data===data);
     const pendAtivos=pends.filter(p=>!(p.vistoriado==1));
     const collabNomes=[...new Set([...sess.map(s=>s.colaborador_nome).filter(Boolean),...pends.map(p=>p.colaborador).filter(Boolean)])];
     const collabSemPend=collabNomes.filter(n=>!pends.find(p=>p.colaborador===n)).length;
@@ -1649,7 +1656,7 @@ function _resEmoji(n) { const e=['👨‍🍳','👩‍🍳','🧑‍🍳','😎
 function setDefaultDates() {
   const hoje=today();
   const dt=new Date(); dt.setDate(dt.getDate()-7);
-  const ini=dt.toISOString().slice(0,10);
+  const ini=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
   ['filter-start','filter-end','rel-start','rel-end'].forEach(id=>{
     const el=document.getElementById(id);
     if (el) el.value=id.includes('end')?hoje:ini;
@@ -2097,7 +2104,14 @@ function showToast(msg) {
 function closeModal(id) { const el=document.getElementById(id); if (el) el.classList.add('hidden'); }
 function shakeEl(id)    { const el=document.getElementById(id); if (!el) return; el.classList.add('shake'); setTimeout(()=>el.classList.remove('shake'),500); }
 function fmt(n)  { if (n===null||n===undefined||n==='') return '—'; return Number(n).toLocaleString('pt-BR'); }
-function today() { return new Date().toISOString().slice(0,10); }
+function today() {
+  // Usa data LOCAL do dispositivo (não UTC) para evitar erro de fuso horário no Brasil
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd= String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
 function fmtDate(){ return new Date().toLocaleDateString('pt-BR',{weekday:'long',year:'numeric',month:'long',day:'numeric'}); }
 
 function getCatColor(cat) {
