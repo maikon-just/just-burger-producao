@@ -224,7 +224,7 @@
             <th>Usuário</th>
             <th>Nome</th>
             <th>Papel</th>
-            <th>Card / Dept</th>
+            <th>Card / Dept / Turno</th>
             <th>Sistemas</th>
             <th>Status</th>
             <th>Ações</th>
@@ -313,7 +313,7 @@
       <div class="form-group form-full">
         <label><input type="checkbox" id="f-primeiro-acesso" checked/> &nbsp;Forçar troca de senha no primeiro acesso</label>
       </div>
-      <!-- PERMISSÕES POR SISTEMA -->
+      <!-- PERMISSÕES POR SISTEMA (colaborador e líder) -->
       <div class="form-group form-full" id="f-sistemas-group" style="display:none">
         <label style="margin-bottom:8px;display:block">🔐 Acesso aos sistemas</label>
         <div style="display:flex;flex-wrap:wrap;gap:8px">
@@ -330,7 +330,16 @@
             <input type="checkbox" id="fs-financeiro" value="financeiro" style="accent-color:#15803d"/> 💰 Financeiro
           </label>
         </div>
-        <p style="font-size:11px;color:#6b7280;margin-top:6px">✳️ Colaboradores têm acesso somente aos sistemas marcados. Líderes e admins têm acesso total.</p>
+        <p style="font-size:11px;color:#6b7280;margin-top:6px" id="f-sistemas-hint"></p>
+      </div>
+      <!-- TURNO PREFERIDO (só colaborador) -->
+      <div class="form-group" id="f-turno-group" style="display:none">
+        <label>Turno preferido</label>
+        <select class="form-inp" id="f-turno">
+          <option value="">— qualquer turno —</option>
+          <option value="dia">☀️ Dia</option>
+          <option value="noite">🌙 Noite</option>
+        </select>
       </div>
     </div>
     <p class="err-msg" id="modal-user-err"></p>
@@ -469,8 +478,11 @@ function _renderUsuarios(lista) {
         ${u.primeiro_acesso?'<br><span class="badge-first">1º acesso</span>':''}</td>
       <td>${u.nome_display||'—'}</td>
       <td><span class="badge-papel ${papelCls[u.papel]||'bp-colab'}">${papelLabel[u.papel]||u.papel}</span></td>
-      <td><small style="color:#6b7280">${u.nome_card||'—'}</small><br>
-          <small style="color:#aaa">${u.departamento||'—'}</small></td>
+      <td>
+        <small style="color:#6b7280">${u.nome_card||'—'}</small><br>
+        <small style="color:#aaa">${u.departamento||'—'}</small>
+        ${u.turno_preferido ? '<br><small style="color:#e8590c;font-weight:800">'+(u.turno_preferido==='dia'?'☀️ Dia':'🌙 Noite')+'</small>' : ''}
+      </td>
       <td>${_renderSistemasCell(u)}</td>
       <td>${u.ativo===false
         ?'<span class="badge-status-off">🔴 Inativo</span>'
@@ -516,6 +528,7 @@ function _abrirModalNovoUser() {
     const el = document.getElementById(id);
     if (el) el.checked = id === 'fs-producao'; // Produção marcado por padrão
   });
+  document.getElementById('f-turno').value = '';
   _popularSelectCards('');
   _onPapelChange();
   document.getElementById('modal-user').classList.remove('hidden');
@@ -534,11 +547,12 @@ function _editarUser(id) {
   document.getElementById('f-primeiro-acesso').checked = u.primeiro_acesso===true;
   document.getElementById('modal-user-err').textContent = '';
   // Restaura permissões de sistemas
-  const sistUser = Array.isArray(u.sistemas) ? u.sistemas : ['producao'];
+  const sistUser = Array.isArray(u.sistemas) ? u.sistemas : (u.papel==='colaborador' ? ['producao'] : []);
   ['fs-producao','fs-motoboys','fs-dashboard','fs-financeiro'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.checked = sistUser.includes(el.value);
   });
+  document.getElementById('f-turno').value = u.turno_preferido || '';
   _popularSelectCards(u.nome_card||'');
   _onPapelChange();
   document.getElementById('modal-user').classList.remove('hidden');
@@ -555,20 +569,36 @@ function _popularSelectCards(selecionado) {
 }
 
 function _onPapelChange() {
-  const p = document.getElementById('f-papel').value;
+  const p     = document.getElementById('f-papel').value;
   const cardG = document.getElementById('f-card-group');
   const deptG = document.getElementById('f-dept-group');
   const sistG = document.getElementById('f-sistemas-group');
-  if (p==='colaborador') {
-    cardG.style.display=''; deptG.style.display='';
-    sistG.style.display='';
-    document.getElementById('f-dept').value = document.getElementById('f-dept').value||'PRODUCAO';
+  const turnG = document.getElementById('f-turno-group');
+  const hint  = document.getElementById('f-sistemas-hint');
+
+  if (p === 'colaborador') {
+    cardG.style.display = '';
+    deptG.style.display = '';
+    sistG.style.display = '';
+    turnG.style.display = '';
+    if (hint) hint.textContent = '✳️ O colaborador só verá os sistemas marcados acima.';
+    document.getElementById('f-dept').value = document.getElementById('f-dept').value || 'PRODUCAO';
+  } else if (p === 'lider') {
+    cardG.style.display = 'none';
+    deptG.style.display = 'none';
+    sistG.style.display = '';      // Líder também pode ter sistemas restritos
+    turnG.style.display = 'none';
+    if (hint) hint.textContent = '⚠️ Se nenhum sistema for marcado, o líder terá acesso a todos.';
+    document.getElementById('f-card').value  = '';
+    document.getElementById('f-dept').value  = 'TODOS';
   } else {
-    // lider/admin vê tudo — sem restrição de sistema
-    cardG.style.display='none'; deptG.style.display='none';
-    sistG.style.display='none';
-    document.getElementById('f-card').value='';
-    document.getElementById('f-dept').value='TODOS';
+    // admin — acesso total, sem restrições
+    cardG.style.display = 'none';
+    deptG.style.display = 'none';
+    sistG.style.display = 'none';
+    turnG.style.display = 'none';
+    document.getElementById('f-card').value  = '';
+    document.getElementById('f-dept').value  = 'TODOS';
   }
 }
 
@@ -599,11 +629,14 @@ async function _salvarUser() {
       return el && el.checked;
     });
 
+  const turnoP = document.getElementById('f-turno').value || '';
+
   const dados = {
     username, nome_display:nome, papel,
-    nome_card: papel==='colaborador'?card:'',
-    departamento: papel==='colaborador'?dept:'TODOS',
-    sistemas: papel==='colaborador' ? sistSelecionados : [],
+    nome_card:       papel==='colaborador' ? card : '',
+    departamento:    papel==='colaborador' ? dept : 'TODOS',
+    sistemas:        papel !== 'admin' ? sistSelecionados : [],
+    turno_preferido: papel==='colaborador' ? turnoP : '',
     primeiro_acesso: prim,
     ativo: true,
   };
