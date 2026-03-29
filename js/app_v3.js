@@ -384,15 +384,15 @@ function onWorkDateChange() {
 }
 
 function _updateWorkDateDisplay(ds) {
-  const el = document.getElementById('work-date-display');
-  if (!el) return;
-  const dt = new Date(ds+'T12:00:00');
-  const dn = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
-  const mn = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const isHoje = ds === today();
-  const diaStr = `${dn[dt.getDay()]}`;
-  const dateStr = `${dt.getDate()} ${mn[dt.getMonth()]} ${dt.getFullYear()}`;
-  el.innerHTML = `<strong>${diaStr}</strong>&nbsp;&nbsp;<span style="font-weight:700;color:#555">${dateStr}</span>${isHoje ? '&nbsp;&nbsp;<span class="date-today-badge">HOJE</span>' : ''}`;
+  const weekdayEl = document.getElementById('work-date-display');
+  const valEl     = document.getElementById('work-date-val');
+  const dt  = new Date(ds+'T12:00:00');
+  const dn  = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+  const mn  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const dateStr = `${dt.getDate()} / ${mn[dt.getMonth()]} / ${dt.getFullYear()}`;
+  const diaStr  = dn[dt.getDay()];
+  if (valEl)     valEl.textContent     = dateStr;
+  if (weekdayEl) weekdayEl.textContent = diaStr;
 }
 
 /* ══ NAVEGAÇÃO ════════════════════════════════════════════ */
@@ -1010,15 +1010,21 @@ function renderStep1() {
        - Qty Não confirmado: "Padrão: X un" (só quantidade, sem msg execução)
        - Qty Confirmado: valor programado
     */
+    const qtdPadrao = Number(t.quantidade_padrao)||0;
+    const isExcCard = !ck && qtdPadrao === 0;
     let infoLine;
     if (ck) {
       infoLine = isConf
         ? '<div class="task-qty-display" style="color:#16a34a;font-weight:800">✓ Confirmada</div>'
         : '<div class="task-qty-display" style="color:#9ca3af">Toque para confirmar</div>';
+    } else if (isExcCard) {
+      infoLine = isConf
+        ? '<div class="task-qty-display" style="color:#d97706;font-weight:800">⚡ Exceção — confirmada</div>'
+        : '<div class="task-qty-display" style="color:#f59e0b;font-weight:700">⚡ Tarefa de exceção</div>';
     } else {
       infoLine = isConf
         ? `<div class="task-qty-display"><strong>${fmt(conf.programada)}</strong> ${t.unidade||''} a produzir</div>`
-        : `<div class="task-qty-display">Padrão: ${fmt(t.quantidade_padrao)} ${t.unidade||''}</div>`;
+        : `<div class="task-qty-display">Padrão: <strong>${fmt(qtdPadrao)}</strong> ${t.unidade||''} em estoque</div>`;
     }
     return `<div class="task-card s1-card${isConf?' task-confirmed':''}" id="s1c-${t.id}" onclick="openS1Modal('${t.id}')">
       <div class="task-card-header" style="background:${cc}">
@@ -1036,13 +1042,13 @@ function renderStep1() {
   const startBtn   =document.getElementById('btn-sm-start-footer');
   const concludeBtn=document.getElementById('btn-conclude');
   if (!S.producaoIniciada) {
-    /* Fase 1: mostra botão Iniciar, oculta Concluir */
+    /* Fase 1: mostra botão Iniciar Turno, oculta Finalizar */
     if (pInfo) pInfo.style.display='flex';
-    if (pTxt)  pTxt.textContent=allConfirmed?'Todos programados — clique em Iniciar!':`${total-confirmed} item(s) ainda não confirmado(s)`;
-    if (startBtn)   startBtn.classList.remove('hidden');
+    if (pTxt)  pTxt.textContent=allConfirmed?'Todos programados — clique em Iniciar Turno!':`${total-confirmed} item(s) ainda não confirmado(s)`;
+    if (startBtn)   { startBtn.classList.remove('hidden'); startBtn.style.display=''; }
     if (concludeBtn) concludeBtn.classList.add('hidden');
   } else {
-    /* Fase 1 já iniciada (voltou do card de setor) — oculta Iniciar */
+    /* Fase 2 em andamento: oculta Iniciar, oculta Finalizar (só aparece quando tudo feito) */
     if (pInfo) pInfo.style.display='none';
     if (startBtn)   startBtn.classList.add('hidden');
     if (concludeBtn) concludeBtn.classList.add('hidden');
@@ -1061,12 +1067,18 @@ function openS1Modal(id) {
   document.getElementById('modal-s1-title').textContent=t.item;
   document.getElementById('modal-s1-cat').textContent=t.categoria||'';
   document.getElementById('modal-s1-header').style.background=getCatColor(t.categoria);
-  const qtyMode=document.getElementById('s1-qty-mode');
-  const ckMode =document.getElementById('s1-checklist-mode');
-  if (qtyMode) qtyMode.style.display=ck?'none':'';
-  if (ckMode)  ckMode.classList.toggle('hidden',!ck);
-  if (!ck) {
-    const padrao      =Number(t.quantidade_padrao)||0;
+  const qtyMode    = document.getElementById('s1-qty-mode');
+  const ckMode     = document.getElementById('s1-checklist-mode');
+  const excMode    = document.getElementById('s1-excecao-mode');
+  const padrao     = Number(t.quantidade_padrao)||0;
+  const isExcecao  = !ck && padrao === 0;
+
+  /* Mostra o modo correto */
+  if (ckMode)   ckMode.classList.toggle('hidden', !ck);
+  if (excMode)  excMode.classList.toggle('hidden', !isExcecao);
+  if (qtyMode)  qtyMode.style.display = (ck || isExcecao) ? 'none' : '';
+
+  if (!ck && !isExcecao) {
     const estoqueAtual=conf.estoque!==undefined?conf.estoque:0;
     document.getElementById('modal-s1-estoque').textContent=estoqueAtual;
     document.getElementById('modal-s1-unidade').textContent=t.unidade||'un';
@@ -1074,6 +1086,9 @@ function openS1Modal(id) {
     document.getElementById('calc-estoque').textContent=estoqueAtual;
     document.getElementById('modal-s1-prog').textContent=conf.programada!==undefined?conf.programada:(padrao>estoqueAtual?padrao-estoqueAtual:0);
     document.getElementById('modal-s1-unit2').textContent=t.unidade||'';
+    /* Exibe a qtd padrão do BD */
+    const pdEl = document.getElementById('calc-padrao-display');
+    if (pdEl) pdEl.textContent = fmt(padrao)+' '+(t.unidade||'');
     _calcNecessario();
   }
   document.getElementById('modal-s1').classList.remove('hidden');
@@ -1111,8 +1126,10 @@ function adjField(field,delta) {
 function confirmS1() {
   const t=S.tarefas.find(x=>x.id===_s1Id); if (!t) return;
   const ck=isChecklist(t);
+  const padrao=Number(t.quantidade_padrao)||0;
+  const isExcecao=!ck&&padrao===0;
   let est=0,prog=1;
-  if (!ck) {
+  if (!ck && !isExcecao) {
     est=Number(document.getElementById('modal-s1-estoque').textContent)||0;
     prog=Number(document.getElementById('modal-s1-prog').textContent)||0;
   }
@@ -1125,6 +1142,10 @@ function confirmS1() {
 }
 
 async function iniciarProducao() {
+  /* Oculta o botão imediatamente para evitar cliques duplos */
+  const iniBtn = document.getElementById('btn-sm-start-footer');
+  if (iniBtn) { iniBtn.classList.add('hidden'); iniBtn.disabled = true; }
+
   S.producaoIniciada=true;
   /* Garante que todos os cards sem s1 usem o padrão */
   S.tarefas.forEach(t=>{ if (!S.s1[t.id]) S.s1[t.id]={estoque:0,programada:t.quantidade_padrao||0,confirmed:true}; });
@@ -1213,10 +1234,15 @@ function renderStep2() {
   const pTxt2      =document.getElementById('pending-count-text');
   const startBtn2  =document.getElementById('btn-sm-start-footer');
   const concludeBtn=document.getElementById('btn-conclude');
-  if (pInfo)   { pInfo.style.display='flex'; }
-  if (pTxt2)   pTxt2.textContent=allDone?'Tudo finalizado! Clique em Concluir Turno.':`${done2}/${S.tarefas.length} finalizadas — pode sair e voltar!`;
-  if (startBtn2)   startBtn2.classList.add('hidden'); // Oculta Iniciar na fase 2
-  if (concludeBtn) concludeBtn.classList.toggle('hidden',!allDone);
+  /* Sempre oculta Iniciar Turno na fase 2 */
+  if (startBtn2) startBtn2.classList.add('hidden');
+  /* Botão Finalizar Turno: só aparece quando TODAS as tarefas tiverem status */
+  if (concludeBtn) concludeBtn.classList.toggle('hidden', !allDone);
+  /* Info */
+  if (pInfo) pInfo.style.display='flex';
+  if (pTxt2) pTxt2.textContent = allDone
+    ? 'Tudo finalizado! Clique em Finalizar Turno.'
+    : `${done2}/${S.tarefas.length} finalizadas — pode sair e voltar!`;
   /* Auto-save 100% — sem toast, botão Concluir aparece automaticamente */
 }
 
@@ -1242,25 +1268,26 @@ function openS2Modal(id) {
   document.querySelectorAll('.sbtn').forEach(b=>b.classList.remove('active'));
   if (d2.status) { const ab=document.querySelector(`.sbtn[data-status="${d2.status}"]`); if (ab) ab.classList.add('active'); }
   _s2Status=d2.status||null; _s2Motivo=d2.motivo||'';
+
+  /* Reset de UI */
   const qpw=document.getElementById('qty-prod-wrap'); if (qpw) qpw.classList.add('hidden');
-  const mw =document.getElementById('motivos-wrap');  if (mw)  mw.classList.add('hidden');
+  const mw =document.getElementById('motivos-wrap');
   const mc =document.getElementById('motivo-custom'); if (mc) { mc.value=''; mc.classList.add('hidden'); }
   document.querySelectorAll('.motivo-btn').forEach(b=>b.classList.remove('active'));
-  if (_s2Motivo) {
-    const mb=document.querySelector(`.motivo-btn[onclick*="${_s2Motivo.replace(/'/g,"\\'")}"]`);
-    if (mb) mb.classList.add('active');
-    // mostra textarea se Outros
-    if (_s2Motivo&&!['\u23f0 Tempo insuficiente','\ud83d\udd27 Equipamento','\ud83d\udce6 Falta de insumos','\u2705 Estoque já completo','\ud83c\udf89 Feriado','\u26a1 Ação especial'].includes(_s2Motivo)) {
-      if (mc) { mc.classList.remove('hidden'); mc.value=_s2Motivo; }
+
+  /* Restaura estado anterior se houver */
+  if (_s2Status === 'nao_finalizado') {
+    if (mw) mw.classList.remove('hidden');
+    if (_s2Motivo) {
+      const KNOWN=['⏰ Tempo insuficiente','🔧 Equipamento'];
+      const mb=document.querySelector(`.motivo-btn[onclick*="${_s2Motivo.replace(/'/g,"\\'")}"]`);
+      if (mb) mb.classList.add('active');
+      if (!KNOWN.includes(_s2Motivo)) {
+        if (mc) { mc.classList.remove('hidden'); mc.value=_s2Motivo; }
+      }
     }
-  }
-  // Se já tinha status, restaura visível
-  if (d2.status && d2.status!=='total') {
-    const qpwEl=document.getElementById('qty-prod-wrap');
-    const mwEl =document.getElementById('motivos-wrap');
-    const showQ=(d2.status==='parcial'||d2.status==='maior_qtd');
-    if (qpwEl) qpwEl.classList.toggle('hidden',!showQ);
-    if (mwEl)  mwEl.classList.remove('hidden');
+  } else {
+    if (mw) mw.classList.add('hidden');
   }
   document.getElementById('modal-s2').classList.remove('hidden');
 }
@@ -1271,27 +1298,24 @@ function selectStatus(status) {
   const ab=document.querySelector(`.sbtn[data-status="${status}"]`);
   if (ab) ab.classList.add('active');
 
-  const qpw   = document.getElementById('qty-prod-wrap');
-  const mw    = document.getElementById('motivos-wrap');
-  const label = document.getElementById('qty-prod-label');
+  const qpw = document.getElementById('qty-prod-wrap');
+  const mw  = document.getElementById('motivos-wrap');
 
-  // Quantidade visível para parcial e maior_qtd
-  const showQty = (status==='parcial'||status==='maior_qtd');
-  if (qpw) qpw.classList.toggle('hidden', !showQty);
-  if (label) label.textContent = status==='maior_qtd' ? '📦 Quantidade Real Produzida (maior)' : '📦 Quantidade Produzida';
+  /* Quantidade — oculto em ambos os casos (100% ou não executado) */
+  if (qpw) qpw.classList.add('hidden');
 
-  // Motivos necessários para parcial, nao_finalizado e maior_qtd
-  if (mw) mw.classList.toggle('hidden', status==='total');
+  /* Motivo — só aparece para "Não Executado" */
+  if (mw) mw.classList.toggle('hidden', status !== 'nao_finalizado');
 
-  // Limpa motivo ao trocar status
-  _s2Motivo=null;
+  /* Limpa motivo ao trocar status */
+  _s2Motivo = null;
   document.querySelectorAll('.motivo-btn').forEach(b=>b.classList.remove('active'));
-  const mc=document.getElementById('motivo-custom');
+  const mc = document.getElementById('motivo-custom');
   if (mc) { mc.classList.add('hidden'); mc.value=''; }
 
-  // Se 100%: auto-salva imediatamente
-  if (status==='total') {
-    setTimeout(()=>confirmS2(), 120);
+  /* Se 100%: fecha e salva automaticamente */
+  if (status === 'total') {
+    setTimeout(() => confirmS2(), 150);
   }
 }
 
@@ -1317,15 +1341,11 @@ async function confirmS2() {
   const ck=isChecklist(t);
   let prod=1;
 
-  // Validações por status
-  if (!ck && (_s2Status==='parcial'||_s2Status==='maior_qtd')) {
-    prod=Number(document.getElementById('modal-s2-prod').textContent)||0;
-    if (prod<=0) { shakeEl('qty-prod-wrap'); showToast('⚠️ Informe a quantidade!'); return; }
-  }
-  if (_s2Status!=='total' && !_s2Motivo) {
+  /* Validação: Não Executado exige motivo */
+  if (_s2Status === 'nao_finalizado' && !_s2Motivo) {
     shakeEl('motivos-wrap'); showToast('⚠️ Selecione um motivo!'); return;
   }
-  if (_s2Motivo==='Outros') {
+  if (_s2Motivo === 'Outros') {
     const inp=document.getElementById('motivo-custom');
     const mv=inp?inp.value.trim():'';
     if (!mv) { shakeEl('motivo-custom'); showToast('⚠️ Descreva o motivo!'); return; }
@@ -1374,18 +1394,19 @@ async function confirmS2() {
   }
 }
 
-/* ══ CONCLUIR TURNO ══════════════════════════════════════ */
+/* ══ FINALIZAR TURNO ══════════════════════════════════════ */
 function openFinishModal() {
+  /* Oculta o botão Finalizar para evitar cliques duplos */
+  const concludeBtn = document.getElementById('btn-conclude');
+  if (concludeBtn) concludeBtn.classList.add('hidden');
+
   const total  =S.tarefas.length;
   const totais =Object.values(S.s2).filter(d=>d.status==='total').length;
-  const parciais=Object.values(S.s2).filter(d=>d.status==='parcial').length;
   const nao    =Object.values(S.s2).filter(d=>d.status==='nao_finalizado').length;
   document.getElementById('finish-summary').innerHTML=`
     <div class="finish-row"><span>📋 Total de tarefas</span><span class="finish-num">${total}</span></div>
     <div class="finish-row"><span>✅ Finalizadas 100%</span><span class="finish-num" style="color:#16a34a">${totais}</span></div>
-    <div class="finish-row"><span>⚠️ Parcialmente</span><span class="finish-num" style="color:#d97706">${parciais}</span></div>
     <div class="finish-row"><span>❌ Não executadas</span><span class="finish-num" style="color:#dc2626">${nao}</span></div>`;
-  // obs removida
   document.getElementById('modal-finish').classList.remove('hidden');
 }
 
@@ -2456,7 +2477,17 @@ function showToast(msg) {
   _toastT=setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.classList.add('hidden'),300); },3000);
 }
 
-function closeModal(id) { const el=document.getElementById(id); if (el) el.classList.add('hidden'); }
+function closeModal(id) {
+  const el=document.getElementById(id);
+  if (el) el.classList.add('hidden');
+  /* Se fechou o modal de finalizar (botão Voltar), restaura o botão Finalizar Turno */
+  if (id === 'modal-finish') {
+    const concludeBtn = document.getElementById('btn-conclude');
+    /* Só mostra se todas as tarefas ainda estiverem com status */
+    const allDone = S.tarefas.length > 0 && S.tarefas.every(t=>S.s2[t.id]&&S.s2[t.id].status);
+    if (concludeBtn && allDone) concludeBtn.classList.remove('hidden');
+  }
+}
 function shakeEl(id)    { const el=document.getElementById(id); if (!el) return; el.classList.add('shake'); setTimeout(()=>el.classList.remove('shake'),500); }
 function fmt(n)  { if (n===null||n===undefined||n==='') return '—'; return Number(n).toLocaleString('pt-BR'); }
 function today() {
