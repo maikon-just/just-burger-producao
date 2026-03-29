@@ -317,11 +317,27 @@
 </div>
 
 <!-- FILTROS -->
-<div class="filter-bar" id="filter-bar">
-  <div class="filter-group">
-    <span class="filter-label">📅 Data</span>
-    <input type="date" id="res-data" onchange="onResDataChange()"/>
+<div class="filter-bar" id="filter-bar" style="flex-wrap:wrap;gap:12px;align-items:center">
+
+  <!-- Campo de data clicavel em qualquer área -->
+  <div class="filter-group" style="flex:1;min-width:180px">
+    <span class="filter-label">📅 Selecione a data para ver as pendências</span>
+    <div style="position:relative;cursor:pointer"
+         onclick="var inp=document.getElementById('res-data');if(inp.showPicker)inp.showPicker();else inp.click();">
+      <div id="res-data-display"
+           style="background:#f9fafb;border:2px solid #e2e6f0;border-radius:10px;padding:10px 14px;
+                  font-family:inherit;font-size:15px;font-weight:800;color:#1a1a2e;
+                  display:flex;align-items:center;gap:10px;user-select:none;transition:border-color .2s">
+        <i class="fas fa-calendar-alt" style="color:#e8590c;font-size:16px"></i>
+        <span id="res-data-texto">Hoje</span>
+        <i class="fas fa-chevron-down" style="font-size:11px;color:#aaa;margin-left:auto"></i>
+      </div>
+      <input type="date" id="res-data" onchange="onResDataChange()"
+             style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2"/>
+    </div>
   </div>
+
+  <!-- Turno -->
   <div class="filter-group">
     <span class="filter-label">☀️ Turno</span>
     <div class="btn-turno-group">
@@ -330,11 +346,12 @@
     </div>
     <input type="hidden" id="res-turno" value="dia"/>
   </div>
-  <div class="filter-group" style="min-width:260px">
-    <span class="filter-label">📆 Dia da semana</span>
-    <div class="btn-dia-group" id="dias-btn-group"></div>
-    <input type="hidden" id="res-dia" value="segunda"/>
-  </div>
+
+  <!-- Dia da semana — oculto, controlado apenas pela data -->
+  <input type="hidden" id="res-dia" value="segunda"/>
+  <!-- Mantido por compatibilidade, não exibido -->
+  <div id="dias-btn-group" style="display:none"></div>
+
 </div>
 
 <!-- SUMMARY -->
@@ -435,7 +452,7 @@
 <div class="modal-overlay hidden" id="modal-transferir">
   <div class="modal-box">
     <div class="modal-title-h">🔄 Transferir Tarefa</div>
-    <div class="modal-sub-h" id="modal-transferir-sub">Reatribuir tarefa para outro colaborador</div>
+    <div class="modal-sub-h" id="modal-transferir-sub">A tarefa sairá das pendências desta pessoa</div>
 
     <input type="hidden" id="transferir-pend-id"/>
     <input type="hidden" id="transferir-item-nome"/>
@@ -444,42 +461,39 @@
     <input type="hidden" id="transferir-qprog"/>
     <input type="hidden" id="transferir-qfeit"/>
     <input type="hidden" id="transferir-categoria"/>
-
-    <!-- Detalhes da tarefa -->
-    <div id="transferir-detalhe" style="background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:12px;margin-bottom:16px;font-size:13px">
-      <!-- preenchido pelo JS -->
-    </div>
-
-    <!-- Data destino + auto-detecta turno e dia -->
-    <label class="modal-label">📅 Data destino</label>
-    <input type="date" id="transferir-data" class="modal-input" onchange="onTransfDataChange()"/>
-
-    <!-- Turno e dia (ocultos — auto-preenchidos pela data) -->
+    <!-- Mantidos por compatibilidade mas não exibidos -->
+    <input type="hidden" id="transferir-data"/>
     <input type="hidden" id="transferir-turno" value="dia"/>
     <input type="hidden" id="transferir-dia" value="segunda"/>
     <input type="hidden" id="trn-btn-dia"/>
     <input type="hidden" id="trn-btn-noite"/>
     <div id="trn-dias-group" style="display:none"></div>
+    <div id="tranf-turno-info" style="display:none"></div>
 
-    <!-- Tag informativa do turno/dia detectado -->
-    <div id="tranf-turno-info" style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;padding:8px 12px;margin-bottom:14px;font-size:13px;font-weight:700;color:#0369a1;display:none">
-      <!-- preenchido pelo JS -->
+    <!-- Detalhes da tarefa -->
+    <div id="transferir-detalhe" style="background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:12px;margin-bottom:16px;font-size:13px">
+    </div>
+
+    <!-- Info explicativa -->
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#166534;font-weight:700">
+      ✅ Ao transferir, esta pendência será <strong>marcada como resolvida</strong> e sairá deste card.<br>
+      O colaborador destino continuará sua tarefa normalmente na tela de produção.
     </div>
 
     <!-- Colaborador destino -->
-    <label class="modal-label">👤 Colaborador destino</label>
+    <label class="modal-label">👤 Transferir para</label>
     <select id="transferir-destino" class="modal-select">
-      <option value="">Selecione a data primeiro...</option>
+      <option value="">Selecione o colaborador...</option>
     </select>
 
     <label class="modal-label">📝 Observação (opcional)</label>
-    <input type="text" id="transferir-obs" class="modal-input" placeholder="Ex: faltou matéria prima..."/>
+    <input type="text" id="transferir-obs" class="modal-input" placeholder="Ex: faltou matéria prima, transferido para próximo turno..."/>
 
     <hr class="modal-divider"/>
     <div class="modal-footer-row">
       <button class="modal-btn-cancel" onclick="fecharModalTransferir()">Cancelar</button>
-      <button class="modal-btn-confirm" onclick="confirmarTransferencia()">
-        <i class="fas fa-exchange-alt"></i> Transferir
+      <button class="modal-btn-confirm btn-green-confirm" onclick="confirmarTransferencia()">
+        <i class="fas fa-exchange-alt"></i> Confirmar Transferência
       </button>
     </div>
   </div>
@@ -562,11 +576,33 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('res-data').value = hoje;
   document.getElementById('res-dia').value  = diaKey;
 
-  renderDiasBtns(diaKey);
+  // Atualiza display do campo de data
+  _atualizaDisplayData(hoje, diaKey);
+
   preencherSelectColaboradores();
-  _renderTransfDiasBtns('segunda');
   loadResultados();
 });
+
+/* Atualiza o display visual do campo de data */
+function _atualizaDisplayData(dataVal, diaKey) {
+  const el = document.getElementById('res-data-texto');
+  if (!el) return;
+  const NOMES = {segunda:'Segunda-feira',terca:'Terça-feira',quarta:'Quarta-feira',
+                 quinta:'Quinta-feira',sexta:'Sexta-feira',sabado:'Sábado',domingo:'Domingo'};
+  const hj = new Date().toISOString().slice(0,10);
+  if (dataVal === hj) {
+    el.textContent = `Hoje, ${NOMES[diaKey]||diaKey}`;
+  } else {
+    const [y,m,d] = dataVal.split('-');
+    el.textContent = `${d}/${m}/${y} · ${NOMES[diaKey]||diaKey}`;
+  }
+  // Destaque na borda do campo
+  const disp = document.getElementById('res-data-display');
+  if (disp) {
+    disp.style.borderColor = '#e8590c';
+    setTimeout(()=>{ if(disp) disp.style.borderColor='#e2e6f0'; }, 1200);
+  }
+}
 
 function renderDiasBtns(activeKey) {
   const wrap = document.getElementById('dias-btn-group');
@@ -595,15 +631,14 @@ function onResDataChange() {
     const jsDay  = new Date(y, m-1, d).getDay(); // local, sem UTC
     const diaKey = DIA_JS_MAP[jsDay];
     document.getElementById('res-dia').value = diaKey;
-    renderDiasBtns(diaKey);
-    // Atualiza também o header sub para mostrar a data selecionada
+    // Atualiza o display do campo de data
+    _atualizaDisplayData(dataVal, diaKey);
+    // Atualiza sub do header
     const subEl = document.getElementById('header-sub');
-    if (subEl) {
-      const NOMES = {segunda:'Segunda-feira',terca:'Terça-feira',quarta:'Quarta-feira',
-                    quinta:'Quinta-feira',sexta:'Sexta-feira',sabado:'Sábado',domingo:'Domingo'};
-      const [yy,mm,dd] = dataVal.split('-');
-      subEl.textContent = `${dd}/${mm}/${yy} · ${NOMES[diaKey]||diaKey}`;
-    }
+    const NOMES = {segunda:'Segunda-feira',terca:'Terça-feira',quarta:'Quarta-feira',
+                   quinta:'Quinta-feira',sexta:'Sexta-feira',sabado:'Sábado',domingo:'Domingo'};
+    const [yy,mm,dd] = dataVal.split('-');
+    if (subEl) subEl.textContent = `${dd}/${mm}/${yy} · ${NOMES[diaKey]||diaKey}`;
   }
   loadResultados();
 }
@@ -666,15 +701,17 @@ async function loadResultados() {
       fbGetAll('sessoes')
     ]);
 
+    // Filtra apenas pendências ativas (não vistoriadas e não transferidas)
     const pends = pendencias.filter(p =>
-      p.data === data && p.turno === turno && p.dia_semana === dia
+      p.data === data && p.turno === turno && p.dia_semana === dia &&
+      !(p.vistoriado == 1)
     );
     const sess = sessoes.filter(s =>
       s.data === data && s.turno === turno && s.dia_semana === dia &&
       (s.status_geral === 'completo' || s.status_geral === 'parcial')
     );
 
-    const pendAtivos    = pends.filter(p => !p.vistoriado || p.vistoriado == 0);
+    const pendAtivos = pends.filter(p => !p.vistoriado || p.vistoriado == 0);
     const collabNomes   = [...new Set([
       ...sess.map(s => s.colaborador_nome || s.colaborador_card).filter(Boolean),
       ...pends.map(p => p.colaborador).filter(Boolean),
@@ -954,18 +991,21 @@ function abrirModalTransferir(pendId, itemNome, origem, categoria, motivo, qProg
   document.getElementById('transferir-qprog').value     = qProg || 0;
   document.getElementById('transferir-qfeit').value     = qFeit || 0;
   document.getElementById('transferir-categoria').value = categoria || '';
-
-  /* Pré-seleciona data = hoje e auto-detecta turno/dia */
-  const hoje = new Date().toISOString().slice(0,10);
-  document.getElementById('transferir-data').value = hoje;
-  onTransfDataChange(); // auto-detect turno e dia da semana
+  // Popular select de destino com todos os colaboradores (exceto origem)
+  const sel = document.getElementById('transferir-destino');
+  if (sel) {
+    sel.innerHTML = '<option value="">Selecione o colaborador destino...</option>' +
+      TODOS_COLABS.filter(n => n !== origem).map(n =>
+        `<option value="${n}">${COLLAB_EMOJI_MAP[n]||'👤'} ${n}</option>`
+      ).join('');
+  }
 
   /* Detalhe da tarefa */
   const qRest = Math.max(0, qProg - qFeit);
   document.getElementById('transferir-detalhe').innerHTML = `
     <div style="font-weight:900;font-size:14px;margin-bottom:6px">📦 ${itemNome}</div>
     <div style="font-size:12px;color:#888">
-      <span style="margin-right:12px">👤 <strong>${origem}</strong></span>
+      <span style="margin-right:12px">👤 <strong>De: ${origem}</strong></span>
       ${categoria ? `<span style="margin-right:12px">🏷️ ${categoria}</span>` : ''}
     </div>
     ${qProg > 0 ? `<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
@@ -975,11 +1015,7 @@ function abrirModalTransferir(pendId, itemNome, origem, categoria, motivo, qProg
     </div>` : ''}
     ${motivo ? `<div style="margin-top:6px;font-size:12px;color:#888">💬 Motivo: ${motivo}</div>` : ''}`;
 
-  document.getElementById('modal-transferir-sub').textContent = `Transferindo: "${itemNome}" · de ${origem}`;
-
-  /* Popula colaboradores disponíveis */
-  _popularDestinoComTarefas();
-
+  document.getElementById('modal-transferir-sub').textContent = `"${itemNome}" · de ${origem} → Transferir para:`;
   document.getElementById('modal-transferir').classList.remove('hidden');
 }
 
@@ -993,122 +1029,49 @@ async function confirmarTransferencia() {
   const origem    = document.getElementById('transferir-origem').value;
   const destino   = document.getElementById('transferir-destino').value;
   const obs       = document.getElementById('transferir-obs').value.trim();
-  const tarefaId  = document.getElementById('transferir-tarefa-id').value;
-  const categoria = document.getElementById('transferir-categoria').value;
 
   if (!destino) { showToast('⚠️ Selecione o colaborador destino!'); return; }
-
-  /* Lê turno/dia/data do modal de transferência (não do filtro de resultados) */
-  const turnoDestino = document.getElementById('transferir-turno').value || 'dia';
-  const diaDestino   = document.getElementById('transferir-dia').value   || 'segunda';
-  const dataDestino  = document.getElementById('transferir-data').value  || new Date().toISOString().slice(0, 10);
-
-  /* Turno/dia/data ORIGEM (dos filtros ativos de resultados) */
-  const turnoOrigem = document.getElementById('res-turno').value || 'dia';
-  const diaOrigem   = document.getElementById('res-dia').value   || 'segunda';
-  const dataOrigem  = document.getElementById('res-data').value  || new Date().toISOString().slice(0, 10);
-
-  const qProg = parseFloat(document.getElementById('transferir-qprog').value) || 0;
-  const qFeit = parseFloat(document.getElementById('transferir-qfeit').value) || 0;
-  const qRest = Math.max(0, qProg - qFeit);
 
   const btn = document.querySelector('#modal-transferir .modal-btn-confirm');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Transferindo...'; }
 
   try {
-    /* 1. Remove card da origem: marca pendência original como vistoriada/transferida */
+    /*
+     * COMPORTAMENTO CORRETO:
+     * 1. Marca a pendência original como vistoriada (vistoriado=1) → some da tela
+     * 2. Registra para quem foi transferida (apenas como log)
+     * 3. NÃO cria nova pendência para o destino — o destino ainda vai finalizar
+     *    sua tarefa normalmente pela tela de produção.
+     */
     await fbPatch('pendencias', pendId, {
       vistoriado: 1,
       transferido_para: destino,
-      transferido_turno: turnoDestino,
-      transferido_dia: diaDestino,
-      transferido_data: dataDestino,
       obs_transferencia: obs || '',
+      transferido_em: new Date().toISOString().slice(0,10),
     });
 
-    /* 2. Verifica se já existe pendência idêntica para o destino (evita duplicação) */
-    let jaExiste = false;
-    try {
-      const todasPends = await fbGetAll('pendencias');
-      jaExiste = todasPends.some(p =>
-        p.colaborador === destino &&
-        p.data === dataDestino &&
-        p.turno === turnoDestino &&
-        p.dia_semana === diaDestino &&
-        p.item && p.item.includes(itemNome) &&
-        !p.vistoriado
-      );
-    } catch(e) {}
-
-    /* 3. Cria nova pendência para o colaborador destino (somente se não existe) */
-    let novaPendId = null;
-    if (!jaExiste) {
-      const novaPend = await fbPost('pendencias', {
-        data: dataDestino,
-        turno: turnoDestino,
-        dia_semana: diaDestino,
-        colaborador: destino,
-        item: obs ? `${itemNome} (transf. de ${origem}: ${obs})` : `${itemNome} (transferido de ${origem})`,
-        categoria: categoria || '',
-        quantidade_programada: qRest > 0 ? qRest : (qProg || 1),
-        quantidade_produzida: 0,
-        status: 'nao_finalizado',
-        motivo: obs || `Transferido de ${origem}`,
-        vistoriado: 0,
-        origem_transferencia: origem,
-        tarefa_id: tarefaId || '',
-      });
-      novaPendId = novaPend?.id || null;
-    }
-
-    /* 4. Cria / vincula tarefa para o destino (para aparecer na tela de produção) */
-    if (!jaExiste) {
-      let tarefaBase = null;
-      if (tarefaId) {
-        try {
-          const snapT = await DB.ref(`tarefas/${tarefaId}`).once('value');
-          tarefaBase = snapT.val();
-        } catch(e) {}
-      }
-      /* Cria nova tarefa para o colaborador destino no turno/dia correto */
-      await fbPost('tarefas', {
-        colaborador: destino,
-        turno: turnoDestino,
-        dia_semana: diaDestino,
-        categoria: tarefaBase?.categoria || categoria || 'Geral',
-        item: tarefaBase ? tarefaBase.item + ` (transf. de ${origem})` : `${itemNome} (transf. de ${origem})`,
-        quantidade_padrao: qRest > 0 ? qRest : (tarefaBase?.quantidade_padrao || qProg || 1),
-        unidade: tarefaBase?.unidade || 'un',
-        ordem: tarefaBase?.ordem || 99,
-        origem_transferencia: origem,
-        tarefa_id_original: tarefaId || '',
-        transferida_em: dataDestino,
-        ativa: 1,
-      });
-    }
-
     fecharModalTransferir();
-    showToast(`✅ Transferido para ${destino}!`);
+    showToast(`✅ Transferido para ${destino}! Item removido das pendências.`);
 
-    /* Remove item do DOM imediatamente (sem reload) */
+    /* Remove item do DOM com animação */
     const el = document.getElementById(`ti-${pendId}`);
     if (el) {
-      el.style.transition = 'opacity 0.35s, transform 0.35s, max-height 0.35s, padding 0.35s';
+      el.style.transition = 'opacity 0.35s, transform 0.35s, max-height 0.4s, padding 0.4s';
       el.style.opacity    = '0';
-      el.style.transform  = 'translateX(40px)';
-      el.style.maxHeight  = el.offsetHeight + 'px';
+      el.style.transform  = 'translateX(50px)';
+      const h = el.offsetHeight;
+      el.style.maxHeight  = h + 'px';
       el.style.overflow   = 'hidden';
-      void el.offsetHeight; // reflow
+      void el.offsetHeight; // forçar reflow
       el.style.maxHeight  = '0';
       el.style.padding    = '0';
+      el.style.marginTop  = '0';
       const origemSlug = _slug(origem);
       setTimeout(() => {
         el.remove();
-        /* Verifica se o card do colaborador ficou vazio e o remove */
-        _verificaVazio(origemSlug);
-        /* Atualiza summary bar */
+        _verificaVazio(origemSlug); // se não restar itens, remove o card
         _atualizaSummary();
-      }, 370);
+      }, 420);
     }
 
   } catch(e) {
