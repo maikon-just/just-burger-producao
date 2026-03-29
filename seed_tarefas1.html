@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Just Burger — Seed Tarefas v3</title>
+<title>Just Burger — Seed Tarefas v3 · VERSÃO FINAL</title>
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',sans-serif;background:#0d1117;color:#e6edf3;padding:16px;max-width:900px;margin:0 auto;font-size:13px}
-h1{color:#ffa657;font-size:20px;margin-bottom:4px}
+body{font-family:'Segoe UI',sans-serif;background:#0d1117;color:#e6edf3;padding:16px;max-width:960px;margin:0 auto;font-size:13px}
+h1{color:#ffa657;font-size:20px;margin-bottom:4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .subtitle{color:#8b949e;font-size:12px;margin-bottom:20px}
 h2{color:#79c0ff;font-size:14px;margin:0 0 10px;display:flex;align-items:center;gap:6px}
 h3{color:#7ee787;font-size:12px;margin:8px 0 4px}
@@ -21,21 +21,28 @@ h3{color:#7ee787;font-size:12px;margin:8px 0 4px}
 .btn-add{background:#d29922;color:#000}
 .btn-sec{background:#21262d;color:#e6edf3;border:1px solid #30363d}
 
-/* Upload zones */
+/* Upload grid — 3 zonas */
 .upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px}
+.upload-grid-extra{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
 @media(max-width:540px){.upload-grid{grid-template-columns:1fr}}
 .upload-zone{border:2px dashed #30363d;border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:all .2s;position:relative;background:#0d1117}
 .upload-zone:hover,.upload-zone.drag{border-color:#ffa657;background:#1a1400}
 .upload-zone.done{border-color:#2ea043;border-style:solid;background:#0d1f0d}
+.upload-zone.done-extra{border-color:#79c0ff;border-style:solid;background:#0a1020}
 .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .upload-zone .uz-icon{font-size:28px;margin-bottom:6px}
 .upload-zone .uz-label{font-size:12px;font-weight:700;color:#8b949e}
 .upload-zone .uz-sub{font-size:11px;color:#6e7681;margin-top:3px}
 .upload-zone.done .uz-label{color:#7ee787}
 .upload-zone.done .uz-sub{color:#2ea043}
+.upload-zone.done-extra .uz-label{color:#79c0ff}
+.upload-zone.done-extra .uz-sub{color:#79c0ff}
 .badge-turno{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800;margin-bottom:6px}
 .bt-dia{background:#1a3a1a;color:#7ee787}
 .bt-noite{background:#1a1a3a;color:#79c0ff}
+.bt-extra{background:#2d1a3a;color:#d2a8ff}
+.extra-tag{background:#21262d;border:1px dashed #d2a8ff;border-radius:8px;padding:10px 14px;font-size:11px;color:#8b949e;margin-top:10px}
+.extra-tag strong{color:#d2a8ff}
 
 /* Stats */
 .stats{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
@@ -59,47 +66,100 @@ td.num{color:#ffa657;font-weight:700;text-align:right}
 /* Progress & log */
 .progress-bar{background:#21262d;border-radius:4px;height:14px;margin:8px 0;overflow:hidden;display:none}
 .progress-fill{background:linear-gradient(90deg,#238636,#2ea043);height:100%;transition:width .3s;border-radius:4px}
-.log{background:#010409;border:1px solid #21262d;border-radius:6px;padding:10px;font-family:monospace;font-size:11px;max-height:320px;overflow-y:auto;margin-top:8px;display:none;line-height:1.7}
+.log{background:#010409;border:1px solid #21262d;border-radius:6px;padding:10px;font-family:monospace;font-size:11px;max-height:360px;overflow-y:auto;margin-top:8px;display:none;line-height:1.7}
 .ok{color:#7ee787}.err{color:#ff7b72}.warn{color:#ffa657}.info{color:#79c0ff}
 
 .alert-warn{background:#2d1f00;border:1px solid #d29922;border-radius:8px;padding:10px 14px;font-size:12px;color:#fde68a;margin:8px 0}
 .alert-warn strong{color:#ffa657}
 .sep{border:none;border-top:1px solid #21262d;margin:14px 0}
 .empty-state{text-align:center;padding:30px;color:#6e7681;font-size:13px}
-.version-badge{display:inline-block;background:#1f3a5f;color:#79c0ff;font-size:10px;padding:2px 8px;border-radius:12px;margin-left:8px;font-weight:700}
+
+/* Badges */
+.version-badge{display:inline-block;background:#1f3a5f;color:#79c0ff;font-size:10px;padding:2px 8px;border-radius:12px;font-weight:700;white-space:nowrap}
+.final-badge{display:inline-block;background:#1a3a0a;color:#7ee787;font-size:10px;padding:2px 8px;border-radius:12px;font-weight:700;border:1px solid #2ea043;white-space:nowrap}
+
+/* Footer */
+.footer{margin-top:24px;padding:14px 16px;background:#161b22;border:1px solid #30363d;border-radius:10px;font-size:11px;color:#6e7681;display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.footer strong{color:#8b949e}
+.footer-sep{border-left:1px solid #30363d;height:20px}
+
+/* Separador de seção */
+.section-divider{display:flex;align-items:center;gap:8px;margin:14px 0 10px;color:#8b949e;font-size:11px;font-weight:700;text-transform:uppercase}
+.section-divider::before,.section-divider::after{content:'';flex:1;border-top:1px solid #21262d}
+
+/* Chip de turno extra */
+.extra-chip{display:inline-flex;align-items:center;gap:4px;background:#21262d;border:1px solid #d2a8ff;border-radius:20px;padding:3px 10px;font-size:11px;color:#d2a8ff;margin:4px 2px;font-weight:700}
+
+/* Animação pulso para badge final */
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(46,160,67,0.4)}50%{box-shadow:0 0 8px 3px rgba(46,160,67,0.3)}}
+.final-badge{animation:glow 2.5s ease-in-out infinite}
 </style>
 </head>
 <body>
 
-<h1>🍔 Just Burger — Seed de Tarefas <span class="version-badge">v3 CORRIGIDO</span></h1>
-<p class="subtitle">Versão corrigida — lê TODAS as abas de ambas as planilhas, incluindo Antoniel, Marcus, Aline, Sandro, Dina, Rhuan/Fritadeira e todas as abas de dias</p>
+<h1>
+  🍔 Just Burger — Seed de Tarefas
+  <span class="version-badge">v3</span>
+  <span class="final-badge">✅ VERSÃO FINAL</span>
+</h1>
+<p class="subtitle">
+  Modelo padrão definitivo · Lê <strong>todas as abas</strong> de ambas as planilhas ·
+  Inclui Antoniel, Marcus, Aline, Sandro, Dina, Rhuan/Fritadeira, Despacho e todos os colaboradores ·
+  Suporte a planilhas adicionais via upload extra
+</p>
 
-<!-- ═══ STEP 1 — UPLOAD ═══ -->
+<!-- ═══ STEP 1 — UPLOAD PADRÃO ═══ -->
 <div class="card">
-  <h2>📂 Passo 1 — Selecione as planilhas</h2>
+  <h2>📂 Passo 1 — Planilhas principais (Dia e Noite)</h2>
   <div class="upload-grid">
-    <div class="upload-zone" id="zone-dia" onclick="document.getElementById('inp-dia').click()">
+    <!-- Zona DIA -->
+    <div class="upload-zone" id="zone-dia"
+         onclick="document.getElementById('inp-dia').click()"
+         ondragover="dzDrag(event,'dia')" ondragleave="dzLeave('dia')" ondrop="dzDrop(event,'dia')">
       <input type="file" id="inp-dia" accept=".xlsx,.xls" style="display:none" onchange="onFile(this,'dia')"/>
       <div class="uz-icon">☀️</div>
       <div style="margin-bottom:4px"><span class="badge-turno bt-dia">TURNO DIA</span></div>
-      <div class="uz-label" id="lbl-dia">Clique para selecionar</div>
+      <div class="uz-label" id="lbl-dia">Clique ou arraste aqui</div>
       <div class="uz-sub" id="sub-dia">1-TAREFAS DIA DINÁ.xlsx</div>
     </div>
-    <div class="upload-zone" id="zone-noite" onclick="document.getElementById('inp-noite').click()">
+    <!-- Zona NOITE -->
+    <div class="upload-zone" id="zone-noite"
+         onclick="document.getElementById('inp-noite').click()"
+         ondragover="dzDrag(event,'noite')" ondragleave="dzLeave('noite')" ondrop="dzDrop(event,'noite')">
       <input type="file" id="inp-noite" accept=".xlsx,.xls" style="display:none" onchange="onFile(this,'noite')"/>
       <div class="uz-icon">🌙</div>
       <div style="margin-bottom:4px"><span class="badge-turno bt-noite">TURNO NOITE</span></div>
-      <div class="uz-label" id="lbl-noite">Clique para selecionar</div>
+      <div class="uz-label" id="lbl-noite">Clique ou arraste aqui</div>
       <div class="uz-sub" id="sub-noite">2-TAREFAS NOITE SANDRO.xlsx</div>
     </div>
   </div>
-  <p style="color:#6e7681;font-size:11px;margin-top:6px">💡 Arraste ou clique em cada caixa para selecionar o arquivo correto</p>
+
+  <!-- Separador -->
+  <div class="section-divider">Planilha adicional opcional</div>
+
+  <!-- Zona EXTRA -->
+  <div class="upload-grid-extra">
+    <div class="upload-zone" id="zone-extra"
+         onclick="document.getElementById('inp-extra').click()"
+         ondragover="dzDrag(event,'extra')" ondragleave="dzLeave('extra')" ondrop="dzDrop(event,'extra')">
+      <input type="file" id="inp-extra" accept=".xlsx,.xls" style="display:none" onchange="onFile(this,'extra')"/>
+      <div class="uz-icon">📋</div>
+      <div style="margin-bottom:4px"><span class="badge-turno bt-extra">PLANILHA EXTRA</span></div>
+      <div class="uz-label" id="lbl-extra">Clique ou arraste para adicionar planilha adicional</div>
+      <div class="uz-sub" id="sub-extra">Ex: nova planilha de colaborador, evento, etc.</div>
+    </div>
+  </div>
+  <div class="extra-tag">
+    💡 <strong>Planilha Extra:</strong> Use para adicionar tarefas de novos colaboradores, eventos especiais ou planilhas complementares.
+    As tarefas serão importadas junto com as planilhas principais. O sistema detecta automaticamente o turno e o colaborador por aba.
+  </div>
 </div>
 
 <!-- ═══ STEP 2 — PREVIEW ═══ -->
 <div class="card" id="card-preview" style="display:none">
-  <h2>👁️ Passo 2 — Preview das tarefas</h2>
+  <h2>👁️ Passo 2 — Preview das tarefas extraídas</h2>
   <div class="stats" id="stats-area"></div>
+  <div id="chips-area" style="margin-bottom:8px"></div>
   <div id="preview-area"><div class="empty-state">Aguardando upload das planilhas...</div></div>
 </div>
 
@@ -108,18 +168,37 @@ td.num{color:#ffa657;font-weight:700;text-align:right}
   <h2>🚀 Passo 3 — Importar para Firebase</h2>
   <div class="alert-warn">
     ⚠️ <strong>Limpar e Reinserir</strong> vai APAGAR todas as tarefas existentes e inserir as novas planilhas.<br>
-    Use <strong>Inserir sem Limpar</strong> apenas se quiser adicionar sem apagar as existentes.
+    Use <strong>Inserir sem Limpar</strong> se quiser adicionar sem apagar as existentes (ex: planilha extra).
   </div>
   <div style="margin:10px 0;display:flex;gap:8px;flex-wrap:wrap">
     <button class="btn btn-danger" id="btn-limpar" onclick="limparEInserir()">🗑️ Limpar e Reinserir Tarefas</button>
     <button class="btn btn-add" id="btn-add" onclick="apenasInserir()">➕ Inserir sem Limpar</button>
+    <button class="btn btn-sec" onclick="resetarTudo()">🔄 Limpar seleção</button>
   </div>
   <div class="progress-bar" id="prog-wrap"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
   <div class="log" id="log-area"></div>
 </div>
 
+<!-- ═══ FOOTER ═══ -->
+<div class="footer">
+  <span>🍔 <strong>Just Burger</strong> — Controle de Produção</span>
+  <span class="footer-sep"></span>
+  <span>📄 Seed de Tarefas <strong>v3 · VERSÃO FINAL</strong></span>
+  <span class="footer-sep"></span>
+  <span>📅 Modelo padrão desde <strong>28/03/2026</strong></span>
+  <span class="footer-sep"></span>
+  <span>🔥 Firebase Realtime DB · <code style="color:#79c0ff">justburger-producao-e9b27</code></span>
+</div>
+
 <script>
-/* ═══════════ FIREBASE ═══════════ */
+/* ═══════════════════════════════════════════════════════
+   JUST BURGER — SEED TAREFAS v3 · VERSÃO FINAL
+   Modelo padrão · 28/03/2026
+   Colaboradores: Dia (Dina) + Noite (Sandro) + Extra
+   21 colaboradores · ~1617 tarefas
+═══════════════════════════════════════════════════════ */
+
+/* ═══ FIREBASE ═══ */
 const FB = {
   apiKey:"AIzaSyDt1yzxGGzuT2cSdten1bFuXG7yeDQ90Po",
   authDomain:"justburger-producao-e9b27.firebaseapp.com",
@@ -132,12 +211,12 @@ const FB = {
 if(!firebase.apps.length) firebase.initializeApp(FB);
 const db = firebase.database();
 
-/* ═══════════ ESTADO ═══════════ */
-const ARQUIVOS = { dia: null, noite: null };
+/* ═══ ESTADO ═══ */
+// 'dia', 'noite', 'extra' → {wb, nome} | null
+const ARQUIVOS = { dia: null, noite: null, extra: null };
 let TODAS_TAREFAS = [];
 
-/* ═══════════ CONSTANTES ═══════════ */
-// Dias da semana para normalização
+/* ═══ CONSTANTES ═══ */
 const DIAS_MAP = {
   'segunda':  'segunda','segunda-feira':'segunda','seg':'segunda',
   'terca':    'terca','terça':'terca','terça-feira':'terca','terca-feira':'terca','ter':'terca',
@@ -150,7 +229,6 @@ const DIAS_MAP = {
 const TODOS_DIAS = ['segunda','terca','quarta','quinta','sexta','sabado','domingo'];
 const DIAS_JS   = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
 
-// Abas de dias de semana a ignorar como aba principal (serão processadas separadamente nas abas de turno)
 const ABAS_DIAS_SEMANA = new Set([
   'SEGUNDA','TERÇA','QUARTA','QUINTA','SEXTA','SABADO','SÁBADO','DOMINGO',
   'SEGUNDA-FEIRA','TERÇA-FEIRA','QUARTA-FEIRA','QUINTA-FEIRA','SEXTA-FEIRA',
@@ -170,7 +248,7 @@ const ABA_COLAB = {
   'JOAO':               'JOÃO',
   'ALAN RICARDO':       'ALAN RICARDO',
   'GABRIEL LEITE':      'GABRIEL LEITE',
-  'FRITADEIRA':         'RHUAN',     // aba FRITADEIRA = RHUAN
+  'FRITADEIRA':         'RHUAN',
   'GABRIEL KHALYL':     'GABRIEL KHALYL',
   'SERGIO CAMARAS':     'SERGIO CAMARAS',
   'SÉRGIO ':            'SERGIO CAMARAS',
@@ -195,7 +273,6 @@ const ABA_COLAB = {
   'SANDRO':                  'SANDRO',
 };
 
-// Linhas a ignorar (cabeçalhos, rodapés, avisos)
 const IGNORAR_CONTAINS = [
   'PROIBIDO O USO','EMERGÊNCIA LIGAR','JUST BURGER MATRIZ',
   'PARA QUALQUER','PASSIVO DE ADVERTENCIA',
@@ -207,6 +284,7 @@ const IGNORAR_CONTAINS = [
   'Todos os dias cada funcionário'
 ];
 
+/* ═══ UTILS ═══ */
 function norm(s){ return String(s||'').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 
 function isDiaSemana(s){
@@ -241,7 +319,6 @@ function nomeColab(aba){
   if(ABA_COLAB[k]) return ABA_COLAB[k];
   const ku = k.toUpperCase();
   for(const [a,v] of Object.entries(ABA_COLAB)) if(a.toUpperCase()===ku) return v;
-  // Tentar extrair nome antes de " - " (ex: "RHUAN - Fritadeira" → "RHUAN")
   const partes = k.split(/\s*[-–]\s*/);
   return partes[0].trim().toUpperCase();
 }
@@ -250,18 +327,13 @@ function parseQtd(b){
   if(typeof b==='number' && b>0 && b<1000000) return {qty:b, un:'un'};
   const s = String(b||'').trim();
   if(!s) return null;
-  // "70 kilos", "08 kilos", "150 kilos"
   const mKilo = s.match(/^(\d+(?:[.,]\d+)?)\s*kilos?/i);
   if(mKilo) return {qty:parseFloat(mKilo[1].replace(',','.')), un:'kg'};
-  // "60 litros"
   const mLit = s.match(/^(\d+(?:[.,]\d+)?)\s*litros?/i);
   if(mLit) return {qty:parseFloat(mLit[1].replace(',','.')), un:'L'};
-  // "200 discos"
   const mDisc = s.match(/^(\d+(?:[.,]\d+)?)\s*discos?/i);
   if(mDisc) return {qty:parseFloat(mDisc[1].replace(',','.')), un:'un'};
-  // "todos" ou texto especial → sem qtd
   if(/^todos?/i.test(s)||/^final/i.test(s)||s.length>20) return null;
-  // número puro em string
   const mNum = s.match(/^(\d+(?:[.,]\d+)?)$/);
   if(mNum) return {qty:parseFloat(mNum[1].replace(',','.')), un:'un'};
   return null;
@@ -273,7 +345,6 @@ function unidade(txt){
   if(/\blitros?\b/.test(t)) return 'L';
   if(/\bporç/.test(t)) return 'porções';
   if(/\bpacote/.test(t)) return 'pacotes';
-  if(/\bpé/.test(t)||/\bpes\b/.test(t)) return 'un';
   return 'un';
 }
 
@@ -327,26 +398,22 @@ function deveIgnorar(txt){
 }
 
 function isDataLinha(c0){
-  // "DATA:24/03/26" ou "DATA: 24/03/2026" ou serial Excel
   return /^DATA:?\s*\d/i.test(String(c0||'').trim()) || (typeof c0==='number' && c0>40000 && c0<55000);
+}
+
+/* ═══ TURNO PARA EXIBIÇÃO ═══ */
+function turnoLabel(turno){
+  if(turno==='dia') return '☀️';
+  if(turno==='noite') return '🌙';
+  return '📋';
 }
 
 /* ═══════════ PROCESSADORES ═══════════ */
 
 /*
  * processarAbaIndividual:
- * Abas onde cada linha é de um colaborador específico.
- * Estrutura: [DIA DA SEMANA] → [Dia | Qtd | Tarefa] → DATA:... → tarefas
- * Padrões detectados:
- *   - Col A = dia semana (ignorar), Col B vazia
- *   - Col A = "Dia " / "DATA:..." / vazio
- *   - Col B = quantidade (número ou "X kilos")
- *   - Col C = tarefa
- * Variantes:
- *   - GABRIEL KHALYL: Col A = data, Col B = tarefa (sem col C separada)
- *   - DINA/FAXINA: Col A = data, Col B = tarefa
- *   - SERGIO CAMARAS: Col A = data, Col B = qtd, Col C = tarefa
- *   - Alguns sem quantidade (só checklist)
+ * Abas com estrutura: dia semana → DATA:... → Col B=qty, Col C=tarefa
+ * Variantes detectadas automaticamente (layoutB_eh_tarefa).
  */
 function processarAbaIndividual(sheetName, ws, turno){
   const raw  = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true});
@@ -358,8 +425,6 @@ function processarAbaIndividual(sheetName, ws, turno){
   const vistas    = new Set();
   let diaAtual    = null;
 
-  // Detectar o tipo de layout da aba
-  // Verificar se col B é tarefa ou quantidade olhando primeiras linhas com dados
   let layoutB_eh_tarefa = false;
   for(let i=0; i<raw.length; i++){
     const r = raw[i];
@@ -368,96 +433,61 @@ function processarAbaIndividual(sheetName, ws, turno){
     const c1s = String(r[1]||'').trim();
     const c2s = String(r[2]||'').trim();
     if(c0s && /^DATA/i.test(c0s)){
-      // Se col B é texto longo (tarefa) e col C está vazia → layout B=tarefa
-      if(c1s.length > 5 && c2s==='' && typeof r[1]==='string') {
-        layoutB_eh_tarefa = true;
-      }
+      if(c1s.length > 5 && c2s==='' && typeof r[1]==='string') layoutB_eh_tarefa = true;
       break;
     }
   }
 
   for(let i=0; i<raw.length; i++){
     const r0 = raw[i];
-    const r2 = fmt[i];
     if(!r0) continue;
-
     const c0r = r0[0], c1r = r0[1], c2r = r0[2];
     const c0s = String(c0r||'').trim();
     const c1s = String(c1r||'').trim();
     const c2s = String(c2r||'').trim();
-
-    // Linha vazia
     const totalNonEmpty = [c0r,c1r,c2r,...(r0.slice(3)||[])].filter(c=>String(c||'').trim()).length;
     if(totalNonEmpty===0) continue;
 
-    // Detectar dia da semana como separador
-    if(isDiaSemana(c0s) && !c1s && !c2s){
-      diaAtual = normDia(c0s);
-      continue;
-    }
-    // Variante "QUARTA - FEIRA " com espaços
+    if(isDiaSemana(c0s) && !c1s && !c2s){ diaAtual=normDia(c0s); continue; }
     const c0Clean = c0s.replace(/\s*-\s*/g,' ').replace(/\s+/g,' ').trim();
-    if(isDiaSemana(c0Clean) && !c1s && !c2s){
-      diaAtual = normDia(c0Clean);
-      continue;
-    }
+    if(isDiaSemana(c0Clean) && !c1s && !c2s){ diaAtual=normDia(c0Clean); continue; }
 
-    // Linha de data
     const dSerial = typeof c0r==='number' ? excelDateToJS(c0r) : null;
     const dTexto  = !dSerial ? parseDataTexto(c0s) : null;
     const dDet    = dSerial || dTexto;
     if(dDet){
       diaAtual = diaSemanaDeData(dDet);
-      // Tarefa na mesma linha que a data?
       if(layoutB_eh_tarefa && c1s && !deveIgnorar(c1s)){
         push(colabNome, turno, diaAtual||'segunda', limpar(c1s), null, 'checklist', categ(colabNome,c1s), i);
       } else if(!layoutB_eh_tarefa){
         const qtdDet = parseQtd(c1r);
         if(c2s && !deveIgnorar(c2s)){
-          if(qtdDet){
-            push(colabNome, turno, diaAtual||'segunda', limpar(c2s), qtdDet.qty, qtdDet.un, categ(colabNome,c2s), i);
-          } else {
-            push(colabNome, turno, diaAtual||'segunda', limpar(c2s), null, 'checklist', categ(colabNome,c2s), i);
-          }
+          if(qtdDet) push(colabNome, turno, diaAtual||'segunda', limpar(c2s), qtdDet.qty, qtdDet.un, categ(colabNome,c2s), i);
+          else push(colabNome, turno, diaAtual||'segunda', limpar(c2s), null, 'checklist', categ(colabNome,c2s), i);
         }
       }
       continue;
     }
 
-    // Linha de tarefa pura (col A vazia, tarefa em col B ou C)
     if(c0s==='' || isDiaSemana(c0s)){
       if(layoutB_eh_tarefa){
-        // Col B = tarefa
-        if(c1s && c1s.length>3 && !deveIgnorar(c1s) && !isDiaSemana(c1s)){
+        if(c1s && c1s.length>3 && !deveIgnorar(c1s) && !isDiaSemana(c1s))
           push(colabNome, turno, diaAtual||'segunda', limpar(c1s), null, 'checklist', categ(colabNome,c1s), i);
-        }
       } else {
-        // Col B = qty, Col C = tarefa
         const qtdDet = parseQtd(c1r);
         if(c2s && c2s.length>3 && !deveIgnorar(c2s)){
-          if(qtdDet){
-            push(colabNome, turno, diaAtual||'segunda', limpar(c2s), qtdDet.qty, qtdDet.un, categ(colabNome,c2s), i);
-          } else if(c1s && !deveIgnorar(c1s)){
-            // Col B é texto de finalização/observação + Col C é tarefa
-            push(colabNome, turno, diaAtual||'segunda', limpar(c2s), null, 'checklist', categ(colabNome,c2s), i);
-          } else {
-            push(colabNome, turno, diaAtual||'segunda', limpar(c2s), null, 'checklist', categ(colabNome,c2s), i);
-          }
+          if(qtdDet) push(colabNome, turno, diaAtual||'segunda', limpar(c2s), qtdDet.qty, qtdDet.un, categ(colabNome,c2s), i);
+          else push(colabNome, turno, diaAtual||'segunda', limpar(c2s), null, 'checklist', categ(colabNome,c2s), i);
         } else if(c2s==='' && c1s && c1s.length>3 && !deveIgnorar(c1s) && typeof c1r==='string' && !parseQtd(c1r)){
-          // Col B é texto (tarefa), Col C vazia
           push(colabNome, turno, diaAtual||'segunda', limpar(c1s), null, 'checklist', categ(colabNome,c1s), i);
         }
       }
       continue;
     }
 
-    // Linha com col A preenchida e não é data nem dia da semana (possível cabeçalho de subseção ou tarefa)
     if(c0s && !deveIgnorar(c0s) && !isDiaSemana(c0s) && !isDataLinha(c0r)){
-      if(typeof c1r==='number' && c1r>0){
-        // Col A = item, Col B = qtd
+      if(typeof c1r==='number' && c1r>0)
         push(colabNome, turno, diaAtual||'segunda', limpar(c0s), c1r, unidade(c0s), categ(colabNome,c0s), i);
-      }
-      // Outros casos com texto em col A são provavelmente cabeçalhos de colaborador na aba de dia
     }
   }
 
@@ -467,34 +497,26 @@ function processarAbaIndividual(sheetName, ws, turno){
     const key = `${col}|${dia}|${item.toUpperCase().substring(0,40)}`;
     if(vistas.has(key)) return;
     vistas.add(key);
-    tarefas.push({
-      colaborador:col, turno:tur, dia_semana:dia||'segunda',
+    tarefas.push({colaborador:col, turno:tur, dia_semana:dia||'segunda',
       categoria:cat, item, quantidade:qty, quantidade_padrao:qty,
-      unidade:un||'checklist', ordem:ord
-    });
+      unidade:un||'checklist', ordem:ord});
   }
-
   return tarefas;
 }
 
 /*
- * processarAbaDia (abas de dia da semana do turno NOITE):
- * Cada aba de dia contém múltiplos colaboradores separados por linha de nome.
- * Estrutura: [NOME COLAB] → DATA:... → tarefas com qtd em "X kilos" na col B
- * Colaboradores possíveis: FABIO, DAVI, HENRIQUE, PEDRO, BRUNO/JOSÉ BRUNO
+ * processarAbaDia_Noite:
+ * Abas de dia da semana na planilha NOITE (ex: TERÇA, QUARTA...).
+ * Cada aba contém múltiplos colaboradores separados por linha de nome.
  */
 function processarAbaDia_Noite(sheetName, ws){
   const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true});
   if(!raw || raw.length<2) return [];
-
   const diaKey = normDia(sheetName);
   if(!diaKey) return [];
-
   const tarefas = [];
   const vistas  = new Set();
   let colabAtual = null;
-
-  // Colaboradores que aparecem nas abas de dia noite
   const NOITE_COLABS_RE = /^(FABIO|DAVI|HENRIQUE|PEDRO|BRUNO|JOÃO VICTOR|SAMUEL|SANDRO|DESPACHO)/i;
 
   for(let i=0; i<raw.length; i++){
@@ -504,15 +526,11 @@ function processarAbaDia_Noite(sheetName, ws){
     const c1r = r0[1];
     const c1s = String(c1r||'').trim();
     const c2s = String(r0[2]||'').trim();
-
     const totalNonEmpty = [r0[0],r0[1],r0[2]].filter(c=>String(c||'').trim()).length;
     if(totalNonEmpty===0) continue;
 
-    // Detectar linha de nome de colaborador
-    // Padrão: "FABIO", "DAVI - ESTAGIÁRIO", "HENRIQUE -ESTÁGIARIO", "BRUNO - Ilha 3/Chapeiro"
     if(NOITE_COLABS_RE.test(c0s) && !isDataLinha(r0[0])){
       const nome = c0s.split(/\s*[-–]\s*/)[0].trim().toUpperCase();
-      // Mapear nomes
       if(/^FABIO/i.test(nome))    colabAtual = 'FABIO';
       else if(/^DAVI/i.test(nome))     colabAtual = 'DAVI';
       else if(/^HENRIQUE/i.test(nome)) colabAtual = 'HENRIQUE';
@@ -524,11 +542,9 @@ function processarAbaDia_Noite(sheetName, ws){
     }
     if(!colabAtual) continue;
 
-    // Linha de data
     const dSerial = typeof r0[0]==='number' ? excelDateToJS(r0[0]) : null;
     const dTexto  = !dSerial ? parseDataTexto(c0s) : null;
     if(dSerial||dTexto){
-      // Ver se tem tarefa embutida (col B e C)
       const qtdDet = parseQtd(c1r);
       if(c2s && c2s.length>3 && !deveIgnorar(c2s)){
         if(qtdDet) push(colabAtual, diaKey, limpar(c2s), qtdDet.qty, qtdDet.un, i);
@@ -539,17 +555,14 @@ function processarAbaDia_Noite(sheetName, ws){
       continue;
     }
 
-    // Linha de tarefa
     if(c0s==='' || c0s==='Dia '){
       const qtdDet = parseQtd(c1r);
       if(c2s && c2s.length>3 && !deveIgnorar(c2s)){
         if(qtdDet) push(colabAtual, diaKey, limpar(c2s), qtdDet.qty, qtdDet.un, i);
         else push(colabAtual, diaKey, limpar(c2s), null, 'checklist', i);
       } else if(c2s==='' && c1s && c1s.length>3 && !deveIgnorar(c1s)){
-        // Col B é a tarefa (sem qtd)
-        if(typeof c1r==='string' && !parseQtd(c1r)){
+        if(typeof c1r==='string' && !parseQtd(c1r))
           push(colabAtual, diaKey, limpar(c1s), null, 'checklist', i);
-        }
       }
     }
   }
@@ -560,30 +573,22 @@ function processarAbaDia_Noite(sheetName, ws){
     const key = `${col}|${dia}|${item.toUpperCase().substring(0,40)}`;
     if(vistas.has(key)) return;
     vistas.add(key);
-    tarefas.push({
-      colaborador:col, turno:'noite', dia_semana:dia,
+    tarefas.push({colaborador:col, turno:'noite', dia_semana:dia,
       categoria:categ(col,item), item, quantidade:qty, quantidade_padrao:qty,
-      unidade:un||'checklist', ordem:ord
-    });
+      unidade:un||'checklist', ordem:ord});
   }
-
   return tarefas;
 }
 
 /*
  * processarAbaAline:
- * A aba ALINE não tem estrutura de dias - é uma lista de tarefas diárias fixas.
- * Todas as tarefas aparecem para todos os dias úteis (terca a domingo).
- * Estrutura: lista de tarefas em col A (sem quantidade).
- * Seções: INICIO / IFOOD E APP / FINALIZAÇÃO
+ * Lista de tarefas diárias fixas sem estrutura de datas → todos os dias úteis.
  */
 function processarAbaAline(ws, turno){
   const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true});
   if(!raw) return [];
-
   const tarefas = [];
   const vistas  = new Set();
-  // Aline trabalha terça a domingo (conforme cabeçalho "INICIO TERÇA QUARTA...")
   const diasAline = ['terca','quarta','quinta','sexta','sabado','domingo'];
 
   for(let i=0; i<raw.length; i++){
@@ -593,36 +598,29 @@ function processarAbaAline(ws, turno){
     if(!c0s || c0s.length<5) continue;
     if(deveIgnorar(c0s)) continue;
     if(isDiaSemana(c0s)) continue;
-    // Ignorar cabeçalho "INICIO", "FINALIZAÇÃO", seção IF
     if(/^(INICIO|FINALIZAÇÃO|FINALIZACAO|IFOOD|150 CARTÕES|ATENDIMENTO ALINE)/i.test(c0s)) continue;
     if(/^\d+\s*(cartões|cartos)/i.test(c0s)) continue;
-
     const item = limpar(c0s);
     if(item.length<5) continue;
-
     diasAline.forEach(dia=>{
       const key = `ALINE|${dia}|${item.toUpperCase().substring(0,40)}`;
       if(vistas.has(key)) return;
       vistas.add(key);
-      tarefas.push({
-        colaborador:'ALINE', turno, dia_semana:dia,
+      tarefas.push({colaborador:'ALINE', turno, dia_semana:dia,
         categoria:'Atendimento', item, quantidade:null, quantidade_padrao:null,
-        unidade:'checklist', ordem:i
-      });
+        unidade:'checklist', ordem:i});
     });
   }
   return tarefas;
 }
 
 /*
- * processarAbaAtendimento (Antoniel/Marcus):
- * Estrutura similar a Aline — lista de tarefas sem dias específicos.
- * Devem aparecer para todos os dias.
+ * processarAbaAtendimento (Antoniel / Marcus):
+ * Lista de tarefas sem dias específicos → replicadas para todos os dias.
  */
 function processarAbaAtendimento(ws, turno, colabNome){
   const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true});
   if(!raw) return [];
-
   const tarefas = [];
   const vistas  = new Set();
 
@@ -633,28 +631,19 @@ function processarAbaAtendimento(ws, turno, colabNome){
     const c1s = String(r0[1]||'').trim();
     const c2s = String(r0[2]||'').trim();
     if(!c0s && !c1s && !c2s) continue;
-
-    // Verificar se tem estrutura dia/data
     if(isDiaSemana(c0s)) continue;
-    if(isDataLinha(r0[0])){
-      // Se tem estrutura de data, processar como aba individual
-      return processarAbaIndividual('_'+colabNome, ws, turno);
-    }
-
+    if(isDataLinha(r0[0])) return processarAbaIndividual('_'+colabNome, ws, turno);
     const item = limpar(c0s || c1s || c2s);
     if(!item || item.length<5) continue;
     if(deveIgnorar(item)) continue;
     if(isDiaSemana(item)) continue;
-
     TODOS_DIAS.forEach(dia=>{
       const key = `${colabNome}|${dia}|${item.toUpperCase().substring(0,40)}`;
       if(vistas.has(key)) return;
       vistas.add(key);
-      tarefas.push({
-        colaborador:colabNome, turno, dia_semana:dia,
+      tarefas.push({colaborador:colabNome, turno, dia_semana:dia,
         categoria:'Atendimento', item, quantidade:null, quantidade_padrao:null,
-        unidade:'checklist', ordem:i
-      });
+        unidade:'checklist', ordem:i});
     });
   }
   return tarefas;
@@ -662,7 +651,7 @@ function processarAbaAtendimento(ws, turno, colabNome){
 
 /*
  * processarAbaDespacho:
- * Formato A=quantidade (número), B=item. Tarefas para todos os dias.
+ * Formato Col A=quantidade, Col B=item → para todos os dias.
  */
 function processarAbaDespacho(ws, turno){
   const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true});
@@ -672,7 +661,7 @@ function processarAbaDespacho(ws, turno){
   const IGNORAR_DESPACHO = [
     'Andar central','PARTE DE BAIXO DA ILHA','LISTA DE ITENS PARA FICAR EMBALADAS',
     'DEIXAR NA GELADEIRA','REFRIGERANTES','OBS:','QUANTIDADE','MANTER O AMBIENTE',
-    'VESPERA','ILHA DE DESPACHO','PERIODO','NÃO PRECISA','CHECK LIST','Andar central'
+    'VESPERA','ILHA DE DESPACHO','PERIODO','NÃO PRECISA','CHECK LIST'
   ];
   for(let i=0; i<raw.length; i++){
     const r0 = raw[i];
@@ -699,7 +688,7 @@ function processarAbaDespacho(ws, turno){
 
 /*
  * processarAbaSandro:
- * Lista de tarefas de supervisão sem datas — para todos os dias.
+ * Lista de tarefas de supervisão sem datas → para todos os dias.
  */
 function processarAbaSandro(ws, turno){
   const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true});
@@ -729,49 +718,111 @@ function processarAbaSandro(ws, turno){
   return tarefas;
 }
 
-/* ═══════════ ENTRY POINT POR ABA ═══════════ */
+/*
+ * processarAbaGenericaExtra:
+ * Para planilhas extras não mapeadas — tenta detectar automaticamente a estrutura.
+ * Usa processarAbaIndividual como fallback inteligente.
+ */
+function processarAbaGenericaExtra(sheetName, ws){
+  // Detecção: se aba tem nome de colaborador mapeado, usar esse colaborador
+  // Senão, usar o nome da aba como colaborador
+  const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true});
+  if(!raw || raw.length<2) return [];
+
+  // Tentar detectar se é lista simples (col A = tarefa) sem datas
+  let temDatas = false;
+  for(let i=0; i<Math.min(raw.length,20); i++){
+    const r = raw[i];
+    if(!r) continue;
+    const c0 = r[0];
+    if(excelDateToJS(c0)||parseDataTexto(String(c0||''))) { temDatas=true; break; }
+  }
+
+  if(!temDatas){
+    // Lista simples → replicar para todos os dias
+    const colabNome = nomeColab(sheetName);
+    const tarefas = [];
+    const vistas  = new Set();
+    for(let i=0; i<raw.length; i++){
+      const r0 = raw[i];
+      if(!r0) continue;
+      const c0s = String(r0[0]||'').trim();
+      const c1s = String(r0[1]||'').trim();
+      const txt = c0s.length>3 ? c0s : c1s;
+      if(!txt || txt.length<5) continue;
+      if(deveIgnorar(txt)) continue;
+      if(isDiaSemana(txt)) continue;
+      const item = limpar(txt);
+      if(item.length<5) continue;
+      TODOS_DIAS.forEach(dia=>{
+        const key = `${colabNome}|${dia}|${item.toUpperCase().substring(0,40)}`;
+        if(vistas.has(key)) return;
+        vistas.add(key);
+        tarefas.push({colaborador:colabNome, turno:'extra', dia_semana:dia,
+          categoria:categ(colabNome,item), item, quantidade:null, quantidade_padrao:null,
+          unidade:'checklist', ordem:i});
+      });
+    }
+    return tarefas;
+  }
+
+  // Tem datas → processamento padrão
+  return processarAbaIndividual(sheetName, ws, 'extra');
+}
+
+/* ═══ ENTRY POINT POR ABA ═══ */
 function processarAba(sheetName, ws, turno){
-  const sn = sheetName.trim();
+  const sn  = sheetName.trim();
   const snU = sn.toUpperCase();
 
-  // Detectar se é aba de dia da semana (planilha de noite)
-  // Essas abas têm múltiplos colaboradores dentro
-  if(turno==='noite' && ABAS_DIAS_SEMANA.has(snU)){
+  // Aba de dia da semana na planilha NOITE
+  if(turno==='noite' && ABAS_DIAS_SEMANA.has(snU))
     return processarAbaDia_Noite(sn, ws);
-  }
 
-  // Abas a ignorar completamente
-  if(ABAS_DIAS_SEMANA.has(snU)) return []; // dias da semana no turno dia
+  // Abas de dia da semana no turno DIA → ignorar (dados já estão nas abas individuais)
+  if(ABAS_DIAS_SEMANA.has(snU)) return [];
 
-  // Aba ABC — apenas planilha de controle de desperdício, sem tarefas reais
+  // ABC — planilha de controle de desperdício, sem tarefas reais
   if(snU==='ABC') return [];
 
-  // Aba ALINE — lista de tarefas diárias fixas sem estrutura de datas
+  // ALINE — lista diária fixa
   if(snU==='ALINE') return processarAbaAline(ws, turno);
 
-  // Abas ANTONIEL e MARCUS — lista de tarefas diárias fixas (sem datas)
-  if(snU==='ATENDIMENTO ANTONIEL'||snU==='ANTONIEL'){
+  // ANTONIEL e MARCUS — lista diária fixa
+  if(snU==='ATENDIMENTO ANTONIEL'||snU==='ANTONIEL')
     return processarAbaAtendimento(ws, turno, 'ANTONIEL');
-  }
-  if(snU==='ATENDIMENTO MARCUS'||snU==='MARCUS'){
+  if(snU==='ATENDIMENTO MARCUS'||snU==='MARCUS')
     return processarAbaAtendimento(ws, turno, 'MARCUS');
-  }
 
-  // Aba DESPACHO — checklist com formato A=qty, B=item (para todos os dias)
-  if(snU==='DESPACHO'){
-    return processarAbaDespacho(ws, turno);
-  }
+  // DESPACHO — Col A=qty, Col B=item
+  if(snU==='DESPACHO') return processarAbaDespacho(ws, turno);
 
-  // Aba SANDRO — lista de tarefas para todos os dias (sem datas)
-  if(snU==='SANDRO'){
-    return processarAbaSandro(ws, turno);
-  }
+  // SANDRO — supervisão, lista para todos os dias
+  if(snU==='SANDRO') return processarAbaSandro(ws, turno);
 
-  // Processamento padrão por aba individual
+  // Planilha EXTRA — processamento genérico inteligente
+  if(turno==='extra') return processarAbaGenericaExtra(sn, ws);
+
+  // Padrão: aba individual com datas
   return processarAbaIndividual(sn, ws, turno);
 }
 
-/* ═══════════ UPLOAD ═══════════ */
+/* ═══ DRAG & DROP HELPERS ═══ */
+function dzDrag(e, turno){ e.preventDefault(); document.getElementById('zone-'+turno).classList.add('drag'); }
+function dzLeave(turno){ document.getElementById('zone-'+turno).classList.remove('drag'); }
+function dzDrop(e, turno){
+  e.preventDefault();
+  document.getElementById('zone-'+turno).classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if(!file) return;
+  const inp = document.getElementById('inp-'+turno);
+  const dt  = new DataTransfer();
+  dt.items.add(file);
+  inp.files = dt.files;
+  onFile(inp, turno);
+}
+
+/* ═══ UPLOAD ═══ */
 async function onFile(inp, turno){
   const file = inp.files[0]; if(!file) return;
   const zone = document.getElementById('zone-'+turno);
@@ -779,14 +830,20 @@ async function onFile(inp, turno){
   const sub  = document.getElementById('sub-'+turno);
 
   lbl.textContent = '⏳ Lendo...';
-  zone.classList.remove('done');
+  zone.classList.remove('done','done-extra','drag');
 
   try{
     const buf = await file.arrayBuffer();
     const wb  = XLSX.read(buf, {type:'array', raw:true});
     ARQUIVOS[turno] = {wb, nome:file.name};
-    zone.classList.add('done');
-    lbl.textContent = '✅ '+file.name;
+
+    if(turno==='extra'){
+      zone.classList.add('done-extra');
+      lbl.textContent = '✅ '+file.name;
+    } else {
+      zone.classList.add('done');
+      lbl.textContent = '✅ '+file.name;
+    }
     sub.textContent = `${wb.SheetNames.length} abas encontradas`;
     await processarTodos();
   }catch(e){
@@ -795,9 +852,31 @@ async function onFile(inp, turno){
   }
 }
 
+/* ═══ RESETAR ═══ */
+function resetarTudo(){
+  if(!confirm('Limpar todas as planilhas selecionadas?')) return;
+  ['dia','noite','extra'].forEach(t=>{
+    ARQUIVOS[t] = null;
+    document.getElementById('zone-'+t).classList.remove('done','done-extra','drag');
+    document.getElementById('lbl-'+t).textContent = t==='extra'
+      ? 'Clique ou arraste para adicionar planilha adicional'
+      : 'Clique ou arraste aqui';
+    document.getElementById('sub-'+t).textContent = t==='extra'
+      ? 'Ex: nova planilha de colaborador, evento, etc.'
+      : t==='dia' ? '1-TAREFAS DIA DINÁ.xlsx' : '2-TAREFAS NOITE SANDRO.xlsx';
+    const inp = document.getElementById('inp-'+t);
+    if(inp) inp.value = '';
+  });
+  TODAS_TAREFAS = [];
+  document.getElementById('card-preview').style.display = 'none';
+  document.getElementById('card-import').style.display = 'none';
+}
+
+/* ═══ PROCESSAMENTO GERAL ═══ */
 async function processarTodos(){
   TODAS_TAREFAS = [];
   const pArea    = document.getElementById('preview-area');
+  const chipsEl  = document.getElementById('chips-area');
   const cardPrev = document.getElementById('card-preview');
   const cardImp  = document.getElementById('card-import');
   cardPrev.style.display = 'block';
@@ -806,11 +885,13 @@ async function processarTodos(){
   const arquivosCarregados = Object.entries(ARQUIVOS).filter(([,v])=>v);
   if(!arquivosCarregados.length){
     pArea.innerHTML = '<div class="empty-state">📂 Selecione pelo menos um arquivo acima</div>';
+    chipsEl.innerHTML = '';
     return;
   }
 
   for(const [turno, {wb, nome}] of arquivosCarregados){
-    html += `<h3 style="color:#ffa657;margin:12px 0 6px">📁 ${nome} — ${turno.toUpperCase()}</h3>`;
+    const corTurno = turno==='dia'?'#7ee787': turno==='noite'?'#79c0ff':'#d2a8ff';
+    html += `<h3 style="color:${corTurno};margin:12px 0 6px">${turnoLabel(turno)} ${nome} — ${turno.toUpperCase()}</h3>`;
     const colabsMap = {};
 
     for(const sn of wb.SheetNames){
@@ -819,13 +900,12 @@ async function processarTodos(){
         html += `<p style="color:#6e7681;font-size:11px">⏭️ Ignorado: ${sn}</p>`;
         continue;
       }
-      // Nas planilhas de DIA, as abas de dias de semana são ignoradas
       if(turno==='dia' && ABAS_DIAS_SEMANA.has(snU)){
         html += `<p style="color:#6e7681;font-size:11px">⏭️ Ignorado (aba de dia): ${sn}</p>`;
         continue;
       }
 
-      const ws = wb.Sheets[sn];
+      const ws    = wb.Sheets[sn];
       const tarefas = processarAba(sn, ws, turno);
 
       if(!tarefas.length){
@@ -834,14 +914,13 @@ async function processarTodos(){
       }
 
       TODAS_TAREFAS.push(...tarefas);
-      // Agrupar por colaborador para exibição
       for(const t of tarefas){
         if(!colabsMap[t.colaborador]) colabsMap[t.colaborador]=[];
         colabsMap[t.colaborador].push(t);
       }
     }
 
-    // Remover duplicatas entre abas (ex: colaborador FABIO pode aparecer em aba individual + aba de dia)
+    // Deduplicar globalmente
     const dedupKey = new Set();
     TODAS_TAREFAS = TODAS_TAREFAS.filter(t=>{
       const k = `${t.colaborador}|${t.dia_semana}|${t.item.toUpperCase().substring(0,40)}`;
@@ -849,7 +928,7 @@ async function processarTodos(){
       dedupKey.add(k); return true;
     });
 
-    // Renderizar preview por colaborador
+    // Renderizar blocos por colaborador
     for(const [col, tasks] of Object.entries(colabsMap)){
       const uniqueTasks = [];
       const seen = new Set();
@@ -861,7 +940,7 @@ async function processarTodos(){
       html += `
       <div class="colab-block">
         <div class="colab-hdr" onclick="toggleColab(this)">
-          <span style="font-size:16px">${turno==='dia'?'☀️':'🌙'}</span>
+          <span style="font-size:16px">${turnoLabel(turno)}</span>
           <span class="colab-hdr-name">${col}</span>
           <span class="colab-hdr-cnt">${uniqueTasks.length} tarefas · ${dias.length} dia(s): ${dias.join(', ')}</span>
           <span style="color:#6e7681;font-size:11px;margin-left:4px">▼</span>
@@ -890,15 +969,26 @@ async function processarTodos(){
   // Stats
   const totalDia   = TODAS_TAREFAS.filter(t=>t.turno==='dia').length;
   const totalNoite = TODAS_TAREFAS.filter(t=>t.turno==='noite').length;
+  const totalExtra = TODAS_TAREFAS.filter(t=>t.turno==='extra').length;
   const colabs     = [...new Set(TODAS_TAREFAS.map(t=>t.colaborador))];
   const cats       = [...new Set(TODAS_TAREFAS.map(t=>t.categoria))];
+
   document.getElementById('stats-area').innerHTML = `
     <div class="stat"><div class="stat-num">${TODAS_TAREFAS.length}</div><div class="stat-label">Total Tarefas</div></div>
     <div class="stat"><div class="stat-num" style="color:#7ee787">${totalDia}</div><div class="stat-label">☀️ Dia</div></div>
     <div class="stat"><div class="stat-num" style="color:#79c0ff">${totalNoite}</div><div class="stat-label">🌙 Noite</div></div>
+    ${totalExtra>0?`<div class="stat"><div class="stat-num" style="color:#d2a8ff">${totalExtra}</div><div class="stat-label">📋 Extra</div></div>`:''}
     <div class="stat"><div class="stat-num">${colabs.length}</div><div class="stat-label">Colaboradores</div></div>
     <div class="stat"><div class="stat-num" style="color:#ffa657">${cats.length}</div><div class="stat-label">Categorias</div></div>
   `;
+
+  // Chips de colaboradores
+  chipsEl.innerHTML = colabs.map(c=>{
+    const turno = TODAS_TAREFAS.find(t=>t.colaborador===c)?.turno||'';
+    const icon  = turnoLabel(turno);
+    const cnt   = TODAS_TAREFAS.filter(t=>t.colaborador===c).length;
+    return `<span class="extra-chip">${icon} ${c} <span style="color:#6e7681;font-size:10px">${cnt}</span></span>`;
+  }).join('');
 
   cardImp.style.display = TODAS_TAREFAS.length > 0 ? 'block' : 'none';
 }
@@ -910,7 +1000,7 @@ function toggleColab(hdr){
   if(arr) arr.textContent = body.classList.contains('open')?'▲':'▼';
 }
 
-/* ═══════════ FIREBASE OPS ═══════════ */
+/* ═══ FIREBASE OPS ═══ */
 function geraId(){ return Date.now().toString(36)+Math.random().toString(36).substr(2,8); }
 function setProgress(p){ document.getElementById('prog-fill').style.width = p+'%'; }
 function setBtns(on){ ['btn-limpar','btn-add'].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=!on;}); }
@@ -926,14 +1016,13 @@ function log(msg, tipo='info'){
 
 async function limparEInserir(){
   if(!TODAS_TAREFAS.length){alert('⚠️ Nenhuma tarefa carregada! Faça o upload das planilhas primeiro.');return;}
-  if(!confirm(`⚠️ Apagar TODAS as tarefas do Firebase e inserir ${TODAS_TAREFAS.length} novas?\n\nEsta ação não pode ser desfeita!`)) return;
+  if(!confirm(`⚠️ ATENÇÃO!\n\nAção: APAGAR TODAS as tarefas do Firebase e inserir ${TODAS_TAREFAS.length} novas.\n\nEsta ação NÃO pode ser desfeita!\n\nConfirmar?`)) return;
   setBtns(false);
   logEl = document.getElementById('log-area');
   logEl.innerHTML = '';
   logEl.style.display = 'block';
   document.getElementById('prog-wrap').style.display = 'block';
   setProgress(0);
-
   log('🗑️ Apagando tarefas existentes...','warn');
   try{
     await db.ref('tarefas').remove();
@@ -947,7 +1036,7 @@ async function limparEInserir(){
 
 async function apenasInserir(){
   if(!TODAS_TAREFAS.length){alert('⚠️ Nenhuma tarefa carregada!');return;}
-  if(!confirm(`Inserir ${TODAS_TAREFAS.length} tarefas sem apagar as existentes?`)) return;
+  if(!confirm(`Inserir ${TODAS_TAREFAS.length} tarefas SEM apagar as existentes?\n\nUse esta opção para adicionar planilhas extras.`)) return;
   setBtns(false);
   logEl = document.getElementById('log-area');
   logEl.innerHTML = '';
@@ -961,6 +1050,9 @@ async function inserir(){
   const total = TODAS_TAREFAS.length;
   log(`📦 Inserindo ${total} tarefas no Firebase...`, 'info');
   log(`👥 Colaboradores: ${[...new Set(TODAS_TAREFAS.map(t=>t.colaborador))].join(', ')}`, 'info');
+  log(`📊 Dia: ${TODAS_TAREFAS.filter(t=>t.turno==='dia').length} | Noite: ${TODAS_TAREFAS.filter(t=>t.turno==='noite').length}${TODAS_TAREFAS.some(t=>t.turno==='extra')?' | Extra: '+TODAS_TAREFAS.filter(t=>t.turno==='extra').length:''}`, 'info');
+  log('', 'info');
+
   let ok = 0, erros = 0;
   const LOTE = 25;
 
@@ -971,17 +1063,17 @@ async function inserir(){
       const id = geraId()+'_'+(i+idx);
       updates['tarefas/'+id] = {
         id,
-        colaborador:    t.colaborador,
-        turno:          t.turno,
-        dia_semana:     t.dia_semana,
-        categoria:      t.categoria,
-        item:           t.item,
-        quantidade:     t.quantidade,
+        colaborador:       t.colaborador,
+        turno:             t.turno,
+        dia_semana:        t.dia_semana,
+        categoria:         t.categoria,
+        item:              t.item,
+        quantidade:        t.quantidade,
         quantidade_padrao: t.quantidade_padrao,
-        unidade:        t.unidade,
-        ordem:          t.ordem||(i+idx),
-        created_at:     Date.now(),
-        updated_at:     Date.now()
+        unidade:           t.unidade,
+        ordem:             t.ordem||(i+idx),
+        created_at:        Date.now(),
+        updated_at:        Date.now()
       };
     });
     try{
@@ -997,46 +1089,30 @@ async function inserir(){
   }
 
   setProgress(100);
-  log('','info');
-  log('══════════════════════════════','info');
+  log('', 'info');
+  log('══════════════════════════════════', 'info');
   if(erros===0){
-    log(`✅ CONCLUÍDO! ${ok} tarefas inseridas com sucesso.`,'ok');
+    log(`✅ CONCLUÍDO! ${ok} tarefas inseridas com sucesso.`, 'ok');
   } else {
-    log(`⚠️ ${ok} inseridas, ${erros} com erro.`,'warn');
+    log(`⚠️ ${ok} inseridas, ${erros} com erro.`, 'warn');
   }
-  log('','info');
+  log('', 'info');
 
-  // Relatório por colaborador
+  // Resumo por colaborador
   const porColab = {};
   TODAS_TAREFAS.forEach(t=>{
-    if(!porColab[t.colaborador]) porColab[t.colaborador] = 0;
+    if(!porColab[t.colaborador]) porColab[t.colaborador]=0;
     porColab[t.colaborador]++;
   });
-  log('📊 Resumo por colaborador:','info');
+  log('📊 Resumo por colaborador:', 'info');
   Object.entries(porColab).sort((a,b)=>b[1]-a[1]).forEach(([col,cnt])=>{
-    log(`   ${col}: ${cnt} tarefas`,'info');
+    log(`   ${col}: ${cnt} tarefas`, 'info');
   });
-  log('','info');
-  log('👉 Abra index.html para testar os cards!','info');
+  log('', 'info');
+  log('👉 Abra index.html para ver os cards atualizados!', 'info');
+  log('📈 Abra medias.html para verificar as métricas.', 'info');
   setBtns(true);
 }
-
-/* Drag & drop */
-['dia','noite'].forEach(turno=>{
-  const zone = document.getElementById('zone-'+turno);
-  zone.addEventListener('dragover', e=>{e.preventDefault();zone.classList.add('drag');});
-  zone.addEventListener('dragleave', ()=>zone.classList.remove('drag'));
-  zone.addEventListener('drop', e=>{
-    e.preventDefault(); zone.classList.remove('drag');
-    const file = e.dataTransfer.files[0];
-    if(!file) return;
-    const inp = document.getElementById('inp-'+turno);
-    const dt  = new DataTransfer();
-    dt.items.add(file);
-    inp.files = dt.files;
-    onFile(inp, turno);
-  });
-});
 </script>
 </body>
 </html>
