@@ -1081,11 +1081,13 @@ async function confirmarTransferencia() {
     const tarefasExist = await fbGetAll('tarefas');
     const jaExiste = tarefasExist.some(t =>
       t.colaborador === destino && t.turno === turno &&
-      t.dia_semana === dia && (t.item||'').toLowerCase() === (itemNome||'').toLowerCase()
+      (t.data_especifica ? t.data_especifica === data : t.dia_semana === dia) &&
+      (t.item||'').toLowerCase() === (itemNome||'').toLowerCase()
     );
     if (!jaExiste) {
       await fbPost('tarefas', {
         turno, dia_semana: dia,
+        data_especifica: data,   /* aparece SOMENTE nesta data */
         colaborador: destino,
         item: itemNome,
         categoria: categoria,
