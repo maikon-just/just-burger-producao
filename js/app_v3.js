@@ -217,8 +217,10 @@ function _updateWorkDateDisplay(ds) {
   const dt = new Date(ds+'T12:00:00');
   const dn = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
   const mn = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  // Mostra apenas: Dia da Semana · DD Mês AAAA
-  el.textContent = `${dn[dt.getDay()]} · ${dt.getDate()} ${mn[dt.getMonth()]} ${dt.getFullYear()}`;
+  const isHoje = ds === today();
+  const diaStr = `${dn[dt.getDay()]}`;
+  const dateStr = `${dt.getDate()} ${mn[dt.getMonth()]} ${dt.getFullYear()}`;
+  el.innerHTML = `<strong>${diaStr}</strong>&nbsp;&nbsp;<span style="font-weight:700;color:#555">${dateStr}</span>${isHoje ? '&nbsp;&nbsp;<span class="date-today-badge">HOJE</span>' : ''}`;
 }
 
 /* ══ NAVEGAÇÃO ════════════════════════════════════════════ */
@@ -1426,12 +1428,12 @@ function _resRenderTasks(itens,slug) {
   }).join('');
 }
 
-/* ══ TRANSFERIR TAREFA — 1 PASSO (usa data/dia/turno já definidos) ══════════ */
+/* ══ TRANSFERIR TAREFA — modal único com calendário livre ══════════════════ */
 let _trCtx={};
 
 function _resAbrirTransferir(pendId,itemNome,origem,cat,motivo,qProg,qFeit,tarefaId) {
   const qRest=Math.max(0,(qProg||0)-(qFeit||0));
-  // Usa exatamente os mesmos data/turno/dia que estão nos filtros de resultado
+  // Data/turno/dia padrão = filtros da tela de resultados (editáveis no modal)
   const dataAtual  = (document.getElementById('res-data')||{}).value || today();
   const turnoAtual = (document.getElementById('res-turno')||{}).value || S.turno || 'dia';
   const [_y,_m,_d] = dataAtual.split('-').map(Number);
@@ -1447,81 +1449,109 @@ function _resAbrirTransferir(pendId,itemNome,origem,cat,motivo,qProg,qFeit,taref
     ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
     document.body.appendChild(ov);
   }
-  _trRenderPasso1(ov); // agora é passo único — só escolhe destino
+  _trRenderModal(ov);
   ov.style.display='flex';
 }
 
-/* Modal de 1 passo: apenas escolher o colaborador destino.
-   Data / turno / dia já vêm de _trCtx (definidos no momento de abrir). */
-function _trRenderPasso1(ov) {
-  const {itemNome,origem,cat,qProg,qFeit,qRest,turnoEscolhido,diaEscolhido,dataEscolhida}=_trCtx;
-  const diaObj  = DIAS_LIST.find(d=>d.key===diaEscolhido)||{short:diaEscolhido,label:diaEscolhido};
-  const turnoLbl= turnoEscolhido==='dia'?'☀️ Dia':'🌙 Noite';
-  // Data formatada para exibição
-  const [dy,dm,dd]= dataEscolhida.split('-');
-  const dataFmt   = `${dd}/${dm}/${dy}`;
+function _trSetTurno(t) {
+  _trCtx.turnoEscolhido=t;
+  const rb=document.querySelectorAll('._tr_turno_btn');
+  rb.forEach(b=>{ b.style.background=b.dataset.t===t?(t==='dia'?'#FDE68A':'#1E2235'):'#f3f4f6';
+    b.style.color=b.dataset.t===t?(t==='dia'?'#111':'#fff'):'#374151';
+    b.style.borderColor=b.dataset.t===t?(t==='dia'?'#EAB308':'#4f46e5'):'#e2e6f0'; });
+}
 
-  // Lista de todos os colaboradores (de ambos os turnos) exceto o de origem
-  const todosColabs=Object.keys(COLLAB_EMOJI).filter(n=>n!==origem&&n!=='').sort();
+function _trOnDataChange() {
+  const inp=document.getElementById('_tr_data_input');
+  if (!inp||!inp.value) return;
+  const [y,m,d]=inp.value.split('-').map(Number);
+  _trCtx.dataEscolhida=inp.value;
+  _trCtx.diaEscolhido=DIA_JS_MAP[new Date(y,m-1,d).getDay()];
+  const lbl=document.getElementById('_tr_dia_label');
+  if (lbl) {
+    const dObj=DIAS_LIST.find(x=>x.key===_trCtx.diaEscolhido)||{short:_trCtx.diaEscolhido};
+    lbl.textContent=`📆 ${dObj.short}`;
+  }
+}
+
+function _trRenderModal(ov) {
+  const {itemNome,origem,cat,qProg,qFeit,qRest,turnoEscolhido,diaEscolhido,dataEscolhida}=_trCtx;
+  const diaObj=DIAS_LIST.find(d=>d.key===diaEscolhido)||{short:diaEscolhido};
+  const todosColabs=Object.keys(COLLAB_EMOJI).filter(n=>n&&n!==origem).sort();
   const btns=todosColabs.map(n=>`
-    <button onclick="_trSelecionarDestino('${n.replace(/'/g,"\\'")}')"
+    <button class="_tr_dest_btn" data-nome="${n.replace(/"/g,'&quot;')}"
+      onclick="_trSelecionarDestino(this)"
       style="padding:10px 12px;border-radius:12px;border:2px solid #e2e6f0;background:#fff;
              font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;color:#374151;
-             display:flex;align-items:center;gap:8px;text-align:left;transition:all .15s"
+             display:flex;align-items:center;gap:8px;text-align:left;transition:all .15s;width:100%"
       onmouseover="this.style.borderColor='#e8590c';this.style.background='#fff7ed'"
       onmouseout="this.style.borderColor='#e2e6f0';this.style.background='#fff'">
       <span style="font-size:18px">${COLLAB_EMOJI[n]||'👤'}</span>
       <span>${n}</span>
     </button>`).join('');
 
-  ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:20px;width:100%;max-width:380px;
-    box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:inherit;max-height:92vh;overflow-y:auto">
-    <!-- Cabeçalho -->
+  ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:20px;width:100%;max-width:400px;
+    box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:'Nunito','Segoe UI',sans-serif;max-height:92vh;overflow-y:auto">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
       <div style="font-size:26px">🔄</div>
-      <div>
-        <div style="font-size:15px;font-weight:900">Transferir Tarefa</div>
-        <div style="font-size:11px;color:#888">De: <strong>${origem}</strong></div>
-      </div>
+      <div><div style="font-size:15px;font-weight:900">Transferir Tarefa</div>
+        <div style="font-size:11px;color:#888">De: <strong>${origem}</strong></div></div>
       <button onclick="document.getElementById('_modal_transferir_embutido').style.display='none'"
-        style="margin-left:auto;background:none;border:none;font-size:20px;cursor:pointer;color:#999">✕</button>
+        style="margin-left:auto;background:none;border:none;font-size:22px;cursor:pointer;color:#aaa;line-height:1">✕</button>
     </div>
-
-    <!-- Info da tarefa -->
-    <div style="background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:10px;margin-bottom:12px;font-size:13px">
-      <strong>${itemNome}</strong>
-      ${cat?`<div style="color:#888;font-size:11px;margin-top:2px">🏷️ ${cat}</div>`:''}
+    <div style="background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:10px;margin-bottom:14px;font-size:13px">
+      <strong style="font-size:14px">${itemNome}</strong>
+      ${cat?`<div style="color:#888;font-size:11px;margin-top:3px">🏷️ ${cat}</div>`:''}
       ${qProg>0?`<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
         <span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">📋 ${qProg}</span>
         ${qFeit>0?`<span style="background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">✅ ${qFeit}</span>`:''}
         ${qRest>0?`<span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">⬇️ falta ${qRest}</span>`:''}
       </div>`:''}
     </div>
-
-    <!-- Data/turno/dia (fixos, derivados do calendário) -->
-    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:8px 12px;margin-bottom:14px;
-                font-size:12px;color:#166534;font-weight:700;display:flex;gap:12px;flex-wrap:wrap">
-      <span>📅 ${dataFmt}</span>
-      <span>${turnoLbl}</span>
-      <span>📆 ${diaObj.short}</span>
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">📅 Data para o destino</label>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <input type="date" id="_tr_data_input" value="${dataEscolhida}"
+          onchange="_trOnDataChange()"
+          style="border:2px solid #e2e6f0;border-radius:10px;padding:9px 12px;font-family:inherit;
+                 font-size:14px;font-weight:800;outline:none;background:#f9fafb;color:#111;cursor:pointer;
+                 transition:border-color .2s;flex:1;min-width:140px"/>
+        <span id="_tr_dia_label" style="font-size:13px;font-weight:800;color:#4b5563;background:#f3f4f6;
+              padding:7px 12px;border-radius:10px;white-space:nowrap">📆 ${diaObj.short}</span>
+      </div>
     </div>
-
-    <!-- Observação -->
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">⏰ Turno</label>
+      <div style="display:flex;gap:8px">
+        <button class="_tr_turno_btn" data-t="dia" onclick="_trSetTurno('dia')"
+          style="flex:1;padding:9px;border-radius:12px;border:2px solid ${turnoEscolhido==='dia'?'#EAB308':'#e2e6f0'};
+                 background:${turnoEscolhido==='dia'?'#FDE68A':'#f3f4f6'};color:${turnoEscolhido==='dia'?'#111':'#374151'};
+                 font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">☀️ Dia</button>
+        <button class="_tr_turno_btn" data-t="noite" onclick="_trSetTurno('noite')"
+          style="flex:1;padding:9px;border-radius:12px;border:2px solid ${turnoEscolhido==='noite'?'#4f46e5':'#e2e6f0'};
+                 background:${turnoEscolhido==='noite'?'#1E2235':'#f3f4f6'};color:${turnoEscolhido==='noite'?'#fff':'#374151'};
+                 font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">🌙 Noite</button>
+      </div>
+    </div>
     <label style="font-size:11px;font-weight:800;color:#374151;display:block;margin-bottom:4px">📝 Observação (opcional)</label>
     <input type="text" id="_tr_obs" placeholder="Motivo da transferência..."
-      style="width:100%;padding:9px 12px;border:2px solid #e2e6f0;border-radius:10px;font-family:inherit;font-size:13px;margin-bottom:14px;outline:none;box-sizing:border-box"/>
-
-    <!-- Lista de colaboradores destino -->
+      style="width:100%;padding:9px 12px;border:2px solid #e2e6f0;border-radius:10px;
+             font-family:inherit;font-size:13px;margin-bottom:16px;outline:none;box-sizing:border-box"/>
     <div style="font-size:11px;font-weight:900;color:#6b7280;text-transform:uppercase;margin-bottom:8px;letter-spacing:.5px">
       👤 Transferir para</div>
-    <div style="display:flex;flex-direction:column;gap:6px">
-      ${btns}
-    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">${btns}</div>
   </div>`;
 }
 
-function _trSelecionarDestino(destino) {
+function _trSelecionarDestino(btn) {
+  const destino=btn.dataset.nome||btn.textContent.trim();
   _trCtx.destinoEscolhido=destino;
+  const inpData=document.getElementById('_tr_data_input');
+  if (inpData&&inpData.value) {
+    _trCtx.dataEscolhida=inpData.value;
+    const [y,m,d]=inpData.value.split('-').map(Number);
+    _trCtx.diaEscolhido=DIA_JS_MAP[new Date(y,m-1,d).getDay()];
+  }
   const obs=(document.getElementById('_tr_obs')||{}).value?.trim()||'';
   _resConfirmarTransferir(_trCtx.pendId,_trCtx.itemNome,_trCtx.origem,_trCtx.tarefaId,_trCtx.qProg,_trCtx.qFeit,obs);
 }
@@ -1550,30 +1580,36 @@ async function _resConfirmarTransferir(pendId,itemNome,origem,tarefaId,qProg,qFe
       transferido_em:data,
     });
 
-    /* 2. Cria tarefa no card de produção do DESTINO naquela data/turno/dia.
-       NÃO cria pendência — o colaborador vai executar normalmente.
-       Se já existir tarefa idêntica, não duplica. */
+    /* 2. Cria tarefa no card de produção do DESTINO — data_especifica garante
+       que aparece SOMENTE nesta data específica, não toda semana. */
     const tarefasExist = await _fbGetAll('tarefas');
+    const itemLower = (itemNome||'').toLowerCase().trim();
     const jaExiste = tarefasExist.some(t =>
-      t.colaborador===destino && t.turno===turno &&
-      (t.data_especifica ? t.data_especifica===data : t.dia_semana===dia) &&
-      (t.item||'').toLowerCase()===(itemNome||'').toLowerCase()
+      t.colaborador===destino &&
+      t.turno===turno &&
+      (t.data_especifica===data || (!t.data_especifica && t.dia_semana===dia)) &&
+      (t.item||'').toLowerCase().trim()===itemLower
     );
+    console.log('[Transferir] destino=',destino,'turno=',turno,'dia=',dia,'data=',data,'item=',itemNome,'jaExiste=',jaExiste);
     if (!jaExiste) {
-      await _fbPost('tarefas',{
-        turno, dia_semana:dia,
-        data_especifica:data,   /* aparece SOMENTE nesta data */
-        colaborador:destino,
-        item:itemNome,
-        categoria:_trCtx.cat||'',
-        quantidade_padrao:qtdFinal,
-        unidade:'un',
-        ordem:99,
-        ativa:1,
-        transferida_de:origem,
-        transferida_em:data,
-        obs:obs||'',
+      const novaTarefa = await _fbPost('tarefas',{
+        turno,
+        dia_semana: dia,
+        data_especifica: data,
+        colaborador: destino,
+        item: itemNome,
+        categoria: _trCtx.cat||'',
+        quantidade_padrao: qtdFinal||1,
+        unidade: 'un',
+        ordem: 99,
+        ativa: 1,
+        transferida_de: origem,
+        transferida_em: data,
+        obs: obs||'',
       });
+      console.log('[Transferir] tarefa criada:', novaTarefa);
+    } else {
+      console.log('[Transferir] tarefa já existe, não duplicada');
     }
 
     /* Fecha o modal */
