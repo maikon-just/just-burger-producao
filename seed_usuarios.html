@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Just Burger — Seed de Usuários</title>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
+  <script src="js/firebase_v2.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Nunito','Segoe UI',sans-serif;background:#0f0f1a;color:#fff;min-height:100vh;padding:24px 16px}
+    .container{max-width:860px;margin:0 auto}
+    h1{font-size:22px;font-weight:900;color:#EAB308;margin-bottom:4px}
+    .subtitle{font-size:13px;color:rgba(255,255,255,.5);margin-bottom:28px}
+    .card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:20px;margin-bottom:20px}
+    .card h2{font-size:15px;font-weight:900;margin-bottom:16px;color:#fff}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{text-align:left;padding:8px 10px;color:rgba(255,255,255,.5);font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid rgba(255,255,255,.1)}
+    td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.06);vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:800}
+    .badge-admin{background:rgba(234,179,8,.2);color:#EAB308;border:1px solid rgba(234,179,8,.3)}
+    .badge-lider{background:rgba(99,102,241,.2);color:#a5b4fc;border:1px solid rgba(99,102,241,.3)}
+    .badge-colab{background:rgba(34,197,94,.15);color:#86efac;border:1px solid rgba(34,197,94,.25)}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:12px;border:none;
+         font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;transition:all .2s}
+    .btn-primary{background:linear-gradient(135deg,#e8590c,#ff7b2f);color:#fff;width:100%}
+    .btn-primary:hover{opacity:.9}
+    .btn-danger{background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;width:100%}
+    .btn-danger:hover{opacity:.9}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    #log-box{background:#0a0a14;border:1px solid rgba(255,255,255,.1);border-radius:12px;
+             padding:16px;max-height:280px;overflow-y:auto;font-size:12px;font-family:monospace;
+             line-height:1.8;margin-top:16px;display:none}
+    .log-ok{color:#86efac} .log-err{color:#fca5a5} .log-info{color:#93c5fd} .log-warn{color:#fde68a}
+    .status-bar{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;
+                background:rgba(255,255,255,.05);margin-bottom:16px;font-size:13px;font-weight:700}
+    .progress{height:6px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden;flex:1}
+    .progress-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#e8590c,#EAB308);
+                   width:0%;transition:width .3s}
+    .senha-destaque{background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.3);
+                    border-radius:8px;padding:10px 14px;font-size:13px;font-weight:800;color:#FDE68A;
+                    text-align:center;margin-bottom:16px}
+    .dia-badge{color:#f97316;font-weight:800;font-size:11px}
+    .noite-badge{color:#a78bfa;font-weight:800;font-size:11px}
+    .action-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+    @media(max-width:480px){.action-row{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>🍔 Just Burger — Seed de Usuários</h1>
+  <p class="subtitle">Insere todos os 23 usuários padrão no Firebase · Senha padrão: <strong style="color:#EAB308">lider12345*</strong></p>
+
+  <div class="senha-destaque">
+    🔑 Senha padrão de todos os usuários: <code>lider12345*</code>
+  </div>
+
+  <!-- Tabela de usuários que serão inseridos -->
+  <div class="card">
+    <h2>👥 Usuários que serão inseridos (23 no total)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Username</th>
+          <th>Nome</th>
+          <th>Papel</th>
+          <th>Nome Card (BD)</th>
+          <th>Turno</th>
+          <th>Sistemas</th>
+        </tr>
+      </thead>
+      <tbody id="preview-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Ações -->
+  <div class="card">
+    <h2>⚙️ Ações</h2>
+    <div id="status-bar" class="status-bar" style="display:none">
+      <span id="status-txt">Aguardando...</span>
+      <div class="progress"><div class="progress-fill" id="progress-fill"></div></div>
+      <span id="status-count" style="white-space:nowrap;color:rgba(255,255,255,.5)">0 / 0</span>
+    </div>
+    <div class="action-row">
+      <button class="btn btn-primary" id="btn-inserir" onclick="_seedInserir()">
+        <i class="fas fa-plus-circle"></i> Inserir sem apagar existentes
+      </button>
+      <button class="btn btn-danger" id="btn-limpar-inserir" onclick="_seedLimparInserir()">
+        <i class="fas fa-sync-alt"></i> Limpar tudo e reinserir
+      </button>
+    </div>
+    <div id="log-box"></div>
+  </div>
+
+  <div style="text-align:center;margin-top:12px">
+    <a href="portal.html" style="color:rgba(255,255,255,.4);font-size:13px;font-weight:700;text-decoration:none">
+      ← Voltar ao Portal
+    </a>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════
+   LISTA DOS 21 USUÁRIOS PADRÃO
+   senha: lider12345*
+   sistemas: array de IDs dos sistemas permitidos
+════════════════════════════════════════════════════════ */
+const SENHA_PADRAO = 'lider12345*';
+const _hash = s => btoa(unescape(encodeURIComponent(s)));
+
+const USUARIOS_PADRAO = [
+  // ── ADMINISTRADOR ────────────────────────────────────
+  {
+    username: 'justadm',
+    nome_display: 'Administrador',
+    papel: 'admin',
+    nome_card: '',
+    departamento: 'TODOS',
+    turno_preferido: '',
+    sistemas: [],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+
+  // ── LÍDERES ───────────────────────────────────────────
+  {
+    username: 'jorge',
+    nome_display: 'Jorge',
+    papel: 'lider',
+    nome_card: '',
+    departamento: 'TODOS',
+    turno_preferido: '',
+    sistemas: ['producao','motoboys','financeiro','dashboard'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+
+  // ── COLABORADORES — TURNO DIA ─────────────────────────
+  {
+    username: 'dina',
+    nome_display: 'Dina',
+    papel: 'colaborador',
+    nome_card: 'DINA',
+    departamento: 'PRODUCAO',
+    turno_preferido: 'dia',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'aline',
+    nome_display: 'Aline',
+    papel: 'colaborador',
+    nome_card: 'ALINE',
+    departamento: 'PRODUCAO',
+    turno_preferido: 'dia',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'pablo',
+    nome_display: 'Pablo',
+    papel: 'colaborador',
+    nome_card: 'PABLO',
+    departamento: 'PRODUCAO',
+    turno_preferido: 'dia',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'mateus',
+    nome_display: 'Mateus',
+    papel: 'colaborador',
+    nome_card: 'MATEUS',
+    departamento: 'PRODUCAO',
+    turno_preferido: 'dia',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'joao',
+    nome_display: 'João',
+    papel: 'colaborador',
+    nome_card: 'JOÃO',
+    departamento: 'PRODUCAO',
+    turno_preferido: 'dia',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'alanricardo',
+    nome_display: 'Alan Ricardo',
+    papel: 'colaborador',
+    nome_card: 'ALAN RICARDO',
+    departamento: 'OPERACAO',
+    turno_preferido: 'dia',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'gabrielleite',
+    nome_display: 'Gabriel Leite',
+    papel: 'colaborador',
+    nome_card: 'GABRIEL LEITE',
+    departamento: 'PRODUCAO',
+    turno_preferido: 'dia',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'rhuan',
+    nome_display: 'Rhuan',
+    papel: 'colaborador',
+    nome_card: 'FRITADEIRA',
+    departamento: 'OPERACAO',
+    turno_preferido: 'dia',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'gabrielkhalyl',
+    nome_display: 'Gabriel Khalyl',
+    papel: 'colaborador',
+    nome_card: 'GABRIEL KHALYL',
+    departamento: 'PRODUCAO',
+    turno_preferido: 'dia',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'sergio',
+    nome_display: 'Sergio Câmaras',
+    papel: 'colaborador',
+    nome_card: 'SERGIO CAMARAS',
+    departamento: 'PRODUCAO',
+    turno_preferido: 'dia',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'wesley',
+    nome_display: 'Wesley Motorista',
+    papel: 'colaborador',
+    nome_card: 'WESLEY MOTORISTA',
+    departamento: 'OPERACAO',
+    turno_preferido: 'dia',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'faxina',
+    nome_display: 'Faxina',
+    papel: 'colaborador',
+    nome_card: 'FAXINA',
+    departamento: 'OPERACAO',
+    turno_preferido: 'dia',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+
+  // ── COLABORADORES — TURNO NOITE ───────────────────────
+  {
+    username: 'sandro',
+    nome_display: 'Sandro',
+    papel: 'colaborador',
+    nome_card: 'SANDRO',
+    departamento: 'PRODUCAO',
+    turno_preferido: 'noite',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'antoniel',
+    nome_display: 'Antoniel',
+    papel: 'colaborador',
+    nome_card: 'ANTONIEL',
+    departamento: 'ATENDIMENTO',
+    turno_preferido: 'noite',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'marcus',
+    nome_display: 'Marcus',
+    papel: 'colaborador',
+    nome_card: 'MARCUS',
+    departamento: 'ATENDIMENTO',
+    turno_preferido: 'noite',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'despacho',
+    nome_display: 'Despacho',
+    papel: 'colaborador',
+    nome_card: 'DESPACHO',
+    departamento: 'OPERACAO',
+    turno_preferido: 'noite',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'pedro',
+    nome_display: 'Pedro',
+    papel: 'colaborador',
+    nome_card: 'PEDRO',
+    departamento: 'PRODUCAO',
+    turno_preferido: 'noite',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'davi',
+    nome_display: 'Davi',
+    papel: 'colaborador',
+    nome_card: 'DAVI',
+    departamento: 'PRODUCAO',
+    turno_preferido: 'noite',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'fabio',
+    nome_display: 'Fabio',
+    papel: 'colaborador',
+    nome_card: 'FABIO',
+    departamento: 'PRODUCAO',
+    turno_preferido: 'noite',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'henrique',
+    nome_display: 'Henrique',
+    papel: 'colaborador',
+    nome_card: 'HENRIQUE',
+    departamento: 'PRODUCAO',
+    turno_preferido: 'noite',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+  {
+    username: 'josebruno',
+    nome_display: 'José Bruno',
+    papel: 'colaborador',
+    nome_card: 'JOSÉ BRUNO',
+    departamento: 'PRODUCAO',
+    turno_preferido: 'noite',
+    sistemas: ['producao'],
+    primeiro_acesso: false,
+    ativo: true,
+  },
+];
+
+/* ════ RENDERIZAR PREVIEW ═══════════════════════════════ */
+const papelLabel  = { admin:'admin', lider:'lider', colaborador:'colab' };
+const papelEmoji  = { admin:'👑', lider:'🎖️', colaborador:'👷' };
+const sistLabel   = { producao:'🍔 Prod', motoboys:'🛵 Moto', financeiro:'💰 Fin', dashboard:'📊 Dash' };
+
+function _renderPreview() {
+  const tbody = document.getElementById('preview-tbody');
+  tbody.innerHTML = USUARIOS_PADRAO.map((u, i) => {
+    const badgeCls = 'badge badge-'+papelLabel[u.papel];
+    const turnoHtml = u.turno_preferido === 'dia'
+      ? '<span class="dia-badge">☀️ Dia</span>'
+      : u.turno_preferido === 'noite'
+        ? '<span class="noite-badge">🌙 Noite</span>'
+        : '<span style="color:rgba(255,255,255,.3)">—</span>';
+    const sistemas = (u.sistemas||[]).map(s => sistLabel[s]||s).join(' ');
+    return `<tr>
+      <td style="color:rgba(255,255,255,.35)">${i+1}</td>
+      <td><strong>${u.username}</strong></td>
+      <td>${u.nome_display}</td>
+      <td><span class="${badgeCls}">${papelEmoji[u.papel]} ${u.papel}</span></td>
+      <td style="color:rgba(255,255,255,.5)">${u.nome_card||'—'}</td>
+      <td>${turnoHtml}</td>
+      <td style="font-size:11px;color:rgba(255,255,255,.4)">${sistemas||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ════ LOG ═══════════════════════════════════════════════ */
+function _log(msg, tipo='info') {
+  const box = document.getElementById('log-box');
+  box.style.display = 'block';
+  const cls = { ok:'log-ok', err:'log-err', info:'log-info', warn:'log-warn' }[tipo]||'log-info';
+  box.innerHTML += `<div class="${cls}">${msg}</div>`;
+  box.scrollTop = box.scrollHeight;
+}
+function _clearLog() {
+  document.getElementById('log-box').innerHTML = '';
+}
+
+/* ════ PROGRESSO ═════════════════════════════════════════ */
+function _setStatus(txt, done, total) {
+  document.getElementById('status-bar').style.display = 'flex';
+  document.getElementById('status-txt').textContent = txt;
+  document.getElementById('status-count').textContent = `${done} / ${total}`;
+  const pct = total > 0 ? Math.round(done/total*100) : 0;
+  document.getElementById('progress-fill').style.width = pct+'%';
+}
+
+function _setButtons(disabled) {
+  document.getElementById('btn-inserir').disabled = disabled;
+  document.getElementById('btn-limpar-inserir').disabled = disabled;
+}
+
+/* ════ SEED: INSERIR SEM APAGAR ══════════════════════════ */
+async function _seedInserir() {
+  _clearLog();
+  _setButtons(true);
+  _log('🔍 Verificando usuários existentes no Firebase...', 'info');
+
+  try {
+    const existentes = await fbv2_getAll('usuarios');
+    const usernames  = existentes.map(u => u.username);
+    _log(`📋 ${existentes.length} usuário(s) já existentes no banco.`, 'info');
+
+    let inseridos = 0, pulados = 0;
+    const total = USUARIOS_PADRAO.length;
+
+    for (let i = 0; i < total; i++) {
+      const u = USUARIOS_PADRAO[i];
+      _setStatus(`Processando ${u.username}...`, i, total);
+
+      if (usernames.includes(u.username)) {
+        _log(`⏭️ Pulando <strong>${u.username}</strong> — já existe.`, 'warn');
+        pulados++;
+      } else {
+        const dados = { ...u, senha: _hash(SENHA_PADRAO) };
+        await fbv2_post('usuarios', dados);
+        _log(`✅ Inserido: <strong>${u.username}</strong> (${u.nome_display})`, 'ok');
+        inseridos++;
+      }
+    }
+
+    _setStatus('✅ Concluído!', total, total);
+    _log(``, 'info');
+    _log(`📊 <strong>Resultado:</strong> ${inseridos} inseridos · ${pulados} já existiam · ${total} total`, 'ok');
+    if (inseridos > 0) {
+      _log(`🔑 Senha de todos os novos usuários: <strong>${SENHA_PADRAO}</strong>`, 'ok');
+    }
+
+  } catch(e) {
+    _log(`❌ Erro: ${e.message}`, 'err');
+    console.error(e);
+  } finally {
+    _setButtons(false);
+  }
+}
+
+/* ════ SEED: LIMPAR E REINSERIR ══════════════════════════ */
+async function _seedLimparInserir() {
+  if (!confirm(`⚠️ Isso VAI APAGAR todos os usuários existentes no Firebase e reinserir os 23 padrão.\n\nContinuar?`)) return;
+
+  _clearLog();
+  _setButtons(true);
+  _log('🗑️ Apagando todos os usuários existentes...', 'warn');
+
+  try {
+    const existentes = await fbv2_getAll('usuarios');
+    _log(`📋 ${existentes.length} usuário(s) encontrado(s) para excluir.`, 'info');
+
+    for (const u of existentes) {
+      await fbv2_delete('usuarios', u.id);
+      _log(`🗑️ Excluído: ${u.username}`, 'warn');
+    }
+    _log(`✅ Banco limpo!`, 'ok');
+    _log(``, 'info');
+    _log(`➕ Inserindo 23 usuários padrão...`, 'info');
+
+    const total = USUARIOS_PADRAO.length;
+    for (let i = 0; i < total; i++) {
+      const u = USUARIOS_PADRAO[i];
+      _setStatus(`Inserindo ${u.username}...`, i, total);
+      const dados = { ...u, senha: _hash(SENHA_PADRAO) };
+      await fbv2_post('usuarios', dados);
+      _log(`✅ Inserido: <strong>${u.username}</strong> — ${u.nome_display} (${u.papel})`, 'ok');
+    }
+
+    _setStatus('✅ Todos inseridos!', total, total);
+    _log(``, 'info');
+    _log(`🎉 <strong>Pronto!</strong> ${total} usuário(s) inserido(s) com senha <strong>${SENHA_PADRAO}</strong>`, 'ok');
+
+  } catch(e) {
+    _log(`❌ Erro: ${e.message}`, 'err');
+    console.error(e);
+  } finally {
+    _setButtons(false);
+  }
+}
+
+/* ═══ INIT ═══════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', _renderPreview);
+</script>
+</body>
+</html>
