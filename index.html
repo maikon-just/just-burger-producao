@@ -15,6 +15,21 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
   <!-- CSS principal -->
   <link rel="stylesheet" href="css/style.css"/>
+  <!-- Auth Guard: redireciona para portal se não houver sessão -->
+  <script>
+    (function _authGuard() {
+      try {
+        const raw = sessionStorage.getItem('jb_user');
+        if (!raw) {
+          /* Em desenvolvimento (localhost/preview) não redireciona */
+          const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+                       || location.hostname.includes('gitpod') || location.hostname.includes('preview')
+                       || location.protocol === 'blob:';
+          if (!isLocal) window.location.replace('portal.html');
+        }
+      } catch(e) { /* silencioso */ }
+    })();
+  </script>
 </head>
 <body class="has-bottom-nav">
 
@@ -100,22 +115,17 @@
       </div>
     </div>
 
-    <!-- SELETOR DE DATA — novo design -->
-    <div class="date-selector-wrap">
-      <div class="date-selector-label-top">
-        <i class="fas fa-calendar-alt"></i>
-        <span>DATA DE TRABALHO</span>
-      </div>
-      <div class="date-selector-row-new">
-        <!-- Input de data visível e clicável -->
+    <!-- SELETOR DE DATA — caixa única clicável -->
+    <div class="home-date-wrap">
+      <div class="home-date-box" onclick="var i=document.getElementById('work-date-input');if(i.showPicker)i.showPicker();else i.click();">
+        <i class="fas fa-calendar-alt home-date-icon"></i>
+        <span class="home-date-val" id="work-date-val">Carregando...</span>
+        <i class="fas fa-chevron-down home-date-chevron"></i>
         <input type="date" id="work-date-input"
                onchange="onWorkDateChange()"
-               class="date-input-box"/>
-        <!-- Display de dia da semana + badge hoje -->
-        <div class="date-info-text">
-          <span id="work-date-display">Carregando...</span>
-        </div>
+               style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2"/>
       </div>
+      <div class="home-date-weekday" id="work-date-display">—</div>
     </div>
 
     <!-- PROMPT TURNO -->
@@ -356,22 +366,22 @@
     <!-- Botões de ação da produção -->
     <div class="s1-action-row" id="s1-action-row">
 
-      <!-- FASE 1: Botão Iniciar (linha 1, igual ao Concluir Turno) -->
-      <button class="btn-sm-conclude" id="btn-sm-start-footer" onclick="iniciarProducao()" style="background:linear-gradient(135deg,#f97316,#ea580c);box-shadow:0 4px 14px rgba(249,115,22,.35)">
-        🚀 Iniciar Produção
+      <!-- FASE 1: Botão Iniciar (linha 1) — mesmo estilo do Concluir Turno -->
+      <button class="btn-turno-action btn-turno-iniciar" id="btn-sm-start-footer" onclick="iniciarProducao()">
+        🚀 Iniciar Turno
       </button>
 
-      <!-- FASE 2: Botão Concluir Turno (linha 1) -->
-      <button class="btn-sm-conclude hidden" id="btn-conclude" onclick="openFinishModal()">
-        🏁 Concluir Turno
+      <!-- FASE 2: Botão Finalizar Turno (linha 1) — aparece quando tudo finalizado -->
+      <button class="btn-turno-action btn-turno-finalizar hidden" id="btn-conclude" onclick="openFinishModal()">
+        🏁 Finalizar Turno
       </button>
 
-      <!-- Linha 2: Imprimir + Voltar (ambas as fases) -->
+      <!-- Linha 2: Imprimir + Voltar (sempre visíveis) -->
       <div class="s1-bottom-row">
-        <button class="btn-footer-action btn-footer-print" id="btn-imprimir-footer" onclick="doPrintDirect()">
+        <button class="btn-sm-imprimir" id="btn-imprimir-footer" onclick="doPrintDirect()">
           <i class="fas fa-print"></i> Imprimir
         </button>
-        <button class="btn-footer-action btn-footer-back" onclick="backToCollabScreen()" id="btn-voltar">
+        <button class="btn-sm-voltar" onclick="backToCollabScreen()" id="btn-voltar">
           ← Voltar
         </button>
       </div>
@@ -807,9 +817,25 @@
         </div>
       </div>
 
-      <!-- Modo QUANTIDADE (tarefas com quantidade) -->
+      <!-- Modo EXCEÇÃO (quantidade = 0) -->
+      <div id="s1-excecao-mode" class="hidden">
+        <div class="checklist-prompt" style="background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:16px;margin-bottom:8px">
+          <div class="checklist-icon" style="font-size:28px">⚡</div>
+          <div style="text-align:center">
+            <strong style="display:block;font-size:15px;font-weight:900;color:#92400e;margin-bottom:6px">Tarefa de Exceção</strong>
+            <p style="font-size:13px;color:#b45309;line-height:1.5">Quantidade padrão <strong>zero</strong>. Confirme se esta tarefa será executada no turno.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modo QUANTIDADE (tarefas com quantidade > 0) -->
       <div id="s1-qty-mode">
-        <div class="calc-card">
+        <!-- Linha de qtd padrão do BD -->
+        <div class="calc-card" style="margin-bottom:8px">
+          <div class="calc-row-item">
+            <span>📋 Padrão (BD)</span>
+            <strong class="calc-num" id="calc-padrao-display">—</strong>
+          </div>
           <div class="calc-row-item calc-highlight">
             <span>⚡ A produzir hoje</span>
             <strong class="calc-num" id="calc-necessario">—</strong>
@@ -866,18 +892,14 @@
         </div>
       </div>
 
-      <!-- Botões de status: 3 em 1 linha + maior qtd abaixo -->
+      <!-- Botões de status: apenas 100% e Não Executado na mesma linha -->
       <div class="field-label">📊 Como ficou?</div>
-      <div class="status-btns-row3">
-        <button class="sbtn sbtn-total"   data-status="total"          onclick="selectStatus('total')">✅ 100%</button>
-        <button class="sbtn sbtn-parcial" data-status="parcial"        onclick="selectStatus('parcial')">⚠️ Parcial</button>
-        <button class="sbtn sbtn-nao"     data-status="nao_finalizado" onclick="selectStatus('nao_finalizado')">❌ Não Exec.</button>
-      </div>
-      <div class="status-btns-row1" style="margin-top:6px">
-        <button class="sbtn sbtn-maior"   data-status="maior_qtd"      onclick="selectStatus('maior_qtd')" style="width:100%">➕ Maior Quantidade Produzida</button>
+      <div class="status-btns-row3" style="grid-template-columns:1fr 1fr">
+        <button class="sbtn sbtn-total" data-status="total"          onclick="selectStatus('total')">✅ 100%</button>
+        <button class="sbtn sbtn-nao"   data-status="nao_finalizado" onclick="selectStatus('nao_finalizado')">❌ Não Executado</button>
       </div>
 
-      <!-- Quantidade produzida (parcial ou maior_qtd) -->
+      <!-- Campo ocultos de quantidade (mantido para compatibilidade de dados) -->
       <div id="qty-prod-wrap" class="hidden">
         <div class="field-label" id="qty-prod-label">📦 Quantidade Produzida</div>
         <div class="qty-row big">
@@ -890,16 +912,12 @@
         </div>
       </div>
 
-      <!-- Motivos (parcial, nao_finalizado, maior_qtd) -->
+      <!-- Motivos — só aparece para Não Executado -->
       <div id="motivos-wrap" class="hidden">
         <div class="field-label">💬 Motivo <span class="required-mark">*obrigatório</span></div>
-        <div class="motivo-btns-grid">
+        <div class="motivo-btns-grid" style="grid-template-columns:1fr 1fr 1fr">
           <button class="motivo-btn" onclick="selectMotivo('⏰ Tempo insuficiente')">⏰ Tempo</button>
           <button class="motivo-btn" onclick="selectMotivo('🔧 Equipamento')">🔧 Equip.</button>
-          <button class="motivo-btn" onclick="selectMotivo('📦 Falta de insumos')">📦 Insumos</button>
-          <button class="motivo-btn" onclick="selectMotivo('✅ Estoque já completo')">✅ Estoque OK</button>
-          <button class="motivo-btn" onclick="selectMotivo('🎉 Feriado')">🎉 Feriado</button>
-          <button class="motivo-btn" onclick="selectMotivo('⚡ Ação especial')">⚡ Ação</button>
           <button class="motivo-btn" data-motivo-outros onclick="selectMotivo('Outros')">🔄 Outros</button>
         </div>
         <textarea id="motivo-custom" class="motivo-input hidden" placeholder="Descreva o motivo..." rows="2"></textarea>
