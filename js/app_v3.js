@@ -267,7 +267,7 @@ function togglePassVisibility() {
 function openLeaderPanel() {
   showScreen('screen-leader');
   S.currentLeaderTab='registros';
-  ['registros','pendentes','espelho','relatorio','tarefas'].forEach(t=>{
+  ['registros','pendentes','espelho','relatorio','tarefas','seed'].forEach(t=>{
     const btn=document.getElementById(`tab-${t}`);
     const pan=document.getElementById(`leader-panel-${t}`);
     if (btn) btn.classList.toggle('active',t==='registros');
@@ -278,13 +278,24 @@ function openLeaderPanel() {
 
 function switchLeaderTab(tab) {
   S.currentLeaderTab=tab;
-  ['registros','pendentes','espelho','relatorio','tarefas'].forEach(t=>{
+  ['registros','pendentes','espelho','relatorio','tarefas','seed'].forEach(t=>{
     const btn=document.getElementById(`tab-${t}`);
     const pan=document.getElementById(`leader-panel-${t}`);
     if (btn) btn.classList.toggle('active',t===tab);
     if (pan) pan.classList.toggle('hidden',t!==tab);
   });
   if (tab==='tarefas') loadTarefasGestao();
+}
+
+function abrirSeedFrame() {
+  const wrap  = document.getElementById('seed-frame-wrap');
+  const frame = document.getElementById('seed-iframe');
+  if (!wrap || !frame) return;
+  wrap.style.display = 'block';
+  if (!frame.src || frame.src === window.location.href) {
+    frame.src = 'seed_tarefas_v3.html';
+  }
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /* ══ TURNO ═══════════════════════════════════════════════ */
