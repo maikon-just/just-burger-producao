@@ -400,7 +400,8 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
   const dtTrab=S.dataTrabalho||today();
   const map={};
   todasTarefas.forEach(t=>{
-    if (t.turno===S.turno && t.dia_semana===S.dia && _getDept(t.colaborador)===dept)
+    const matchDia=t.data_especifica ? t.data_especifica===dtTrab : t.dia_semana===S.dia;
+    if (t.turno===S.turno && matchDia && _getDept(t.colaborador)===dept)
       map[t.colaborador]=(map[t.colaborador]||0)+1;
   });
   const nomes=Object.keys(map).sort();
@@ -656,8 +657,16 @@ async function selectColaborador(nome) {
   try {
     const todasTarefas=await _fbGetAll('tarefas');
     _cache.tarefas=todasTarefas;
+    const _dtTrab2=S.dataTrabalho||today();
     S.tarefas=todasTarefas
-      .filter(t=>t.turno===S.turno&&t.dia_semana===S.dia&&t.colaborador===nome)
+      .filter(t=>
+        t.turno===S.turno && t.colaborador===nome &&
+        /* tarefa recorrente normal ou tarefa transferida p/ esta data específica */
+        (t.data_especifica
+          ? t.data_especifica===_dtTrab2
+          : t.dia_semana===S.dia
+        )
+      )
       .sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     if (!S.tarefas.length) { showToast('😕 Sem tarefas para este colaborador'); return; }
 
@@ -1547,11 +1556,13 @@ async function _resConfirmarTransferir(pendId,itemNome,origem,tarefaId,qProg,qFe
     const tarefasExist = await _fbGetAll('tarefas');
     const jaExiste = tarefasExist.some(t =>
       t.colaborador===destino && t.turno===turno &&
-      t.dia_semana===dia && (t.item||'').toLowerCase()===(itemNome||'').toLowerCase()
+      (t.data_especifica ? t.data_especifica===data : t.dia_semana===dia) &&
+      (t.item||'').toLowerCase()===(itemNome||'').toLowerCase()
     );
     if (!jaExiste) {
       await _fbPost('tarefas',{
         turno, dia_semana:dia,
+        data_especifica:data,   /* aparece SOMENTE nesta data */
         colaborador:destino,
         item:itemNome,
         categoria:_trCtx.cat||'',
