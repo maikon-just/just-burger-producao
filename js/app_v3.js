@@ -118,6 +118,31 @@ let _deptAtual   = 'PRODUCAO';
 let _thanksIv    = null;
 let _atendRegIds = {};
 
+/* ══ SESSÃO DO PORTAL ════════════════════════════════════
+   Lê o usuário logado via portal.html (sessionStorage jb_user).
+   Se não houver sessão, o app roda no modo legado (sem restrições).
+   JB_SESSION.papel:
+     'admin' / 'lider'       → acesso total, sem redirecionamento forçado
+     'colaborador'           → fluxo restrito:
+         - turno_preferido   → seleciona turno automaticamente
+         - departamento      → pula tela de dept, abre direto o setor
+         - nome_card         → pula a grade de cards, abre direto o card
+════════════════════════════════════════════════════════ */
+let JB_SESSION = null;
+(function _lerSessaoPortal() {
+  try {
+    const raw = sessionStorage.getItem('jb_user');
+    if (raw) JB_SESSION = JSON.parse(raw);
+  } catch(e) { JB_SESSION = null; }
+})();
+
+function _isColaboradorRestrito() {
+  return JB_SESSION && JB_SESSION.papel === 'colaborador' && !!JB_SESSION.nome_card;
+}
+function _isLider() {
+  return JB_SESSION && (JB_SESSION.papel === 'lider' || JB_SESSION.papel === 'admin');
+}
+
 const _cache = {
   tarefas: null, sessoes: null, _faltas: null,
   _registros: null, turno: null, dia: null, data: null,
@@ -163,10 +188,111 @@ document.addEventListener('DOMContentLoaded', () => {
   initWorkDate();
   renderDayGrid();
   setDefaultDates();
-  showScreen('screen-welcome');
   _prefetchCache();
   _checkPendenciasNotif();
+
+  /* ── Restrições visuais (DOM) ── */
+  _aplicarRestricoesDom();
+
+  /* ── Fluxo por papel ── */
+  if (_isColaboradorRestrito()) {
+    _iniciarFluxoColaborador();
+  } else {
+    showScreen('screen-welcome');
+    /* Lider logado: já está autenticado, ocultar botão líder e deixar painel acessível */
+    if (_isLider()) {
+      S.leaderOk = true;
+      /* Oculta o botão flutuante de login do líder (não precisa mais de senha) */
+      const btnLider = document.querySelector('.btn-leader-access');
+      if (btnLider) btnLider.style.display = 'none';
+      /* Adiciona botão "Painel Líder" direto na welcome */
+      _injetarBotaoLiderNaHome();
+    }
+  }
 });
+
+/* ── Aplica restrições visuais para colaborador ─────── */
+function _aplicarRestricoesDom() {
+  if (!_isColaboradorRestrito()) return;
+  /* Oculta rodapé de navegação */
+  const nav = document.getElementById('global-bottom-nav');
+  if (nav) nav.style.display = 'none';
+  document.body.classList.remove('has-bottom-nav');
+  /* Oculta botão flutuante do líder */
+  const btnLider = document.querySelector('.btn-leader-access');
+  if (btnLider) btnLider.style.display = 'none';
+  /* Adiciona botão "Voltar ao Portal" discreto */
+  _injetarBotaoPortal();
+}
+
+/* Botão discreto de saída para o colaborador */
+function _injetarBotaoPortal() {
+  if (document.getElementById('btn-voltar-portal')) return;
+  const btn = document.createElement('button');
+  btn.id = 'btn-voltar-portal';
+  btn.innerHTML = '<i class="fas fa-sign-out-alt"></i>';
+  btn.title = 'Sair';
+  btn.style.cssText = [
+    'position:fixed;left:14px;top:14px;z-index:300',
+    'background:rgba(0,0,0,.45);backdrop-filter:blur(8px)',
+    'border:1px solid rgba(255,255,255,.15)',
+    'color:rgba(255,255,255,.6);font-size:16px',
+    'width:38px;height:38px;border-radius:50%',
+    'cursor:pointer;display:flex;align-items:center;justify-content:center',
+    'transition:all .2s',
+  ].join(';');
+  btn.onmouseenter = () => btn.style.color = '#fff';
+  btn.onmouseleave = () => btn.style.color = 'rgba(255,255,255,.6)';
+  btn.onclick = () => { window.location.href = 'portal.html'; };
+  document.body.appendChild(btn);
+}
+
+/* ── Fluxo do colaborador restrito ─────────────────────
+   Entra direto no turno → setor → card, sem escolhas
+──────────────────────────────────────────────────────── */
+function _iniciarFluxoColaborador() {
+  const sess = JB_SESSION;
+  /* Define data de trabalho */
+  initWorkDate();
+
+  /* Define turno: preferido ou pede escolha */
+  const turnoForce = sess.turno_preferido; // 'dia' | 'noite' | ''
+
+  if (turnoForce === 'dia' || turnoForce === 'noite') {
+    /* Turno fixo: seleciona e pula */
+    S.turno = turnoForce;
+    const [_y,_m,_d] = (S.dataTrabalho||today()).split('-').map(Number);
+    S.dia = DIA_JS_MAP[new Date(_y,_m-1,_d).getDay()];
+    /* Vai direto para o card, sem mostrar dept nem grades */
+    _invalidarCache();
+    selectColaborador(sess.nome_card);
+  } else {
+    /* Turno não definido: mostra só os botões de turno, sem mais nada */
+    _mostrarSomenteEscolhaTurno();
+  }
+}
+
+function _mostrarSomenteEscolhaTurno() {
+  /* Exibe a tela de boas-vindas simplificada só com turno */
+  showScreen('screen-welcome');
+  /* Ocultar botão do líder (não necessário para colaborador) */
+  const btnL = document.querySelector('.btn-leader-access');
+  if (btnL) btnL.style.display = 'none';
+}
+
+/* ── Injeta botão "Painel Líder" visível na home ────── */
+function _injetarBotaoLiderNaHome() {
+  const existing = document.getElementById('btn-lider-direto');
+  if (existing) return; // já existe
+  const btn = document.createElement('button');
+  btn.id = 'btn-lider-direto';
+  btn.className = 'btn-leader-access';
+  btn.title = 'Painel do Líder';
+  btn.style.cssText = 'position:fixed;right:16px;top:16px;z-index:200;background:#1a1a2e;color:#EAB308;';
+  btn.innerHTML = '<i class="fas fa-user-shield"></i>';
+  btn.onclick = () => openLeaderPanel();
+  document.body.appendChild(btn);
+}
 
 async function _prefetchCache() {
   try {
@@ -236,12 +362,22 @@ function goToWelcome() {
   S.turno=null; S.dia=null; S.colaborador=null;
   S.tarefas=[]; S.s1={}; S.s2={};
   S.producaoIniciada=false;
+  /* Colaborador restrito com turno fixo: volta direto ao card */
+  if (_isColaboradorRestrito() && JB_SESSION.turno_preferido) {
+    _iniciarFluxoColaborador();
+    return;
+  }
   showScreen('screen-welcome');
   _checkPendenciasNotif();
 }
 
 function goToLeaderLogin() {
-  if (S.leaderOk) { openLeaderPanel(); return; }
+  /* Se já está logado como lider/admin via portal, não precisa de senha */
+  if (S.leaderOk || _isLider()) {
+    S.leaderOk = true;
+    openLeaderPanel();
+    return;
+  }
   document.getElementById('leader-password').value='';
   document.getElementById('login-error').classList.add('hidden');
   showScreen('screen-leader-login');
@@ -313,6 +449,12 @@ function selectTurno(turno) {
   // Detecta dia da semana a partir da data escolhida (local, sem UTC)
   const [_y,_m,_d]=S.dataTrabalho.split('-').map(Number);
   S.dia=DIA_JS_MAP[new Date(_y,_m-1,_d).getDay()];
+
+  /* Colaborador restrito: pula dept e grade, vai direto ao card */
+  if (_isColaboradorRestrito()) {
+    selectColaborador(JB_SESSION.nome_card);
+    return;
+  }
   // Pula a tela de seleção de dia → vai direto para departamento
   _irParaDept();
 }
