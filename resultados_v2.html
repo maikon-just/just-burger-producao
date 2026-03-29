@@ -1056,14 +1056,18 @@ async function confirmarTransferencia() {
   const btn = document.querySelector('#modal-transferir .modal-btn-confirm');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Transferindo...'; }
 
+  const turno    = document.getElementById('res-turno').value || 'dia';
+  const data     = document.getElementById('res-data').value  || _hoje();
+  const [_y,_m,_d]= data.split('-').map(Number);
+  const dia      = DIA_JS_MAP[new Date(_y,_m-1,_d).getDay()];
+  const qProg    = parseFloat(document.getElementById('transferir-qprog').value)||0;
+  const qFeit    = parseFloat(document.getElementById('transferir-qfeit').value)||0;
+  const categoria= document.getElementById('transferir-categoria').value||'';
+  const qRest    = Math.max(0, qProg - qFeit);
+  const qtdFinal = qRest > 0 ? qRest : qProg;
+
   try {
-    /*
-     * COMPORTAMENTO CORRETO:
-     * 1. Marca a pendência original como vistoriada (vistoriado=1) → some da tela
-     * 2. Registra para quem foi transferida (apenas como log)
-     * 3. NÃO cria nova pendência para o destino — o destino ainda vai finalizar
-     *    sua tarefa normalmente pela tela de produção.
-     */
+    /* 1. Marca pendência original como transferida/vistoriada → some do card */
     await fbPatch('pendencias', pendId, {
       vistoriado: 1,
       transferido_para: destino,
@@ -1071,8 +1075,22 @@ async function confirmarTransferencia() {
       transferido_em: _hoje(),
     });
 
+    /* 2. Cria nova pendência para o DESTINO — aparece imediatamente nos Resultados */
+    await fbPost('pendencias', {
+      data, turno, dia_semana: dia,
+      colaborador: destino,
+      item: itemNome,
+      categoria: categoria,
+      quantidade_programada: qtdFinal,
+      quantidade_produzida: 0,
+      status: 'nao_finalizado',
+      motivo: obs || `Transferido de ${origem}`,
+      vistoriado: 0,
+      origem_transferencia: origem,
+    });
+
     fecharModalTransferir();
-    showToast(`✅ Transferido para ${destino}! Item removido das pendências.`);
+    showToast(`✅ Transferido para ${destino}! Pendência criada para o destino.`);
 
     /* Remove item do DOM com animação */
     const el = document.getElementById(`ti-${pendId}`);
