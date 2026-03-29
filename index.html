@@ -115,12 +115,11 @@
       </div>
     </div>
 
-    <!-- SELETOR DE DATA — caixa única clicável -->
+    <!-- SELETOR DE DATA — caixa compacta e centralizada -->
     <div class="home-date-wrap">
       <div class="home-date-box" onclick="var i=document.getElementById('work-date-input');if(i.showPicker)i.showPicker();else i.click();">
         <i class="fas fa-calendar-alt home-date-icon"></i>
         <span class="home-date-val" id="work-date-val">Carregando...</span>
-        <i class="fas fa-chevron-down home-date-chevron"></i>
         <input type="date" id="work-date-input"
                onchange="onWorkDateChange()"
                style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2"/>
@@ -366,15 +365,17 @@
     <!-- Botões de ação da produção -->
     <div class="s1-action-row" id="s1-action-row">
 
-      <!-- FASE 1: Botão Iniciar (linha 1) — mesmo estilo do Concluir Turno -->
-      <button class="btn-turno-action btn-turno-iniciar" id="btn-sm-start-footer" onclick="iniciarProducao()">
-        🚀 Iniciar Turno
-      </button>
-
-      <!-- FASE 2: Botão Finalizar Turno (linha 1) — aparece quando tudo finalizado -->
-      <button class="btn-turno-action btn-turno-finalizar hidden" id="btn-conclude" onclick="openFinishModal()">
-        🏁 Finalizar Turno
-      </button>
+      <!-- Linha 1: Iniciar Turno ou Finalizar Turno (centralizados) -->
+      <div style="display:flex;justify-content:center;width:100%">
+        <!-- FASE 1: Botão Iniciar -->
+        <button class="btn-turno-action btn-turno-iniciar" id="btn-sm-start-footer" onclick="iniciarProducao()">
+          🚀 Iniciar Turno
+        </button>
+        <!-- FASE 2: Botão Finalizar Turno — aparece quando tudo finalizado -->
+        <button class="btn-turno-action btn-turno-finalizar hidden" id="btn-conclude" onclick="openFinishModal()">
+          🏁 Finalizar Turno
+        </button>
+      </div>
 
       <!-- Linha 2: Imprimir + Voltar (sempre visíveis) -->
       <div class="s1-bottom-row">
@@ -806,44 +807,45 @@
     </div>
     <div class="modal-body modal-body-compact">
 
-      <!-- Modo EXECUTAR (tarefas sem quantidade) -->
+      <!-- ══ MODO EXECUÇÃO (checklist/sem qtd) ══ -->
       <div id="s1-checklist-mode" class="hidden">
-        <div class="checklist-prompt">
-          <div class="checklist-icon">🔧</div>
-          <div style="text-align:center">
-            <strong style="display:block;font-size:15px;font-weight:900;color:#1a1a2e;margin-bottom:6px">Tarefa de Execução</strong>
-            <p style="font-size:13px;color:#6b7280;line-height:1.5">Toque em <strong>Confirmar</strong> para marcar que esta tarefa será realizada no turno.</p>
-          </div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px;
+                    background:#f0f9ff;border:2px solid #bae6fd;border-radius:12px;
+                    padding:18px 20px;">
+          <span style="font-size:28px">🔧</span>
+          <span style="font-size:14px;color:#0369a1;font-weight:800">Inicie sua tarefa agora</span>
         </div>
       </div>
 
-      <!-- Modo EXCEÇÃO (quantidade = 0) -->
+      <!-- ══ MODO EXCEÇÃO (qtd = 0) ══ -->
       <div id="s1-excecao-mode" class="hidden">
-        <div class="checklist-prompt" style="background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:16px;margin-bottom:8px">
-          <div class="checklist-icon" style="font-size:28px">⚡</div>
-          <div style="text-align:center">
-            <strong style="display:block;font-size:15px;font-weight:900;color:#92400e;margin-bottom:6px">Tarefa de Exceção</strong>
-            <p style="font-size:13px;color:#b45309;line-height:1.5">Quantidade padrão <strong>zero</strong>. Confirme se esta tarefa será executada no turno.</p>
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px;
+                    background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;
+                    padding:16px 18px;">
+          <span style="font-size:26px">⚡</span>
+          <div>
+            <strong style="display:block;font-size:14px;font-weight:900;color:#92400e">Tarefa de Exceção</strong>
+            <span style="font-size:12px;color:#b45309;font-weight:700">Quantidade zero — confirme para executar</span>
           </div>
         </div>
       </div>
 
-      <!-- Modo QUANTIDADE (tarefas com quantidade > 0) -->
-      <div id="s1-qty-mode">
-        <!-- Linha de qtd padrão do BD -->
-        <div class="calc-card" style="margin-bottom:8px">
+      <!-- ══ MODO QUANTIDADE (qtd > 0) ══ -->
+      <div id="s1-qty-mode" style="display:none">
+
+        <!-- 1. Referência: quantidade padrão do BD -->
+        <div class="calc-card" style="margin-bottom:12px">
           <div class="calc-row-item">
-            <span>📋 Padrão (BD)</span>
+            <span>📋 Quantidade a fazer (padrão)</span>
             <strong class="calc-num" id="calc-padrao-display">—</strong>
           </div>
-          <div class="calc-row-item calc-highlight">
-            <span>⚡ A produzir hoje</span>
-            <strong class="calc-num" id="calc-necessario">—</strong>
-          </div>
         </div>
 
-        <div class="field-label" style="margin-top:12px;text-align:center">📦 Informe a qtd em estoque abaixo</div>
-        <div class="qty-row compact" style="justify-content:center;flex-wrap:wrap;gap:6px">
+        <!-- 2. Informe o estoque atual -->
+        <div class="field-label" style="text-align:center;margin-bottom:8px">
+          📦 Informe a quantidade em estoque abaixo
+        </div>
+        <div class="qty-row compact" style="justify-content:center;flex-wrap:wrap;gap:6px;margin-bottom:14px">
           <button class="qty-btn" onclick="adjField('estoque',-100)">-100</button>
           <button class="qty-btn" onclick="adjField('estoque',-10)">-10</button>
           <button class="qty-btn" onclick="adjField('estoque',-1)">-1</button>
@@ -854,10 +856,18 @@
           <button class="qty-btn plus" onclick="adjField('estoque',100)">+100</button>
         </div>
 
+        <!-- 3. A produzir hoje (calculado automaticamente) -->
+        <div class="calc-card" style="border:2px solid #fde68a;background:#fffbeb">
+          <div class="calc-row-item calc-highlight">
+            <span>⚡ A produzir hoje</span>
+            <strong class="calc-num" id="calc-necessario">—</strong>
+          </div>
+        </div>
+
         <!-- Ocultos — usados pelo JS -->
-        <span id="calc-padrao"   style="display:none">—</span>
-        <span id="calc-estoque"  style="display:none">0</span>
-        <span id="modal-s1-prog" style="display:none">0</span>
+        <span id="calc-padrao"    style="display:none">—</span>
+        <span id="calc-estoque"   style="display:none">0</span>
+        <span id="modal-s1-prog"  style="display:none">0</span>
         <span id="modal-s1-unit2" style="display:none"></span>
       </div>
 
