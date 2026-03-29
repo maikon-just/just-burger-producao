@@ -556,10 +556,10 @@ const SISTEMAS = [
     sub:    'Escala, performance e pagamento',
     icon:   '🛵',
     cor:    'sys-motoboys',
-    url:    'motoboys.html',
+    url:    'https://maikon-just.github.io/escala-motoboys/',
     acesso: ['admin','lider'],
-    status: 'soon',
-    badge:  { label: 'EM BREVE', cls: 'badge-soon' },
+    status: 'active',
+    badge:  { label: 'ATIVO', cls: 'badge-active' },
   },
   {
     id:     'dashboard',
@@ -578,10 +578,10 @@ const SISTEMAS = [
     sub:    'Pagamentos e fluxo de caixa',
     icon:   '💰',
     cor:    'sys-financeiro',
-    url:    'financeiro.html',
-    acesso: ['admin'],
-    status: 'soon',
-    badge:  { label: 'EM BREVE', cls: 'badge-soon' },
+    url:    'https://maikon-just.github.io/controle-pagamentos/',
+    acesso: ['admin','lider'],
+    status: 'active',
+    badge:  { label: 'ATIVO', cls: 'badge-active' },
   },
 ];
 
@@ -824,7 +824,12 @@ function _abrirSistema(url, id) {
     sess.sistema_ativo = id;
     sessionStorage.setItem('jb_user', JSON.stringify(sess));
   } catch(e) {}
-  window.location.href = url;
+  /* Links externos abrem em nova aba; internos na mesma aba */
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    window.open(url, '_blank', 'noopener');
+  } else {
+    window.location.href = url;
+  }
 }
 
 function _sistemaLocked(nome) {
