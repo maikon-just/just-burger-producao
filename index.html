@@ -65,7 +65,31 @@
     <i class="fas fa-user-shield"></i>
   </button>
 
-  <main class="welcome-body" style="justify-content:center;padding-top:24px">
+  <!-- Botão Sair (volta ao portal) — aparece só quando há sessão ativa -->
+  <div id="welcome-user-bar" style="display:none;
+    position:fixed;left:0;right:0;top:0;z-index:190;
+    background:rgba(26,26,46,.96);backdrop-filter:blur(10px);
+    padding:8px 16px;display:none;align-items:center;justify-content:space-between;gap:10px;
+    border-bottom:1px solid rgba(255,255,255,.1);">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:18px" id="welcome-user-emoji">👤</span>
+      <div>
+        <div style="font-size:12px;font-weight:900;color:#fff;line-height:1.2" id="welcome-user-nome">—</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.45);font-weight:700" id="welcome-user-papel">—</div>
+      </div>
+    </div>
+    <button onclick="_sairDoPortal()" style="
+      background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.4);
+      color:#fca5a5;padding:7px 14px;border-radius:20px;cursor:pointer;
+      font-family:inherit;font-size:12px;font-weight:800;
+      display:flex;align-items:center;gap:6px;transition:all .2s;"
+      onmouseenter="this.style.background='rgba(220,38,38,.35)'"
+      onmouseleave="this.style.background='rgba(220,38,38,.2)'">
+      <i class="fas fa-sign-out-alt"></i> Sair
+    </button>
+  </div>
+
+  <main class="welcome-body" id="welcome-body-main" style="justify-content:center;padding-top:24px">
 
     <!-- LOGO -->
     <div style="text-align:center;margin-bottom:28px">
@@ -201,7 +225,7 @@
 ══════════════════════════════════════════ -->
 <div id="screen-dept" class="screen hidden">
   <header class="nav-header">
-    <button class="btn-back-circle" onclick="goBack('screen-day')"><i class="fas fa-arrow-left"></i></button>
+    <button class="btn-back-circle" onclick="goToWelcome()"><i class="fas fa-arrow-left"></i></button>
     <div class="nav-chips">
       <span class="nav-chip" id="dept-turno-chip">☀️ Dia</span>
       <span class="nav-chip chip-day" id="dept-day-chip">Segunda</span>
