@@ -1453,21 +1453,13 @@ function _resAbrirTransferir(pendId,itemNome,origem,cat,motivo,qProg,qFeit,taref
   ov.style.display='flex';
 }
 
-/* Atualiza turno no contexto e re-renderiza botões visualmente */
+/* Atualiza turno no contexto e re-renderiza só o info de data */
 function _trSetTurno(t) {
   _trCtx.turnoEscolhido=t;
-  document.querySelectorAll('._tr_turno_btn').forEach(b=>{
-    const isActive=b.dataset.t===t;
-    if (b.dataset.t==='dia') {
-      b.style.background=isActive?'#FDE68A':'#f3f4f6';
-      b.style.color=isActive?'#111':'#374151';
-      b.style.borderColor=isActive?'#EAB308':'#e2e6f0';
-    } else {
-      b.style.background=isActive?'#1E2235':'#f3f4f6';
-      b.style.color=isActive?'#fff':'#374151';
-      b.style.borderColor=isActive?'#4f46e5':'#e2e6f0';
-    }
-  });
+  const rb=document.querySelectorAll('._tr_turno_btn');
+  rb.forEach(b=>{ b.style.background=b.dataset.t===t?(t==='dia'?'#FDE68A':'#1E2235'):'#f3f4f6';
+    b.style.color=b.dataset.t===t?(t==='dia'?'#111':'#fff'):'#374151';
+    b.style.borderColor=b.dataset.t===t?(t==='dia'?'#EAB308':'#4f46e5'):'#e2e6f0'; });
 }
 
 /* Atualiza data/dia no ctx quando o input de data muda no modal */
@@ -1489,22 +1481,22 @@ function _trRenderModal(ov) {
   const {itemNome,origem,cat,qProg,qFeit,qRest,turnoEscolhido,diaEscolhido,dataEscolhida}=_trCtx;
   const diaObj=DIAS_LIST.find(d=>d.key===diaEscolhido)||{short:diaEscolhido};
 
-  /* ── Lista de colaboradores exceto origem (usa TODOS_COLABS ordenado) ── */
-  const todosColabs=TODOS_COLABS.filter(n=>n&&n!==origem);
+  // Lista de colaboradores exceto origem
+  const todosColabs=Object.keys(COLLAB_EMOJI).filter(n=>n&&n!==origem).sort();
   const btns=todosColabs.map(n=>`
     <button class="_tr_dest_btn" data-nome="${n.replace(/"/g,'&quot;')}"
       onclick="_trSelecionarDestino(this)"
       style="padding:10px 12px;border-radius:12px;border:2px solid #e2e6f0;background:#fff;
              font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;color:#374151;
-             display:flex;align-items:center;gap:8px;text-align:left;transition:all .15s;width:100%;box-sizing:border-box"
+             display:flex;align-items:center;gap:8px;text-align:left;transition:all .15s;width:100%"
       onmouseover="this.style.borderColor='#e8590c';this.style.background='#fff7ed'"
       onmouseout="this.style.borderColor='#e2e6f0';this.style.background='#fff'">
       <span style="font-size:18px">${COLLAB_EMOJI[n]||'👤'}</span>
       <span>${n}</span>
     </button>`).join('');
 
-  ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:20px;width:100%;max-width:420px;
-    box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:'Nunito','Segoe UI',sans-serif;max-height:92vh;overflow-y:auto;box-sizing:border-box">
+  ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:20px;width:100%;max-width:400px;
+    box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:'Nunito','Segoe UI',sans-serif;max-height:92vh;overflow-y:auto">
 
     <!-- Cabeçalho -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
@@ -1522,39 +1514,38 @@ function _trRenderModal(ov) {
       <strong style="font-size:14px">${itemNome}</strong>
       ${cat?`<div style="color:#888;font-size:11px;margin-top:3px">🏷️ ${cat}</div>`:''}
       ${qProg>0?`<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
-        <span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">📋 Prog: ${qProg}</span>
-        ${qFeit>0?`<span style="background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">✅ Feito: ${qFeit}</span>`:''}
-        ${qRest>0?`<span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">⬇️ Restam: ${qRest}</span>`:''}
+        <span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">📋 ${qProg}</span>
+        ${qFeit>0?`<span style="background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">✅ ${qFeit}</span>`:''}
+        ${qRest>0?`<span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">⬇️ falta ${qRest}</span>`:''}
       </div>`:''}
     </div>
 
-    <!-- Data do destino (EDITÁVEL — campo livre) -->
+    <!-- Data escolhida (editável) -->
     <div style="margin-bottom:14px">
-      <label style="font-size:11px;font-weight:800;color:#e8590c;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">
-        📅 Data para o destino <span style="color:#aaa;font-weight:400;text-transform:none">(pode alterar)</span></label>
+      <label style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">📅 Data para o destino</label>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <input type="date" id="_tr_data_input" value="${dataEscolhida}"
           onchange="_trOnDataChange()"
-          style="border:2px solid #EAB308;border-radius:10px;padding:9px 12px;font-family:inherit;
-                 font-size:14px;font-weight:800;outline:none;background:#FFFBE6;color:#111;cursor:pointer;
-                 transition:border-color .2s;flex:1;min-width:140px;box-sizing:border-box"/>
+          style="border:2px solid #e2e6f0;border-radius:10px;padding:9px 12px;font-family:inherit;
+                 font-size:14px;font-weight:800;outline:none;background:#f9fafb;color:#111;cursor:pointer;
+                 transition:border-color .2s;flex:1;min-width:140px"/>
         <span id="_tr_dia_label" style="font-size:13px;font-weight:800;color:#4b5563;background:#f3f4f6;
               padding:7px 12px;border-radius:10px;white-space:nowrap">📆 ${diaObj.short}</span>
       </div>
     </div>
 
-    <!-- Turno do destino (EDITÁVEL) -->
+    <!-- Turno -->
     <div style="margin-bottom:14px">
-      <label style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">⏰ Turno do destino</label>
+      <label style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">⏰ Turno</label>
       <div style="display:flex;gap:8px">
         <button class="_tr_turno_btn" data-t="dia" onclick="_trSetTurno('dia')"
           style="flex:1;padding:9px;border-radius:12px;border:2px solid ${turnoEscolhido==='dia'?'#EAB308':'#e2e6f0'};
                  background:${turnoEscolhido==='dia'?'#FDE68A':'#f3f4f6'};color:${turnoEscolhido==='dia'?'#111':'#374151'};
-                 font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;transition:all .15s">☀️ Dia</button>
+                 font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">☀️ Dia</button>
         <button class="_tr_turno_btn" data-t="noite" onclick="_trSetTurno('noite')"
           style="flex:1;padding:9px;border-radius:12px;border:2px solid ${turnoEscolhido==='noite'?'#4f46e5':'#e2e6f0'};
                  background:${turnoEscolhido==='noite'?'#1E2235':'#f3f4f6'};color:${turnoEscolhido==='noite'?'#fff':'#374151'};
-                 font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;transition:all .15s">🌙 Noite</button>
+                 font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">🌙 Noite</button>
       </div>
     </div>
 
@@ -1566,7 +1557,7 @@ function _trRenderModal(ov) {
 
     <!-- Lista de colaboradores destino -->
     <div style="font-size:11px;font-weight:900;color:#6b7280;text-transform:uppercase;margin-bottom:8px;letter-spacing:.5px">
-      👤 Selecione o colaborador destino</div>
+      👤 Transferir para</div>
     <div style="display:flex;flex-direction:column;gap:6px">
       ${btns}
     </div>
@@ -1574,96 +1565,88 @@ function _trRenderModal(ov) {
 }
 
 function _trSelecionarDestino(btn) {
-  /* Lê data/turno atuais do modal — o usuário pode ter editado */
+  const destino=btn.dataset.nome||btn.textContent.trim();
+  _trCtx.destinoEscolhido=destino;
+  // Lê data/turno do modal (podem ter sido alterados pelo usuário)
   const inpData=document.getElementById('_tr_data_input');
   if (inpData&&inpData.value) {
     _trCtx.dataEscolhida=inpData.value;
     const [y,m,d]=inpData.value.split('-').map(Number);
     _trCtx.diaEscolhido=DIA_JS_MAP[new Date(y,m-1,d).getDay()];
   }
-  /* Destino selecionado */
-  const destino=btn.dataset.nome||btn.textContent.trim();
-  _trCtx.destinoEscolhido=destino;
-  /* Feedback visual */
-  document.querySelectorAll('._tr_dest_btn').forEach(b=>{ b.style.borderColor='#e2e6f0'; b.style.background='#fff'; });
-  btn.style.borderColor='#16a34a'; btn.style.background='#dcfce7';
   const obs=(document.getElementById('_tr_obs')||{}).value?.trim()||'';
   _resConfirmarTransferir(_trCtx.pendId,_trCtx.itemNome,_trCtx.origem,_trCtx.tarefaId,_trCtx.qProg,_trCtx.qFeit,obs);
 }
 
 async function _resConfirmarTransferir(pendId,itemNome,origem,tarefaId,qProg,qFeit,obsParam) {
-  const destino   = _trCtx.destinoEscolhido||'';
-  const obs       = obsParam||(document.getElementById('_tr_obs')||{}).value?.trim()||'';
+  const destino=_trCtx.destinoEscolhido||'';
+  const obs    =obsParam||(document.getElementById('_tr_obs')||{}).value?.trim()||'';
   if (!destino) { showToast('⚠️ Selecione o colaborador destino!'); return; }
 
-  const turno    = _trCtx.turnoEscolhido || S.turno || 'dia';
-  const dia      = _trCtx.diaEscolhido   || S.dia   || 'segunda';
-  const data     = _trCtx.dataEscolhida  || today();
-  const qRest    = Math.max(0,(qProg||0)-(qFeit||0));
-  const qtdFinal = qRest>0 ? qRest : (qProg||1);
-  const obsTexto = obs || `Transferido de ${origem} para ${destino}`;
+  const turno=_trCtx.turnoEscolhido||S.turno||'dia';
+  const dia  =_trCtx.diaEscolhido  ||S.dia  ||'segunda';
+  const data =_trCtx.dataEscolhida ||today();
+  const qRest=Math.max(0,(qProg||0)-(qFeit||0));
+  const qtdFinal=qRest>0?qRest:(qProg||0);
 
-  /* Desabilita todos os botões do modal para evitar double-submit */
-  const btnsModal=[...document.querySelectorAll('#_modal_transferir_embutido button')];
-  btnsModal.forEach(b=>{ b.disabled=true; });
+  // Mostra spinner no botão clicado
+  const btns=[...document.querySelectorAll('#_modal_transferir_embutido button')];
+  btns.forEach(b=>{b.disabled=true;});
 
   try {
-    /* ═══ 1. Marca a pendência ORIGINAL como vistoriada + transferida ═══
-       Remove o item do card de resultados do ORIGEM                        */
-    await _fbPatch('pendencias', pendId, {
-      vistoriado       : 1,
-      transferido_para : destino,
-      obs_transferencia: obsTexto,
-      transferido_em   : data,
+    /* 1. Marca pendência original como transferida/vistoriada → some do card */
+    await _fbPatch('pendencias',pendId,{
+      vistoriado:1,
+      transferido_para:destino,
+      obs_transferencia:obs||`Transferido para ${destino}`,
+      transferido_em:data,
     });
 
-    /* ═══ 2. Cria TAREFA no card de produção do DESTINO ═══════════════
-       data_especifica garante que só aparece nesta data, não toda semana.
-       Anti-duplicata: verifica por colaborador+turno+data+item           */
+    /* 2. Cria tarefa no card de produção do DESTINO naquela data/turno/dia.
+       Usa data_especifica para aparecer SOMENTE nesta data, não toda semana.
+       Só não duplica se já existir tarefa com mesmo item+colab+data+turno. */
     const tarefasExist = await _fbGetAll('tarefas');
-    _cache.tarefas     = null; /* invalida para próxima leitura */
-    const itemLower    = (itemNome||'').toLowerCase().trim();
-
-    const jaExisteTarefa = tarefasExist.some(t =>
-      t.colaborador === destino &&
-      t.turno       === turno   &&
-      (t.data_especifica === data || (!t.data_especifica && t.dia_semana === dia)) &&
-      (t.item||'').toLowerCase().trim() === itemLower
+    const itemLower = (itemNome||'').toLowerCase().trim();
+    const jaExiste = tarefasExist.some(t =>
+      t.colaborador===destino &&
+      t.turno===turno &&
+      (t.data_especifica===data || (!t.data_especifica && t.dia_semana===dia)) &&
+      (t.item||'').toLowerCase().trim()===itemLower
     );
-
-    if (!jaExisteTarefa) {
-      await _fbPost('tarefas', {
+    console.log('[Transferir] destino=',destino,'turno=',turno,'dia=',dia,'data=',data,'item=',itemNome,'jaExiste=',jaExiste);
+    if (!jaExiste) {
+      const novaTarefa = await _fbPost('tarefas',{
         turno,
-        dia_semana      : dia,
-        data_especifica : data,        /* aparece SOMENTE nesta data */
-        colaborador     : destino,
-        item            : itemNome,
-        categoria       : _trCtx.cat || '',
-        quantidade_padrao: qtdFinal,
-        unidade         : 'un',
-        ordem           : 99,
-        ativa           : 1,
-        transferida_de  : origem,
-        transferida_em  : data,
-        obs             : obs || '',
+        dia_semana: dia,
+        data_especifica: data,   /* aparece SOMENTE nesta data */
+        colaborador: destino,
+        item: itemNome,
+        categoria: _trCtx.cat||'',
+        quantidade_padrao: qtdFinal||1,
+        unidade: 'un',
+        ordem: 99,
+        ativa: 1,
+        transferida_de: origem,
+        transferida_em: data,
+        obs: obs||'',
       });
-      console.log('[Transferir] ✅ Tarefa criada para', destino, 'em', data, turno);
+      console.log('[Transferir] tarefa criada:', novaTarefa);
     } else {
-      console.log('[Transferir] Tarefa já existe para', destino, '— não duplicada');
+      console.log('[Transferir] tarefa já existe, não duplicada');
     }
 
-    /* ═══ 3. Fecha modal ═══════════════════════════════════════════════ */
+    /* Fecha o modal */
     const ov=document.getElementById('_modal_transferir_embutido');
     if (ov) ov.style.display='none';
 
-    showToast(`✅ Transferido para ${destino}! Card de produção atualizado.`);
+    showToast(`✅ Transferido para ${destino}! Tarefa adicionada ao card de ${destino}.`);
 
-    /* ═══ 4. Remove item do card de resultados do ORIGEM (animação) ═══ */
+    /* Remove item do DOM com animação suave */
     const el=document.getElementById(`rti-${pendId}`);
     if (el) {
-      el.style.transition='opacity 0.35s, transform 0.35s, max-height 0.4s, padding 0.4s, margin 0.4s';
+      el.style.transition='opacity 0.35s, transform 0.35s, max-height 0.4s, padding 0.4s';
       el.style.opacity='0';
-      el.style.transform='translateX(60px)';
+      el.style.transform='translateX(50px)';
       el.style.maxHeight=el.offsetHeight+'px';
       el.style.overflow='hidden';
       void el.offsetHeight;
@@ -1674,14 +1657,11 @@ async function _resConfirmarTransferir(pendId,itemNome,origem,tarefaId,qProg,qFe
         el.remove();
         _resVerificaVazio(_resSlug(origem));
         _resAtualizaSummary();
-      }, 420);
+      },420);
     }
-
     _invalidarCache();
-
   } catch(e) {
-    console.error('[Transferir] Erro:', e);
-    btnsModal.forEach(b=>{ b.disabled=false; });
+    btns.forEach(b=>{b.disabled=false;});
     showToast('❌ Erro ao transferir: '+e.message);
   }
 }
