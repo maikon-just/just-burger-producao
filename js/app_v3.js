@@ -991,23 +991,28 @@ function renderStep1() {
       </div></div>`;
   }).join('');
 
-  const pInfo     =document.getElementById('btn-pending-info');
-  const pTxt      =document.getElementById('pending-count-text');
-  const s1done    =document.getElementById('s1-done-footer');
+  const pInfo      =document.getElementById('btn-pending-info');
+  const pTxt       =document.getElementById('pending-count-text');
+  const btnsRow    =document.getElementById('s1-btns-row');     // Nova linha Iniciar+Imprimir+Voltar
+  const startBtn   =document.getElementById('btn-sm-start-footer');
   const concludeBtn=document.getElementById('btn-conclude');
   if (!S.producaoIniciada) {
+    /* Fase 1: mostrar linha de botões de programação */
     if (pInfo) pInfo.style.display='flex';
     if (pTxt)  pTxt.textContent='Toque nos cards acima para programar';
-    if (s1done) s1done.classList.add('hidden');
+    if (btnsRow) btnsRow.classList.remove('hidden');
+    if (startBtn) startBtn.style.display='inline-flex'; // garantir Iniciar visível
     if (concludeBtn) concludeBtn.classList.add('hidden');
   } else {
     if (allConfirmed) {
       if (pInfo) pInfo.style.display='none';
-      if (s1done) s1done.classList.remove('hidden');
+      if (btnsRow) btnsRow.classList.remove('hidden');
+      if (startBtn) startBtn.style.display='none'; // Oculta Iniciar (já iniciado)
     } else {
       if (pInfo) pInfo.style.display='flex';
       if (pTxt)  pTxt.textContent=`${total-confirmed} item(s) ainda não programado(s)`;
-      if (s1done) s1done.classList.add('hidden');
+      if (btnsRow) btnsRow.classList.remove('hidden');
+      if (startBtn) startBtn.style.display='none';
     }
     if (concludeBtn) concludeBtn.classList.add('hidden');
   }
@@ -1159,12 +1164,11 @@ function renderStep2() {
 
   const allDone    =S.tarefas.every(t=>S.s2[t.id]&&S.s2[t.id].status);
   const pInfo      =document.getElementById('btn-pending-info');
-  const s1done     =document.getElementById('s1-done-footer');
+  const btnsRow2   =document.getElementById('s1-btns-row');
   const concludeBtn=document.getElementById('btn-conclude');
   const btnImpr    =document.getElementById('btn-imprimir-footer');
-  const btnVoltar  =document.getElementById('btn-voltar');
-  if (pInfo)   pInfo.style.display='none';
-  if (s1done)  s1done.classList.add('hidden');
+  if (pInfo)    pInfo.style.display='none';
+  if (btnsRow2) btnsRow2.classList.add('hidden'); // Oculta linha fase 1 na fase 2
   if (concludeBtn) concludeBtn.classList.toggle('hidden',!allDone);
   /* Mostra Imprimir ao lado de Voltar durante etapa 2 */
   if (btnImpr) btnImpr.classList.remove('hidden');
@@ -1943,22 +1947,35 @@ function setDefaultDates() {
   const ini=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
   ['filter-start','filter-end','rel-start','rel-end'].forEach(id=>{
     const el=document.getElementById(id);
-    if (el) el.value=id.includes('end')?hoje:ini;
+    if (el) { el.value=id.includes('end')?hoje:ini; _syncDateDisplay(id); }
   });
+}
+
+/* Sincroniza display legível dos campos de data do painel líder */
+function _syncDateDisplay(fieldId) {
+  const inp = document.getElementById(fieldId);
+  const disp = document.getElementById(fieldId+'-display');
+  if (!inp || !disp) return;
+  if (!inp.value) { disp.textContent='Selecionar...'; return; }
+  const [y,m,d] = inp.value.split('-');
+  const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  disp.innerHTML = `<i class='fas fa-calendar-alt' style='color:#e8590c;margin-right:6px'></i>${d}/${meses[parseInt(m,10)-1]}/${y}`;
 }
 
 async function loadLeaderData() {
   showLoading(true);
   try {
-    const ds =(document.getElementById('filter-start')||{}).value||'';
-    const de =(document.getElementById('filter-end')||{}).value||'';
-    const turno=(document.getElementById('filter-turno')||{}).value||'';
-    const col=(document.getElementById('filter-colaborador')||{}).value||'';
+    const ds    =(document.getElementById('filter-start')||{}).value||'';
+    const de    =(document.getElementById('filter-end')||{}).value||'';
+    const turno =(document.getElementById('filter-turno')||{}).value||'';
+    const status=(document.getElementById('filter-status')||{}).value||'';
+    const col   =(document.getElementById('filter-colaborador')||{}).value||'';
     let data=await _fbGetAll('registros');
-    if (ds)    data=data.filter(r=>r.data>=ds);
-    if (de)    data=data.filter(r=>r.data<=de);
-    if (turno) data=data.filter(r=>r.turno===turno);
-    if (col)   data=data.filter(r=>r.colaborador_card===col);
+    if (ds)     data=data.filter(r=>r.data>=ds);
+    if (de)     data=data.filter(r=>r.data<=de);
+    if (turno)  data=data.filter(r=>r.turno===turno);
+    if (status) data=data.filter(r=>r.status===status);
+    if (col)    data=data.filter(r=>r.colaborador_card===col);
     S.leaderData=data;
     renderLeaderSummary(data);
     const allData=await _fbGetAll('registros');
