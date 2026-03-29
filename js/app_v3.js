@@ -892,10 +892,35 @@ async function selectColaborador(nome) {
         try { Object.assign(S.s1, JSON.parse(sessEtapa1.s1_data)); } catch(e) {}
       }
       S.producaoIniciada=true;
+      /* ── Restaura S.s2 dos registros já gravados ── */
+      try {
+        const todosRegs=await _fbGetAll('registros');
+        const regsColab=todosRegs.filter(r=>
+          r.colaborador_card===nome&&r.data===dt&&
+          r.turno===S.turno&&r.dia_semana===S.dia&&r.tarefa_id
+        );
+        /* Para cada tarefa, pega o registro mais recente */
+        const byTarefa={};
+        regsColab.forEach(r=>{
+          const ts=r.updated_at||r.created_at||0;
+          const ex=byTarefa[r.tarefa_id];
+          if (!ex||(ex.updated_at||ex.created_at||0)<ts) byTarefa[r.tarefa_id]=r;
+        });
+        Object.entries(byTarefa).forEach(([tid,r])=>{
+          S.s2[tid]={
+            produzida:r.quantidade_produzida!==undefined?r.quantidade_produzida:0,
+            status:r.status||'total',
+            motivo:r.motivo||'',
+            reg_id:r.id, /* guarda id para PATCH em vez de novo POST */
+          };
+        });
+        const jaFinal=Object.keys(S.s2).length;
+        if (jaFinal>0) showToast(`▶️ ${jaFinal} tarefa(s) já marcada(s). Continue!`);
+        else showToast('▶️ Continue a finalização!');
+      } catch(e) { console.error(e); showToast('▶️ Continue a finalização!'); }
       _setNavChips(nome);
       renderStep2();
       showScreen('screen-step1');
-      showToast('▶️ Continue a finalização!');
     } else {
       /* Primeira entrada — Etapa 1 */
       S.sessaoId='sess_'+Date.now();
@@ -979,6 +1004,22 @@ function renderStep1() {
     const ck=isChecklist(t);
     const conf=S.s1[t.id];
     const isConf=conf&&conf.confirmed;
+    /* Linha de info do card:
+       - Checklist Não confirmado: "Toque para confirmar"
+       - Checklist Confirmado: "✓ Confirmada"
+       - Qty Não confirmado: "Padrão: X un" (só quantidade, sem msg execução)
+       - Qty Confirmado: valor programado
+    */
+    let infoLine;
+    if (ck) {
+      infoLine = isConf
+        ? '<div class="task-qty-display" style="color:#16a34a;font-weight:800">✓ Confirmada</div>'
+        : '<div class="task-qty-display" style="color:#9ca3af">Toque para confirmar</div>';
+    } else {
+      infoLine = isConf
+        ? `<div class="task-qty-display"><strong>${fmt(conf.programada)}</strong> ${t.unidade||''} a produzir</div>`
+        : `<div class="task-qty-display">Padrão: ${fmt(t.quantidade_padrao)} ${t.unidade||''}</div>`;
+    }
     return `<div class="task-card s1-card${isConf?' task-confirmed':''}" id="s1c-${t.id}" onclick="openS1Modal('${t.id}')">
       <div class="task-card-header" style="background:${cc}">
         <span class="cat-label">${ce} ${t.categoria||'Geral'}</span>
@@ -986,34 +1027,24 @@ function renderStep1() {
       </div>
       <div class="task-card-body">
         <div class="task-name">${t.item}</div>
-        ${ck?'<div class="task-qty-display">✓ Execução</div>'
-            :`<div class="task-qty-display">${isConf?`<strong>${fmt(conf.programada)}</strong> ${t.unidade||''}`:`Padrão: ${fmt(t.quantidade_padrao)} ${t.unidade||''}`}</div>`}
+        ${infoLine}
       </div></div>`;
   }).join('');
 
   const pInfo      =document.getElementById('btn-pending-info');
   const pTxt       =document.getElementById('pending-count-text');
-  const btnsRow    =document.getElementById('s1-btns-row');     // Nova linha Iniciar+Imprimir+Voltar
   const startBtn   =document.getElementById('btn-sm-start-footer');
   const concludeBtn=document.getElementById('btn-conclude');
   if (!S.producaoIniciada) {
-    /* Fase 1: mostrar linha de botões de programação */
+    /* Fase 1: mostra botão Iniciar, oculta Concluir */
     if (pInfo) pInfo.style.display='flex';
-    if (pTxt)  pTxt.textContent='Toque nos cards acima para programar';
-    if (btnsRow) btnsRow.classList.remove('hidden');
-    if (startBtn) startBtn.style.display='inline-flex'; // garantir Iniciar visível
+    if (pTxt)  pTxt.textContent=allConfirmed?'Todos programados — clique em Iniciar!':`${total-confirmed} item(s) ainda não confirmado(s)`;
+    if (startBtn)   startBtn.classList.remove('hidden');
     if (concludeBtn) concludeBtn.classList.add('hidden');
   } else {
-    if (allConfirmed) {
-      if (pInfo) pInfo.style.display='none';
-      if (btnsRow) btnsRow.classList.remove('hidden');
-      if (startBtn) startBtn.style.display='none'; // Oculta Iniciar (já iniciado)
-    } else {
-      if (pInfo) pInfo.style.display='flex';
-      if (pTxt)  pTxt.textContent=`${total-confirmed} item(s) ainda não programado(s)`;
-      if (btnsRow) btnsRow.classList.remove('hidden');
-      if (startBtn) startBtn.style.display='none';
-    }
+    /* Fase 1 já iniciada (voltou do card de setor) — oculta Iniciar */
+    if (pInfo) pInfo.style.display='none';
+    if (startBtn)   startBtn.classList.add('hidden');
     if (concludeBtn) concludeBtn.classList.add('hidden');
   }
 }
@@ -1150,6 +1181,21 @@ function renderStep2() {
     const stBadge=status==='total'?'✅':status==='parcial'?'⚠️':status==='nao_finalizado'?'❌':'';
     const prog=d1.programada!==undefined?d1.programada:(t.quantidade_padrao||0);
     const isConf=!!status;
+    /* Linha de info do card na Etapa 2:
+       - Checklist: só status textual, sem quantidade
+       - Qty: quantidade produzida/programada (sem msg de execução)
+    */
+    let infoLine2;
+    if (ck) {
+      infoLine2=isConf
+        ?(status==='total'?'<div class="task-qty-display" style="color:#16a34a;font-weight:800">✅ Realizada</div>'
+         :'<div class="task-qty-display" style="color:#dc2626;font-weight:800">❌ Não realizada</div>')
+        :'<div class="task-qty-display" style="color:#f59e0b;font-weight:700">⏳ Pendente</div>';
+    } else {
+      infoLine2=isConf
+        ?`<div class="task-qty-display"><strong>${fmt(d2.produzida)}</strong>/${fmt(prog)} ${t.unidade||''}</div>`
+        :`<div class="task-qty-display">Prog: ${fmt(prog)} ${t.unidade||''}</div>`;
+    }
     return `<div class="task-card s2-card ${stClass}" id="s2c-${t.id}" onclick="openS2Modal('${t.id}')">
       <div class="task-card-header" style="background:${cc}">
         <span class="cat-label">${ce} ${t.categoria||'Geral'}</span>
@@ -1157,21 +1203,20 @@ function renderStep2() {
       </div>
       <div class="task-card-body">
         <div class="task-name">${t.item}</div>
-        ${ck?`<div class="task-qty-display">${isConf?(status==='total'?'✅ Feito':'❌ Não feito'):'⏳ Pendente'}</div>`
-            :`<div class="task-qty-display">${isConf?`<span>${fmt(d2.produzida)}/${fmt(prog)} ${t.unidade||''}</span>`:`<span>Prog: ${fmt(prog)} ${t.unidade||''}</span>`}</div>`}
+        ${infoLine2}
       </div></div>`;
   }).join('');
 
   const allDone    =S.tarefas.every(t=>S.s2[t.id]&&S.s2[t.id].status);
+  const done2      =S.tarefas.filter(t=>S.s2[t.id]&&S.s2[t.id].status).length;
   const pInfo      =document.getElementById('btn-pending-info');
-  const btnsRow2   =document.getElementById('s1-btns-row');
+  const pTxt2      =document.getElementById('pending-count-text');
+  const startBtn2  =document.getElementById('btn-sm-start-footer');
   const concludeBtn=document.getElementById('btn-conclude');
-  const btnImpr    =document.getElementById('btn-imprimir-footer');
-  if (pInfo)    pInfo.style.display='none';
-  if (btnsRow2) btnsRow2.classList.add('hidden'); // Oculta linha fase 1 na fase 2
+  if (pInfo)   { pInfo.style.display='flex'; }
+  if (pTxt2)   pTxt2.textContent=allDone?'Tudo finalizado! Clique em Concluir Turno.':`${done2}/${S.tarefas.length} finalizadas — pode sair e voltar!`;
+  if (startBtn2)   startBtn2.classList.add('hidden'); // Oculta Iniciar na fase 2
   if (concludeBtn) concludeBtn.classList.toggle('hidden',!allDone);
-  /* Mostra Imprimir ao lado de Voltar durante etapa 2 */
-  if (btnImpr) btnImpr.classList.remove('hidden');
   /* Auto-save 100% — sem toast, botão Concluir aparece automaticamente */
 }
 
@@ -1290,7 +1335,8 @@ async function confirmS2() {
   if (_s2Status==='total')          prod=ck?1:(S.s1[_s2Id]||{}).programada||t.quantidade_padrao||0;
   if (_s2Status==='nao_finalizado') prod=0;
 
-  S.s2[_s2Id]={produzida:prod,status:_s2Status,motivo:_s2Motivo};
+  const existingRegId = (S.s2[_s2Id]||{}).reg_id || null;
+  S.s2[_s2Id]={produzida:prod,status:_s2Status,motivo:_s2Motivo,reg_id:existingRegId};
   closeModal('modal-s2');
   renderStep2();
 
@@ -1310,12 +1356,20 @@ async function confirmS2() {
     is_checklist:ck?1:0,
   };
   const isAtend=ATEND_COLABS.includes(S.colaborador.toUpperCase());
-  const regExist=isAtend?_atendRegIds[_s2Id]:null;
-  if (isAtend&&regExist) {
-    _fbPatch('registros',regExist,{quantidade_produzida:prod,status:_s2Status,motivo:_s2Motivo,hora_registro:new Date().toLocaleTimeString('pt-BR')}).catch(console.error);
+  const regExist=isAtend?_atendRegIds[_s2Id]:(existingRegId||null);
+  if (regExist) {
+    /* Atualiza registro existente (progresso parcial ou atendimento) */
+    _fbPatch('registros',regExist,{
+      quantidade_produzida:prod,status:_s2Status,motivo:_s2Motivo,
+      hora_registro:new Date().toLocaleTimeString('pt-BR'),
+    }).catch(console.error);
   } else {
+    /* Cria novo registro e guarda o id para futuros PATCHs */
     _fbPost('registros',payload).then(res=>{
-      if (isAtend&&res?.id&&_s2Id) _atendRegIds[_s2Id]=res.id;
+      if (res?.id&&_s2Id) {
+        S.s2[_s2Id].reg_id=res.id;
+        if (isAtend) _atendRegIds[_s2Id]=res.id;
+      }
     }).catch(console.error);
   }
 }
