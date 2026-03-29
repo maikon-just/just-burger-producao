@@ -228,6 +228,7 @@ body {
   gap:8px; font-family:inherit;
 }
 .shift-btn:active  { transform:scale(.97); }
+/* Turno Dia — amarelo pastel */
 .shift-day {
   background:#FDE68A;
   box-shadow:0 4px 18px rgba(234,179,8,.25);
@@ -236,6 +237,7 @@ body {
 .shift-day .shift-name  { color:#111111; }
 .shift-day .shift-sub   { color:#555555; }
 .shift-day .shift-arrow { color:#111111; }
+/* Turno Noite — navy escuro */
 .shift-night {
   background:#1E2235;
   box-shadow:0 4px 18px rgba(30,34,53,.35);
