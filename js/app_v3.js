@@ -545,6 +545,39 @@ function _irParaDept() {
   if (tc) tc.textContent=(S.turno==='dia'?'☀️':'🌙')+' '+(S.turno==='dia'?'Dia':'Noite');
   if (dc) dc.textContent=dObj?dObj.short+' '+dObj.icon:S.dia;
   showScreen('screen-dept');
+  /* Carrega áreas customizadas do Firebase e injeta botões extras */
+  _carregarAreasExtras();
+}
+
+/* Chaves fixas que já têm botão estático no HTML — não duplicar */
+const _AREAS_FIXAS = new Set(['PRODUCAO','OPERACAO','ATENDIMENTO']);
+
+async function _carregarAreasExtras() {
+  const grid = document.getElementById('dept-btn-grid');
+  if (!grid) return;
+  /* Remove botões extras inseridos anteriormente (marcados com data-custom) */
+  grid.querySelectorAll('[data-custom-area]').forEach(el => el.remove());
+  try {
+    const areas = await _fbGetAll('areas');
+    areas
+      .filter(a => a.ativo !== false && !_AREAS_FIXAS.has(a.chave))
+      .forEach(a => {
+        const btn = document.createElement('button');
+        btn.className = 'dept-btn dept-btn-custom';
+        btn.setAttribute('data-custom-area', a.chave);
+        btn.onclick = () => _abrirSetorCards(a.chave);
+        btn.innerHTML = `
+          <span class="dept-btn-emoji">${a.emoji || '🏷️'}</span>
+          <div style="flex:1;text-align:left">
+            <span class="dept-btn-nome">${a.nome}</span>
+            <div class="dept-btn-sub">${a.chave}</div>
+          </div>
+          <span style="font-size:22px;opacity:.45">›</span>`;
+        grid.appendChild(btn);
+      });
+  } catch(e) {
+    /* silencioso — áreas extras são opcionais */
+  }
 }
 
 function _abrirSetorCards(dept) {
@@ -565,6 +598,17 @@ function _mostrarTelaSetor(dept) {
   const labelMap={PRODUCAO:'Produção',OPERACAO:'Operação',ATENDIMENTO:'Atendimento'};
   const emojiMap={PRODUCAO:'🏭',OPERACAO:'⚙️',ATENDIMENTO:'🎯'};
   const corMap  ={PRODUCAO:'#f97316',OPERACAO:'#16a34a',ATENDIMENTO:'#2563eb'};
+  /* Para áreas customizadas: tenta pegar label/emoji do botão já renderizado */
+  if (!labelMap[dept]) {
+    const btnEl = document.querySelector(`[data-custom-area="${dept}"]`);
+    if (btnEl) {
+      labelMap[dept] = btnEl.querySelector('.dept-btn-nome')?.textContent || dept;
+      emojiMap[dept] = btnEl.querySelector('.dept-btn-emoji')?.textContent || '🏷️';
+    } else {
+      labelMap[dept] = dept; emojiMap[dept] = '🏷️';
+    }
+    corMap[dept] = '#0891b2';
+  }
   const tc=document.getElementById('setor-turno-chip');
   const dc=document.getElementById('setor-day-chip');
   const dp=document.getElementById('setor-dept-chip');
