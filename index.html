@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
   <!-- CSS principal -->
-  <link rel="stylesheet" href="css/style.css?v=20260330e"/>
+  <link rel="stylesheet" href="css/style.css?v=20260330f"/>
   <!-- Auth Guard: redireciona para portal se não houver sessão -->
   <script>
     (function _authGuard() {
@@ -976,11 +976,11 @@
         ✕ Fechar
       </button>
       <span style="flex:1;font-size:14px;font-weight:700;opacity:.8">Folha de Produção</span>
-      <button onclick="window.print()"
+      <button onclick="document.getElementById('modal-print-preview').classList.add('hidden');setTimeout(function(){window.print();},120);"
               style="background:#f97316;border:none;color:#fff;padding:10px 20px;
                      border-radius:8px;font-size:14px;font-weight:900;cursor:pointer;
                      font-family:inherit;display:flex;align-items:center;gap:8px">
-        <i class="fas fa-print"></i> Imprimir / Salvar PDF
+        <i class="fas fa-print"></i> Imprimir
       </button>
     </div>
     <!-- Conteúdo dinâmico gerado pelo JS -->
@@ -1016,10 +1016,10 @@
 </div>
 
 <!-- Scripts — ordem importa! -->
-<script src="js/versao.js?v=20260330e"></script>
-<script src="js/data.js?v=20260330e"></script>
-<script src="js/firebase_v2.js?v=20260330e"></script>
-<script src="js/app_v3.js?v=20260330e"></script>
+<script src="js/versao.js?v=20260330f"></script>
+<script src="js/data.js?v=20260330f"></script>
+<script src="js/firebase_v2.js?v=20260330f"></script>
+<script src="js/app_v3.js?v=20260330f"></script>
 
 <!-- Service Worker: força atualização automática a cada deploy -->
 <script>
