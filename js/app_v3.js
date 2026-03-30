@@ -1307,11 +1307,12 @@ function selectStatus(status) {
   const qpw = document.getElementById('qty-prod-wrap');
   const mw  = document.getElementById('motivos-wrap');
 
-  /* Quantidade — oculto em ambos os casos (100% ou não executado) */
-  if (qpw) qpw.classList.add('hidden');
+  /* Quantidade produzida — aparece somente no Parcial */
+  if (qpw) qpw.classList.toggle('hidden', status !== 'parcial');
 
-  /* Motivo — só aparece para "Não Executado" */
-  if (mw) mw.classList.toggle('hidden', status !== 'nao_finalizado');
+  /* Motivo — aparece para "Parcial" e "Não Executado" (obrigatório) */
+  const precisaMotivo = (status === 'nao_finalizado' || status === 'parcial');
+  if (mw) mw.classList.toggle('hidden', !precisaMotivo);
 
   /* Limpa motivo ao trocar status */
   _s2Motivo = null;
@@ -1347,8 +1348,8 @@ async function confirmS2() {
   const ck=isChecklist(t);
   let prod=1;
 
-  /* Validação: Não Executado exige motivo */
-  if (_s2Status === 'nao_finalizado' && !_s2Motivo) {
+  /* Validação: Parcial e Não Executado exigem motivo */
+  if ((_s2Status === 'nao_finalizado' || _s2Status === 'parcial') && !_s2Motivo) {
     shakeEl('motivos-wrap'); showToast('⚠️ Selecione um motivo!'); return;
   }
   if (_s2Motivo === 'Outros') {
@@ -1360,6 +1361,11 @@ async function confirmS2() {
 
   if (_s2Status==='total')          prod=ck?1:(S.s1[_s2Id]||{}).programada||t.quantidade_padrao||0;
   if (_s2Status==='nao_finalizado') prod=0;
+  if (_s2Status==='parcial') {
+    /* Lê quantidade produzida do campo; se não preenchida usa 0 */
+    const qv=document.getElementById('modal-s2-prod');
+    prod=qv?Math.max(0,parseInt(qv.textContent)||0):0;
+  }
 
   const existingRegId = (S.s2[_s2Id]||{}).reg_id || null;
   S.s2[_s2Id]={produzida:prod,status:_s2Status,motivo:_s2Motivo,reg_id:existingRegId};
@@ -2500,52 +2506,52 @@ function _abrirPreviewImpressao(htmlConteudo) {
 }
 
 /* ── Alerta sonoro quando finaliza turno com pendências ── */
+/* Compatível com Chrome Android / Samsung tablets                  */
+/* Usa UM único AudioContext criado no mesmo gesto do usuário       */
 function _tocarAlertaPendencias() {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
+
+    /* Cria o contexto imediatamente dentro do gesto (necessário no Android) */
     const ctx = new AudioCtx();
 
-    /* Sequência de 3 bipes urgentes (tons descendentes) */
-    const notas = [880, 660, 440]; /* Hz: Lá5, Mi5, Lá4 */
-    notas.forEach(function(freq, i) {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+    /* Resume caso o contexto esteja suspenso (política autoplay Android) */
+    const _play = function() {
+      /* Sequência: bip grave → bip médio → bip agudo, repetida 2× */
+      const notas  = [440, 660, 880, 440, 660, 880]; /* 6 notas = 2 grupos */
+      const t0     = ctx.currentTime + 0.05;          /* pequeno offset de segurança */
+      const durBip = 0.22;  /* duração de cada bip em segundos */
+      const gap    = 0.30;  /* espaço entre bips */
+      const pausa  = 0.55;  /* pausa entre os dois grupos */
 
-      osc.type = 'square'; /* tom mais penetrante */
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.35);
+      notas.forEach(function(freq, i) {
+        const inicio = t0 + i * gap + (i >= 3 ? pausa : 0);
 
-      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.35);
-      gain.gain.linearRampToValueAtTime(1, ctx.currentTime + i * 0.35 + 0.02);
-      gain.gain.setValueAtTime(1, ctx.currentTime + i * 0.35 + 0.25);
-      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + i * 0.35 + 0.32);
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
 
-      osc.start(ctx.currentTime + i * 0.35);
-      osc.stop(ctx.currentTime + i * 0.35 + 0.35);
-    });
+        osc.type = 'sine';        /* sine soa melhor no alto-falante do tablet */
+        osc.frequency.value = freq;
 
-    /* Repete a sequência uma segunda vez após 1.2s */
-    setTimeout(function() {
-      try {
-        const ctx2 = new AudioCtx();
-        notas.forEach(function(freq, i) {
-          const osc  = ctx2.createOscillator();
-          const gain = ctx2.createGain();
-          osc.connect(gain);
-          gain.connect(ctx2.destination);
-          osc.type = 'square';
-          osc.frequency.setValueAtTime(freq, ctx2.currentTime + i * 0.35);
-          gain.gain.setValueAtTime(0, ctx2.currentTime + i * 0.35);
-          gain.gain.linearRampToValueAtTime(1, ctx2.currentTime + i * 0.35 + 0.02);
-          gain.gain.setValueAtTime(1, ctx2.currentTime + i * 0.35 + 0.25);
-          gain.gain.linearRampToValueAtTime(0, ctx2.currentTime + i * 0.35 + 0.32);
-          osc.start(ctx2.currentTime + i * 0.35);
-          osc.stop(ctx2.currentTime + i * 0.35 + 0.35);
-        });
-      } catch(e) {}
-    }, 1200);
+        /* Envelope: sobe rápido, sustenta, cai */
+        gain.gain.setValueAtTime(0,   inicio);
+        gain.gain.linearRampToValueAtTime(0.9, inicio + 0.02);
+        gain.gain.setValueAtTime(0.9,          inicio + durBip - 0.04);
+        gain.gain.linearRampToValueAtTime(0,   inicio + durBip);
+
+        osc.start(inicio);
+        osc.stop(inicio + durBip + 0.01);
+      });
+    };
+
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(_play).catch(function() { _play(); });
+    } else {
+      _play();
+    }
 
   } catch(e) {
     console.warn('[JB] Alerta sonoro não suportado:', e);
