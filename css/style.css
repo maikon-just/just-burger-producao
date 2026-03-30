@@ -1222,7 +1222,15 @@ body:not(.has-bottom-nav) .tasks-footer { bottom:0; }
 }
 
 @media print {
-  .nav-header, .tasks-footer, .leader-tabs,
-  .filter-card, .leader-actions { display:none !important; }
-  body { background:#fff; }
+  /* Oculta tudo exceto o modal de pré-visualização */
+  body > *:not(#modal-print-preview) { display:none !important; }
+  #modal-print-preview {
+    display:block !important;
+    position:static !important;
+    background:#fff !important;
+    padding:0 !important;
+  }
+  #modal-print-preview .no-print { display:none !important; }
+  #modal-print-preview > div { min-height:auto !important; box-shadow:none !important; }
+  body { background:#fff; margin:0; padding:0; }
 }
