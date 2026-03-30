@@ -1059,30 +1059,27 @@ let _s1Id=null;
 function openS1Modal(id) {
   const t=S.tarefas.find(x=>x.id===id);
   if (!t) return;
-  // NÃO inicia produção ao abrir o modal — só inicia ao clicar em "Iniciar Turno"
   _s1Id=id;
-  const ck  =isChecklist(t);
-  const conf=S.s1[id]||{};
-  document.getElementById('modal-s1-title').textContent=t.item;
-  document.getElementById('modal-s1-cat').textContent=t.categoria||'';
-  document.getElementById('modal-s1-header').style.background=getCatColor(t.categoria);
-  const qtyMode    = document.getElementById('s1-qty-mode');
-  const ckMode     = document.getElementById('s1-checklist-mode');
-  const excMode    = document.getElementById('s1-excecao-mode');
-  const padrao     = Number(t.quantidade_padrao)||0;
-  const isExcecao  = !ck && padrao === 0;
 
-  /* Oculta TODOS primeiro — evita que modo anterior fique visível */
-  if (ckMode)  ckMode.classList.add('hidden');
-  if (excMode) excMode.classList.add('hidden');
-  if (qtyMode) qtyMode.style.display = 'none';
+  const padrao = Number(t.quantidade_padrao)||0;
+  const ck     = isChecklist(t);
+  /* temQtd = true → abre modal de quantidade; false → abre modal de execução */
+  const temQtd = !ck && padrao > 0;
 
-  /* Mostra APENAS o modo correto (mutuamente exclusivo) */
-  if (ck)          { if (ckMode)  ckMode.classList.remove('hidden'); }
-  else if (isExcecao) { if (excMode) excMode.classList.remove('hidden'); }
-  else             { if (qtyMode) qtyMode.style.display = ''; }
+  /* Garante que AMBOS os modais estejam fechados antes de abrir o correto */
+  document.getElementById('modal-s1-qty').classList.add('hidden');
+  document.getElementById('modal-s1-exec').classList.add('hidden');
 
-  if (!ck && !isExcecao) {
+  const cor = getCatColor(t.categoria);
+  const cat = t.categoria||'';
+
+  if (temQtd) {
+    /* ── MODAL A: tem quantidade padrão ── */
+    document.getElementById('modal-s1-qty-header').style.background = cor;
+    document.getElementById('modal-s1-qty-cat').textContent = cat;
+    document.getElementById('modal-s1-qty-title').textContent = t.item;
+
+    const conf=S.s1[id]||{};
     const estoqueAtual=conf.estoque!==undefined?conf.estoque:0;
     document.getElementById('modal-s1-estoque').textContent=estoqueAtual;
     document.getElementById('modal-s1-unidade').textContent=t.unidade||'un';
@@ -1090,12 +1087,19 @@ function openS1Modal(id) {
     document.getElementById('calc-estoque').textContent=estoqueAtual;
     document.getElementById('modal-s1-prog').textContent=conf.programada!==undefined?conf.programada:(padrao>estoqueAtual?padrao-estoqueAtual:0);
     document.getElementById('modal-s1-unit2').textContent=t.unidade||'';
-    /* Exibe a qtd padrão do BD */
-    const pdEl = document.getElementById('calc-padrao-display');
-    if (pdEl) pdEl.textContent = fmt(padrao)+' '+(t.unidade||'');
+    const pdEl=document.getElementById('calc-padrao-display');
+    if (pdEl) pdEl.textContent=fmt(padrao)+' '+(t.unidade||'');
     _calcNecessario();
+
+    document.getElementById('modal-s1-qty').classList.remove('hidden');
+  } else {
+    /* ── MODAL B: checklist ou sem quantidade ── */
+    document.getElementById('modal-s1-exec-header').style.background = cor;
+    document.getElementById('modal-s1-exec-cat').textContent = cat;
+    document.getElementById('modal-s1-exec-title').textContent = t.item;
+
+    document.getElementById('modal-s1-exec').classList.remove('hidden');
   }
-  document.getElementById('modal-s1').classList.remove('hidden');
 }
 
 function _calcNecessario() {
@@ -1131,18 +1135,17 @@ function confirmS1() {
   const t=S.tarefas.find(x=>x.id===_s1Id); if (!t) return;
   const ck=isChecklist(t);
   const padrao=Number(t.quantidade_padrao)||0;
-  const isExcecao=!ck&&padrao===0;
+  const temQtd=!ck&&padrao>0;
   let est=0,prog=1;
-  if (!ck && !isExcecao) {
+  if (temQtd) {
     est=Number(document.getElementById('modal-s1-estoque').textContent)||0;
     prog=Number(document.getElementById('modal-s1-prog').textContent)||0;
   }
   S.s1[_s1Id]={estoque:est,programada:prog,confirmed:true};
-  closeModal('modal-s1');
+  /* Fecha o modal correto */
+  document.getElementById('modal-s1-qty').classList.add('hidden');
+  document.getElementById('modal-s1-exec').classList.add('hidden');
   renderStep1();
-  /* Auto-iniciar produção se 100% programado */
-  const allConfirmed=S.tarefas.every(t=>S.s1[t.id]&&S.s1[t.id].confirmed);
-  // sem toast — fluxo silencioso
 }
 
 async function iniciarProducao() {
