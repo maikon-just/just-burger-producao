@@ -1040,7 +1040,12 @@ function renderStep1() {
     /* Fase 1: mostra botão Iniciar Turno, oculta Finalizar */
     if (pInfo) pInfo.style.display='flex';
     if (pTxt)  pTxt.textContent=allConfirmed?'Todos programados — clique em Iniciar Turno!':`${total-confirmed} item(s) ainda não confirmado(s)`;
-    if (startBtn)   { startBtn.classList.remove('hidden'); startBtn.style.display=''; }
+    if (startBtn) {
+      startBtn.classList.remove('hidden');
+      startBtn.style.display='';
+      startBtn.disabled=false;      /* garante que nunca fica travado */
+      startBtn.style.opacity='';    /* restaura opacidade normal */
+    }
     if (concludeBtn) concludeBtn.classList.add('hidden');
   } else {
     /* Fase 2 em andamento: oculta Iniciar, oculta Finalizar (só aparece quando tudo feito) */
@@ -1067,10 +1072,15 @@ function openS1Modal(id) {
   const padrao     = Number(t.quantidade_padrao)||0;
   const isExcecao  = !ck && padrao === 0;
 
-  /* Mostra o modo correto */
-  if (ckMode)   ckMode.classList.toggle('hidden', !ck);
-  if (excMode)  excMode.classList.toggle('hidden', !isExcecao);
-  if (qtyMode)  qtyMode.style.display = (ck || isExcecao) ? 'none' : '';
+  /* Oculta TODOS primeiro — evita que modo anterior fique visível */
+  if (ckMode)  ckMode.classList.add('hidden');
+  if (excMode) excMode.classList.add('hidden');
+  if (qtyMode) qtyMode.style.display = 'none';
+
+  /* Mostra APENAS o modo correto (mutuamente exclusivo) */
+  if (ck)          { if (ckMode)  ckMode.classList.remove('hidden'); }
+  else if (isExcecao) { if (excMode) excMode.classList.remove('hidden'); }
+  else             { if (qtyMode) qtyMode.style.display = ''; }
 
   if (!ck && !isExcecao) {
     const estoqueAtual=conf.estoque!==undefined?conf.estoque:0;
