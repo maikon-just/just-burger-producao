@@ -56,7 +56,7 @@
     .med-table tr:last-child td{border-bottom:none}
     .cat-chip{display:inline-block;padding:2px 8px;border-radius:6px;background:rgba(37,99,235,0.1);color:var(--blue);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
     .item-name{font-weight:600;color:var(--text)}
-    .item-name-inp{width:100%;font-weight:600;color:var(--text);background:#fff;border:1.5px solid var(--border);border-radius:7px;padding:5px 8px;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;}
+    .item-name-inp{width:100%;min-width:0;font-weight:600;color:var(--text);background:#fff;border:1.5px solid var(--border);border-radius:7px;padding:5px 8px;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;resize:none;overflow:hidden;line-height:1.4;min-height:32px;display:block;box-sizing:border-box;}
     .item-name-inp:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(230,168,0,.15);}
     .qty-ctrl{display:flex;align-items:center;gap:5px;justify-content:center}
     .qty-btn{width:28px;height:28px;border:1.5px solid var(--border);background:#fff;color:var(--text);border-radius:6px;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all .12s;}
@@ -359,7 +359,7 @@ function renderTabela(){
   if(!lista.length){ cont.innerHTML=`<div class="state-box"><i class="fas fa-inbox"></i><p>Nenhuma tarefa para ${M.turno==='dia'?'☀️ Dia':'🌙 Noite'} — ${M.dia}</p></div>`; return; }
   const por={};
   lista.forEach(t=>{ if(!por[t.colaborador]) por[t.colaborador]=[]; por[t.colaborador].push(t); });
-  cont.innerHTML=Object.entries(por).sort((a,b)=>a[0].localeCompare(b[0])).map(([col,tasks])=>`
+  cont.innerHTML=Object.entries(por).sort((a,b)=>a[0].localeCompare(b[0])).map(([col,tasks])=>` 
     <div class="collab-block">
       <div class="collab-hdr">
         <div class="collab-avatar">${_emoji(col)}</div>
@@ -378,7 +378,7 @@ function renderTabela(){
           <tr id="row-${t.id}">
             <td style="text-align:center"><input type="checkbox" class="row-chk" data-id="${t.id}" style="width:15px;height:15px;accent-color:#dc2626;cursor:pointer" onchange="_onChkChange()"/></td>
             <td><span class="cat-chip">${t.categoria||'Geral'}</span></td>
-            <td><input class="item-name-inp" type="text" id="ni-${t.id}" value="${(t.item||'').replace(/"/g,'&quot;')}" placeholder="Nome da tarefa" oninput="markDirty('${t.id}')"/></td>
+            <td><textarea class="item-name-inp" id="ni-${t.id}" placeholder="Nome da tarefa" rows="1" oninput="_autoResize(this);markDirty('${t.id}')">${(t.item||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea></td>
             <td><div class="qty-ctrl">
               <button class="qty-btn minus" onclick="adjQty('${t.id}',-10)">−10</button>
               <button class="qty-btn minus" onclick="adjQty('${t.id}',-1)">−</button>
@@ -396,10 +396,23 @@ function renderTabela(){
         </tbody>
       </table>
     </div>`).join('');
+  /* Após injetar HTML, ajusta alturas dos textareas */
+  requestAnimationFrame(_initNomeInputs);
 }
+
+/* Redimensiona textarea automaticamente conforme o conteúdo */
+function _autoResize(el){ el.style.height='auto'; el.style.height=(el.scrollHeight)+'px'; }
+/* Chama _autoResize em todos os textareas de nome após renderizar */
+function _initNomeInputs(){ document.querySelectorAll('.item-name-inp').forEach(el=>_autoResize(el)); }
 
 function adjQty(id,delta){ const inp=document.getElementById(`qi-${id}`); if(!inp) return; inp.value=Math.max(0,Number(inp.value)+delta); markDirty(id); }
 function markDirty(id){ const btn=document.getElementById(`sbtn-${id}`); if(btn){btn.classList.remove('saved');btn.innerHTML='<i class="fas fa-save"></i> Salvar';} }
+
+/* Lista de unidades que marcam uma tarefa como "só executar" (sem estoque) */
+const _CHECKLIST_UNITS=['checklist','vídeo','video','execução','execucao','tarefa',
+  'atividade','limpeza','higienização','higienizacao','conferir','verificar',
+  'organizar','abastecer','s/qtd','sem qtd','sem quantidade','turno','vez','dia',
+  'sessao','sessão','serviço','servico'];
 
 async function salvarItem(id){
   const inp=document.getElementById(`qi-${id}`);
@@ -413,10 +426,26 @@ async function salvarItem(id){
   try{
     const patch={quantidade_padrao:qty};
     if(ninp) patch.item=nomeNovo;
+    /* Se a tarefa era checklist (unidade na lista especial) e agora recebeu
+       quantidade > 0, troca a unidade para 'un' para que o app exiba
+       o card com campo de estoque em vez do card de "só executar"      */
+    const t=M.tarefas.find(x=>x.id===id);
+    if(t && qty>0){
+      const u=(t.unidade||'').toLowerCase().trim();
+      if(_CHECKLIST_UNITS.includes(u) || !u){
+        patch.unidade='un';
+      }
+    }
     await _fbPatch('tarefas',id,patch);
     btn.innerHTML='<i class="fas fa-check"></i> Salvo';btn.classList.add('saved');
-    const t=M.tarefas.find(x=>x.id===id);
-    if(t){ t.quantidade_padrao=qty; if(ninp) t.item=nomeNovo; }
+    if(t){
+      t.quantidade_padrao=qty;
+      if(ninp) t.item=nomeNovo;
+      if(patch.unidade) t.unidade=patch.unidade;
+    }
+    /* Atualiza o rótulo de unidade visível na linha sem recarregar tudo */
+    const unitLbl=document.querySelector(`#row-${id} .unit-lbl`);
+    if(unitLbl && patch.unidade) unitLbl.textContent=patch.unidade;
     showToastM('✅ Salvo!');
   }catch(e){btn.innerHTML='<i class="fas fa-save"></i> Salvar';showToastM('❌ Erro: '+e.message);}
   finally{btn.disabled=false;}
