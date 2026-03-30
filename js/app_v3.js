@@ -1171,8 +1171,10 @@ async function iniciarProducao() {
     _cache.sessoes=null; /* invalida cache de sessões */
   } catch(e) { console.error('Erro ao salvar etapa1:', e); }
 
-  /* Volta para a tela de cards — impressão fica disponível pelo botão Imprimir */
-  showToast('✅ Etapa 1 salva! Use o botão Imprimir para a folha de produção.');
+  /* Abre o preview de impressão inline (compatível com tablets) */
+  printColaborador();
+  /* Volta para a tela de cards */
+  showToast('✅ Etapa 1 salva! Toque em Imprimir para confirmar.');
   _mostrarTelaSetor(_deptAtual);
 }
 
