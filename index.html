@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
   <!-- CSS principal -->
-  <link rel="stylesheet" href="css/style.css?v=20260330c"/>
+  <link rel="stylesheet" href="css/style.css?v=20260330d"/>
   <!-- Auth Guard: redireciona para portal se não houver sessão -->
   <script>
     (function _authGuard() {
@@ -791,90 +791,91 @@
 </div>
 
 <!-- ══════════════════════════════════════════
-     MODAL — PROGRAMAR ITEM (Etapa 1)
+     MODAL A — PROGRAMAR: TAREFA COM QUANTIDADE
+     (quantidade_padrao > 0)
 ══════════════════════════════════════════ -->
-<div class="modal-overlay hidden" id="modal-s1">
+<div class="modal-overlay hidden" id="modal-s1-qty">
   <div class="modal-box modal-compact">
-    <button class="modal-close" onclick="closeModal('modal-s1')">✕</button>
-    <div class="modal-header-colored" id="modal-s1-header">
-      <span class="modal-cat-badge" id="modal-s1-cat">Categoria</span>
-      <h3 class="modal-title" id="modal-s1-title">Item</h3>
+    <button class="modal-close" onclick="closeModal('modal-s1-qty')">✕</button>
+    <div class="modal-header-colored" id="modal-s1-qty-header">
+      <span class="modal-cat-badge" id="modal-s1-qty-cat">Categoria</span>
+      <h3 class="modal-title" id="modal-s1-qty-title">Item</h3>
     </div>
     <div class="modal-body modal-body-compact">
 
-      <!-- ══ MODO EXECUÇÃO — checklist / tarefa sem quantidade ══ -->
-      <!-- Mostra SOMENTE o bloco azul "Inicie sua tarefa agora" -->
-      <div id="s1-checklist-mode" class="hidden">
-        <div style="display:flex;align-items:center;justify-content:center;gap:14px;
-                    background:#f0f9ff;border:2px solid #bae6fd;border-radius:14px;
-                    padding:20px 22px;">
-          <span style="font-size:28px">🔧</span>
-          <span style="font-size:15px;color:#0369a1;font-weight:900">Inicie sua tarefa agora</span>
+      <!-- Quantidade a fazer (referência do BD) -->
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;
+                  padding:12px 16px;margin-bottom:10px">
+        <span style="font-size:13px;font-weight:800;color:#475569">📋 Quantidade a fazer</span>
+        <span style="font-size:15px;font-weight:900;color:#ea580c" id="calc-padrao-display">—</span>
+      </div>
+
+      <!-- Label + controles de estoque -->
+      <div style="font-size:12px;font-weight:800;color:#0369a1;margin-bottom:8px;text-align:center">
+        📦 Informe a quantidade em estoque abaixo
+      </div>
+      <div class="qty-row compact" style="justify-content:center;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+        <button class="qty-btn" onclick="adjField('estoque',-100)">-100</button>
+        <button class="qty-btn" onclick="adjField('estoque',-10)">-10</button>
+        <button class="qty-btn" onclick="adjField('estoque',-1)">-1</button>
+        <span class="qty-val" id="modal-s1-estoque">0</span>
+        <span class="qty-unit" id="modal-s1-unidade" style="margin:0 4px;font-size:12px;opacity:.7">un</span>
+        <button class="qty-btn plus" onclick="adjField('estoque',1)">+1</button>
+        <button class="qty-btn plus" onclick="adjField('estoque',10)">+10</button>
+        <button class="qty-btn plus" onclick="adjField('estoque',100)">+100</button>
+      </div>
+
+      <!-- A produzir hoje (calculado automaticamente) -->
+      <div class="calc-card" style="border:2px solid #fde68a;background:#fffbeb">
+        <div class="calc-row-item calc-highlight">
+          <span>⚡ A produzir hoje</span>
+          <strong class="calc-num" id="calc-necessario">—</strong>
         </div>
       </div>
 
-      <!-- ══ MODO EXCEÇÃO — quantidade = 0 no BD ══ -->
-      <!-- Mostra SOMENTE o bloco laranja de exceção, sem campo de estoque -->
-      <div id="s1-excecao-mode" class="hidden">
-        <div style="display:flex;align-items:center;justify-content:center;gap:12px;
-                    background:#fff7ed;border:2px solid #fed7aa;border-radius:14px;
-                    padding:18px 20px;">
-          <span style="font-size:28px">⚡</span>
-          <div>
-            <strong style="display:block;font-size:14px;font-weight:900;color:#92400e">Tarefa de Exceção</strong>
-            <span style="font-size:12px;color:#b45309;font-weight:700">Quantidade zero — confirme para executar</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- ══ MODO QUANTIDADE — tem quantidade padrão > 0 ══ -->
-      <div id="s1-qty-mode" style="display:none">
-
-        <!-- 1. Quantidade a fazer (referência do BD) -->
-        <div style="display:flex;align-items:center;justify-content:space-between;
-                    background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;
-                    padding:12px 16px;margin-bottom:10px">
-          <span style="font-size:13px;font-weight:800;color:#475569">📋 Quantidade a fazer</span>
-          <span style="font-size:15px;font-weight:900;color:#ea580c" id="calc-padrao-display">—</span>
-        </div>
-
-        <!-- 2. Label + controles de estoque -->
-        <div style="font-size:12px;font-weight:800;color:#0369a1;margin-bottom:8px;text-align:center">
-          📦 Informe a quantidade em estoque abaixo
-        </div>
-        <div class="qty-row compact" style="justify-content:center;flex-wrap:wrap;gap:6px;margin-bottom:14px">
-          <button class="qty-btn" onclick="adjField('estoque',-100)">-100</button>
-          <button class="qty-btn" onclick="adjField('estoque',-10)">-10</button>
-          <button class="qty-btn" onclick="adjField('estoque',-1)">-1</button>
-          <span class="qty-val" id="modal-s1-estoque">0</span>
-          <span class="qty-unit" id="modal-s1-unidade" style="margin:0 4px;font-size:12px;opacity:.7">un</span>
-          <button class="qty-btn plus" onclick="adjField('estoque',1)">+1</button>
-          <button class="qty-btn plus" onclick="adjField('estoque',10)">+10</button>
-          <button class="qty-btn plus" onclick="adjField('estoque',100)">+100</button>
-        </div>
-
-        <!-- 3. A produzir hoje (calculado automaticamente) -->
-        <div class="calc-card" style="border:2px solid #fde68a;background:#fffbeb">
-          <div class="calc-row-item calc-highlight">
-            <span>⚡ A produzir hoje</span>
-            <strong class="calc-num" id="calc-necessario">—</strong>
-          </div>
-        </div>
-
-        <!-- Ocultos — usados pelo JS -->
-        <span id="calc-padrao"    style="display:none">—</span>
-        <span id="calc-estoque"   style="display:none">0</span>
-        <span id="modal-s1-prog"  style="display:none">0</span>
-        <span id="modal-s1-unit2" style="display:none"></span>
-      </div>
-
+      <!-- Ocultos — usados pelo JS -->
+      <span id="calc-padrao"    style="display:none">—</span>
+      <span id="calc-estoque"   style="display:none">0</span>
+      <span id="modal-s1-prog"  style="display:none">0</span>
+      <span id="modal-s1-unit2" style="display:none"></span>
     </div>
     <div class="modal-footer">
-      <button class="btn-modal-cancel" onclick="closeModal('modal-s1')">Cancelar</button>
+      <button class="btn-modal-cancel" onclick="closeModal('modal-s1-qty')">Cancelar</button>
       <button class="btn-modal-confirm" id="btn-s1-confirm" onclick="confirmS1()">🟡 Programar</button>
     </div>
   </div>
 </div>
+
+<!-- ══════════════════════════════════════════
+     MODAL B — PROGRAMAR: TAREFA SEM QUANTIDADE
+     (checklist ou quantidade_padrao = 0)
+══════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-s1-exec">
+  <div class="modal-box modal-compact">
+    <button class="modal-close" onclick="closeModal('modal-s1-exec')">✕</button>
+    <div class="modal-header-colored" id="modal-s1-exec-header">
+      <span class="modal-cat-badge" id="modal-s1-exec-cat">Categoria</span>
+      <h3 class="modal-title" id="modal-s1-exec-title">Item</h3>
+    </div>
+    <div class="modal-body modal-body-compact">
+      <!-- Bloco azul: tarefa de execução -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:14px;
+                  background:#f0f9ff;border:2px solid #bae6fd;border-radius:14px;
+                  padding:24px 22px;">
+        <span style="font-size:28px">🔧</span>
+        <span style="font-size:15px;color:#0369a1;font-weight:900">Inicie sua tarefa agora</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="closeModal('modal-s1-exec')">Cancelar</button>
+      <button class="btn-modal-confirm" onclick="confirmS1()">🟡 Programar</button>
+    </div>
+  </div>
+</div>
+
+<!-- alias para compatibilidade com closeModal('modal-s1') chamado em outros lugares -->
+<div id="modal-s1" style="display:none"></div>
 
 <!-- ══════════════════════════════════════════
      MODAL — FINALIZAR ITEM (Etapa 2)
@@ -985,10 +986,10 @@
 </div>
 
 <!-- Scripts — ordem importa! -->
-<script src="js/versao.js?v=20260330c"></script>
-<script src="js/data.js?v=20260330c"></script>
-<script src="js/firebase_v2.js?v=20260330c"></script>
-<script src="js/app_v3.js?v=20260330c"></script>
+<script src="js/versao.js?v=20260330d"></script>
+<script src="js/data.js?v=20260330d"></script>
+<script src="js/firebase_v2.js?v=20260330d"></script>
+<script src="js/app_v3.js?v=20260330d"></script>
 
 <!-- Service Worker: força atualização automática a cada deploy -->
 <script>
