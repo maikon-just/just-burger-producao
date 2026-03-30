@@ -562,6 +562,21 @@
    SENHA
 ══════════════════════════════════════════════════════════ */
 const SENHA_LIDER = 'lider123*';
+
+/* Bypass automático: líder/admin autenticado via portal não precisa digitar senha */
+(function _pwBypass(){
+  try {
+    const raw = sessionStorage.getItem('jb_user');
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u && (u.papel === 'lider' || u.papel === 'admin')) {
+        const ov = document.getElementById('pw-overlay');
+        if (ov) ov.style.display = 'none';
+      }
+    }
+  } catch(e) {}
+})();
+
 function pwToggle(){
   const i = document.getElementById('pw-input');
   i.type = i.type === 'password' ? 'text' : 'password';
