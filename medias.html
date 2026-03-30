@@ -56,8 +56,6 @@
     .med-table tr:last-child td{border-bottom:none}
     .cat-chip{display:inline-block;padding:2px 8px;border-radius:6px;background:rgba(37,99,235,0.1);color:var(--blue);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
     .item-name{font-weight:600;color:var(--text)}
-    .item-name-inp{width:100%;min-width:0;font-weight:600;color:var(--text);background:#fff;border:1.5px solid var(--border);border-radius:7px;padding:5px 8px;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;resize:none;overflow:hidden;line-height:1.4;min-height:32px;display:block;box-sizing:border-box;}
-    .item-name-inp:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(230,168,0,.15);}
     .qty-ctrl{display:flex;align-items:center;gap:5px;justify-content:center}
     .qty-btn{width:28px;height:28px;border:1.5px solid var(--border);background:#fff;color:var(--text);border-radius:6px;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all .12s;}
     .qty-btn:hover{background:var(--border)}
@@ -99,9 +97,6 @@
     .btn-confirm.green:hover{background:#15803d}
     #toast-med{position:fixed;bottom:84px;left:50%;transform:translateX(-50%) translateY(80px);background:#1e293b;color:#fff;padding:10px 22px;border-radius:30px;font-size:13px;font-weight:600;z-index:9999;transition:transform .3s;pointer-events:none;white-space:nowrap;box-shadow:0 6px 24px rgba(0,0,0,0.2);}
     #toast-med.show{transform:translateX(-50%) translateY(0)}
-    .nc-dia-lbl{display:flex;align-items:center;gap:5px;background:#f8f9fc;border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;cursor:pointer;font-size:12px;font-weight:700;transition:all .15s;user-select:none;}
-    .nc-dia-lbl:has(input:checked){background:#ede9fe;border-color:#7c3aed;color:#7c3aed;}
-    .nc-dia-lbl input{accent-color:#7c3aed;width:14px;height:14px;cursor:pointer;}
     @media(max-width:600px){.filter-bar{flex-direction:column;align-items:flex-start}.colab-sel{max-width:100%;width:100%}.form-row{grid-template-columns:1fr}.row-actions{flex-wrap:wrap}}
   </style>
 </head>
@@ -130,19 +125,6 @@
 </div>
 <script>
 (function(){
-  /* Bypass automático: líder/admin autenticado via portal não precisa digitar senha */
-  try {
-    const raw = sessionStorage.getItem('jb_user');
-    if (raw) {
-      const u = JSON.parse(raw);
-      if (u && (u.papel === 'lider' || u.papel === 'admin')) {
-        document.getElementById('pw-overlay').style.display = 'none';
-        document.body.style.overflow = '';
-        return; /* sai sem configurar handlers — overlay já oculto */
-      }
-    }
-  } catch(e) {}
-
   document.body.style.overflow='hidden';
   function _pwEnter(){
     const v=document.getElementById('pw-input').value;
@@ -196,7 +178,6 @@
   <button class="btn-refresh" onclick="carregar()"><i class="fas fa-sync-alt"></i> Atualizar</button>
   <button class="btn-nova" onclick="abrirModalNova()"><i class="fas fa-plus"></i> Nova Tarefa</button>
   <button class="btn-nova" onclick="abrirModalRenomear()"><i class="fas fa-user-edit"></i> Renomear Colab.</button>
-  <button class="btn-nova" onclick="abrirModalNovoColab()" style="background:#7c3aed"><i class="fas fa-user-plus"></i> Novo Colaborador</button>
 </div>
 
 <div class="count-bar" id="count-bar">
@@ -277,67 +258,6 @@
     <div class="modal-footer">
       <button class="btn-cancel" onclick="fecharModalTrocar()">Cancelar</button>
       <button class="btn-confirm" onclick="confirmarTrocar()"><i class="fas fa-exchange-alt"></i> Mover Tarefa</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL NOVO COLABORADOR -->
-<div class="modal-overlay hidden" id="modal-novo-colab">
-  <div class="modal-box" style="max-width:520px">
-    <div class="modal-hdr">
-      <h3>👤 Novo Colaborador</h3>
-      <button class="modal-close" onclick="fecharModalNovoColab()">✕</button>
-    </div>
-    <div class="modal-body">
-
-      <div class="form-group">
-        <label>Nome do Colaborador *</label>
-        <input type="text" id="nc-nome" placeholder="Nome completo"/>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>Departamento *</label>
-          <select id="nc-depto">
-            <option value="">-- Selecione --</option>
-            <option value="Produção">🍳 Produção</option>
-            <option value="Atendimento">🛎️ Atendimento</option>
-            <option value="Câmaras">❄️ Câmaras</option>
-            <option value="Limpeza">🧹 Limpeza</option>
-            <option value="Administrativo">📋 Administrativo</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Turno *</label>
-          <select id="nc-turno">
-            <option value="dia">☀️ Dia</option>
-            <option value="noite">🌙 Noite</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>Dias de trabalho na semana *</label>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px" id="nc-dias-grid">
-          <label class="nc-dia-lbl"><input type="checkbox" value="segunda"/> Segunda</label>
-          <label class="nc-dia-lbl"><input type="checkbox" value="terca"/>   Terça</label>
-          <label class="nc-dia-lbl"><input type="checkbox" value="quarta"/>  Quarta</label>
-          <label class="nc-dia-lbl"><input type="checkbox" value="quinta"/>  Quinta</label>
-          <label class="nc-dia-lbl"><input type="checkbox" value="sexta"/>   Sexta</label>
-          <label class="nc-dia-lbl"><input type="checkbox" value="sabado"/>  Sábado</label>
-          <label class="nc-dia-lbl"><input type="checkbox" value="domingo"/> Domingo</label>
-        </div>
-        <p style="font-size:11px;color:var(--muted);margin-top:6px">
-          Será criado um card para cada dia selecionado. Adicione as tarefas depois.
-        </p>
-      </div>
-
-    </div>
-    <div class="modal-footer">
-      <button class="btn-cancel" onclick="fecharModalNovoColab()">Cancelar</button>
-      <button class="btn-confirm" style="background:#7c3aed" id="btn-confirmar-nc" onclick="salvarNovoColab()">
-        <i class="fas fa-user-plus"></i> Criar Colaborador
-      </button>
     </div>
   </div>
 </div>
@@ -424,7 +344,7 @@ function renderTabela(){
   if(!lista.length){ cont.innerHTML=`<div class="state-box"><i class="fas fa-inbox"></i><p>Nenhuma tarefa para ${M.turno==='dia'?'☀️ Dia':'🌙 Noite'} — ${M.dia}</p></div>`; return; }
   const por={};
   lista.forEach(t=>{ if(!por[t.colaborador]) por[t.colaborador]=[]; por[t.colaborador].push(t); });
-  cont.innerHTML=Object.entries(por).sort((a,b)=>a[0].localeCompare(b[0])).map(([col,tasks])=>` 
+  cont.innerHTML=Object.entries(por).sort((a,b)=>a[0].localeCompare(b[0])).map(([col,tasks])=>`
     <div class="collab-block">
       <div class="collab-hdr">
         <div class="collab-avatar">${_emoji(col)}</div>
@@ -443,7 +363,7 @@ function renderTabela(){
           <tr id="row-${t.id}">
             <td style="text-align:center"><input type="checkbox" class="row-chk" data-id="${t.id}" style="width:15px;height:15px;accent-color:#dc2626;cursor:pointer" onchange="_onChkChange()"/></td>
             <td><span class="cat-chip">${t.categoria||'Geral'}</span></td>
-            <td><textarea class="item-name-inp" id="ni-${t.id}" placeholder="Nome da tarefa" rows="1" oninput="_autoResize(this);markDirty('${t.id}')">${(t.item||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea></td>
+            <td><span class="item-name">${t.item||'—'}</span></td>
             <td><div class="qty-ctrl">
               <button class="qty-btn minus" onclick="adjQty('${t.id}',-10)">−10</button>
               <button class="qty-btn minus" onclick="adjQty('${t.id}',-1)">−</button>
@@ -461,57 +381,21 @@ function renderTabela(){
         </tbody>
       </table>
     </div>`).join('');
-  /* Após injetar HTML, ajusta alturas dos textareas */
-  requestAnimationFrame(_initNomeInputs);
 }
-
-/* Redimensiona textarea automaticamente conforme o conteúdo */
-function _autoResize(el){ el.style.height='auto'; el.style.height=(el.scrollHeight)+'px'; }
-/* Chama _autoResize em todos os textareas de nome após renderizar */
-function _initNomeInputs(){ document.querySelectorAll('.item-name-inp').forEach(el=>_autoResize(el)); }
 
 function adjQty(id,delta){ const inp=document.getElementById(`qi-${id}`); if(!inp) return; inp.value=Math.max(0,Number(inp.value)+delta); markDirty(id); }
 function markDirty(id){ const btn=document.getElementById(`sbtn-${id}`); if(btn){btn.classList.remove('saved');btn.innerHTML='<i class="fas fa-save"></i> Salvar';} }
 
-/* Lista de unidades que marcam uma tarefa como "só executar" (sem estoque) */
-const _CHECKLIST_UNITS=['checklist','vídeo','video','execução','execucao','tarefa',
-  'atividade','limpeza','higienização','higienizacao','conferir','verificar',
-  'organizar','abastecer','s/qtd','sem qtd','sem quantidade','turno','vez','dia',
-  'sessao','sessão','serviço','servico'];
-
 async function salvarItem(id){
-  const inp=document.getElementById(`qi-${id}`);
-  const ninp=document.getElementById(`ni-${id}`);
-  const btn=document.getElementById(`sbtn-${id}`);
+  const inp=document.getElementById(`qi-${id}`);const btn=document.getElementById(`sbtn-${id}`);
   if(!inp||!btn) return;
   const qty=Number(inp.value);
-  const nomeNovo=(ninp?ninp.value.trim():'');
-  if(ninp&&!nomeNovo){showToastM('⚠️ O nome da tarefa não pode ser vazio!');ninp.focus();return;}
   btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';btn.disabled=true;
   try{
-    const patch={quantidade_padrao:qty};
-    if(ninp) patch.item=nomeNovo;
-    /* Se a tarefa era checklist (unidade na lista especial) e agora recebeu
-       quantidade > 0, troca a unidade para 'un' para que o app exiba
-       o card com campo de estoque em vez do card de "só executar"      */
-    const t=M.tarefas.find(x=>x.id===id);
-    if(t && qty>0){
-      const u=(t.unidade||'').toLowerCase().trim();
-      if(_CHECKLIST_UNITS.includes(u) || !u){
-        patch.unidade='un';
-      }
-    }
-    await _fbPatch('tarefas',id,patch);
+    await _fbPatch('tarefas',id,{quantidade_padrao:qty});
     btn.innerHTML='<i class="fas fa-check"></i> Salvo';btn.classList.add('saved');
-    if(t){
-      t.quantidade_padrao=qty;
-      if(ninp) t.item=nomeNovo;
-      if(patch.unidade) t.unidade=patch.unidade;
-    }
-    /* Atualiza o rótulo de unidade visível na linha sem recarregar tudo */
-    const unitLbl=document.querySelector(`#row-${id} .unit-lbl`);
-    if(unitLbl && patch.unidade) unitLbl.textContent=patch.unidade;
-    showToastM('✅ Salvo!');
+    const t=M.tarefas.find(x=>x.id===id);if(t) t.quantidade_padrao=qty;
+    showToastM('✅ Quantidade salva!');
   }catch(e){btn.innerHTML='<i class="fas fa-save"></i> Salvar';showToastM('❌ Erro: '+e.message);}
   finally{btn.disabled=false;}
 }
@@ -708,80 +592,6 @@ async function confirmarRenomear(){
 }
 
 function _emoji(n){const e=['👨‍🍳','👩‍🍳','🧑‍🍳','😎','🙂','🤩','💪','🔥','⭐','🌟'];let s=0;for(let i=0;i<n.length;i++)s+=n.charCodeAt(i);return e[s%e.length];}
-
-/* ══ NOVO COLABORADOR ════════════════════════════════════ */
-function abrirModalNovoColab(){
-  document.getElementById('nc-nome').value='';
-  document.getElementById('nc-depto').value='';
-  document.getElementById('nc-turno').value=M.turno||'dia';
-  /* desmarca todos os dias */
-  document.querySelectorAll('#nc-dias-grid input[type=checkbox]').forEach(c=>c.checked=false);
-  document.getElementById('modal-novo-colab').classList.remove('hidden');
-  setTimeout(()=>document.getElementById('nc-nome').focus(),100);
-}
-function fecharModalNovoColab(){
-  document.getElementById('modal-novo-colab').classList.add('hidden');
-}
-
-async function salvarNovoColab(){
-  const nome   = document.getElementById('nc-nome').value.trim();
-  const depto  = document.getElementById('nc-depto').value;
-  const turno  = document.getElementById('nc-turno').value;
-  const dias   = [...document.querySelectorAll('#nc-dias-grid input:checked')].map(c=>c.value);
-
-  if(!nome)  { showToastM('⚠️ Informe o nome do colaborador!'); return; }
-  if(!depto) { showToastM('⚠️ Selecione o departamento!');      return; }
-  if(!dias.length){ showToastM('⚠️ Selecione pelo menos um dia!'); return; }
-
-  const btn=document.getElementById('btn-confirmar-nc');
-  btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Criando…';
-
-  /* Verifica se colaborador já existe para evitar duplicata */
-  const jaExiste=M.todos.some(t=>t.colaborador.toLowerCase()===nome.toLowerCase());
-  if(jaExiste){
-    showToastM('⚠️ Colaborador já existe! Use "Nova Tarefa" para adicionar tarefas.');
-    btn.disabled=false; btn.innerHTML='<i class="fas fa-user-plus"></i> Criar Colaborador';
-    return;
-  }
-
-  /* Cria uma tarefa-placeholder por dia selecionado
-     O card aparecerá na lista de médias e o usuário adiciona as tarefas reais depois */
-  let ok=0, err=0;
-  for(const dia of dias){
-    try{
-      await _fbPost('tarefas',{
-        colaborador: nome,
-        departamento: depto,
-        turno: turno,
-        dia_semana: dia,
-        categoria: depto,
-        item: `[Adicionar tarefa — ${nome}]`,
-        quantidade_padrao: 0,
-        unidade: 'checklist',
-        ordem: 999,
-      });
-      ok++;
-    } catch(e){ err++; }
-  }
-
-  btn.disabled=false; btn.innerHTML='<i class="fas fa-user-plus"></i> Criar Colaborador';
-
-  if(err===0){
-    showToastM(`✅ Colaborador criado em ${ok} dia(s)! Adicione as tarefas agora.`);
-    fecharModalNovoColab();
-    /* Recarrega e posiciona filtro no turno/primeiro dia do novo colab */
-    M.turno=turno;
-    document.getElementById('btn-dia').classList.toggle('active',turno==='dia');
-    document.getElementById('btn-noite').classList.toggle('active',turno==='noite');
-    await carregar();
-    /* Seleciona o novo colaborador no filtro */
-    const sel=document.getElementById('sel-colab');
-    if(sel){ sel.value=nome; renderTabela(); }
-  } else {
-    showToastM(`⚠️ ${ok} criados, ${err} com erro.`);
-  }
-}
-
 let _tmt;
 function showToastM(msg){const el=document.getElementById('toast-med');el.textContent=msg;el.classList.add('show');clearTimeout(_tmt);_tmt=setTimeout(()=>el.classList.remove('show'),2500);}
 </script>
