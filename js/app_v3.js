@@ -2558,15 +2558,24 @@ function _tocarAlertaPendencias() {
   }
 }
 
-/* ── Botão Imprimir do preview: mantém modal visível e dispara print ── */
+/* ── Botão Imprimir do preview ──────────────────────────────────────
+   Estratégia: copia o conteúdo para #print-zone (div simples, filho
+   direto do body, sem position:fixed/overlay) antes de window.print().
+   Isso evita o problema do Chrome Android que gera páginas em branco
+   quando o conteúdo está dentro de um elemento position:fixed.       */
 function _doPrintPreview() {
-  /* NÃO esconde o modal — o @media print cuida de mostrar só #print-preview-body */
+  const src  = document.getElementById('print-preview-body');
+  const zone = document.getElementById('print-zone');
+  if (src && zone) {
+    zone.innerHTML = src.innerHTML;   /* copia conteúdo para zona limpa */
+  }
   window.print();
-  /* Após o diálogo fechar, esconde o modal */
+  /* Após o diálogo fechar: limpa zona e fecha modal */
   setTimeout(function() {
+    if (zone) zone.innerHTML = '';
     const overlay = document.getElementById('modal-print-preview');
     if (overlay) overlay.classList.add('hidden');
-  }, 500);
+  }, 800);
 }
 
 /* ══ UTILITÁRIOS ═════════════════════════════════════════ */
