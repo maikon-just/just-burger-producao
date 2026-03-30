@@ -1,4 +1,4 @@
-/* ══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    JUST BURGER 🍔 — app_v3.js
    Controle de Produção — Firebase Realtime Database (compat)
    Versão: 2026-03-27 — GitHub Edition
@@ -559,27 +559,53 @@ async function _carregarAreasExtras() {
   if (!grid) return;
   /* Remove botões extras inseridos anteriormente (marcados com data-custom) */
   grid.querySelectorAll('[data-custom-area]').forEach(el => el.remove());
+
+  /* Mapa final: chave → { nome, emoji } */
+  const extra = {};
+
+  /* Fonte 1: coleção 'areas' cadastrada pelo usuário em medias.html */
   try {
     const areas = await _fbGetAll('areas');
     areas
       .filter(a => a.ativo !== false && !_AREAS_FIXAS.has(a.chave))
-      .forEach(a => {
-        const btn = document.createElement('button');
-        btn.className = 'dept-btn dept-btn-custom';
-        btn.setAttribute('data-custom-area', a.chave);
-        btn.onclick = () => _abrirSetorCards(a.chave);
-        btn.innerHTML = `
-          <span class="dept-btn-emoji">${a.emoji || '🏷️'}</span>
-          <div style="flex:1;text-align:left">
-            <span class="dept-btn-nome">${a.nome}</span>
-            <div class="dept-btn-sub">${a.chave}</div>
-          </div>
-          <span style="font-size:22px;opacity:.45">›</span>`;
-        grid.appendChild(btn);
-      });
-  } catch(e) {
-    /* silencioso — áreas extras são opcionais */
-  }
+      .forEach(a => { extra[a.chave] = { nome: a.nome, emoji: a.emoji || '🏷️' }; });
+  } catch(e) { /* silencioso */ }
+
+  /* Fonte 2: campo 'departamento' das tarefas já carregadas no cache
+     Cobre colaboradores criados via Nova Tarefa mesmo sem cadastrar área */
+  try {
+    const tarefas = _cache.tarefas && _cache.tarefas.length
+      ? _cache.tarefas
+      : await _fbGetAll('tarefas');
+    if (!_cache.tarefas || !_cache.tarefas.length) _cache.tarefas = tarefas;
+
+    tarefas.forEach(t => {
+      const chave = (t.departamento || '').toUpperCase().trim();
+      if (chave && !_AREAS_FIXAS.has(chave) && !extra[chave]) {
+        /* Deriva um nome legível a partir da chave (substitui _ por espaço, Title Case) */
+        const nome = chave.replace(/_/g,' ')
+          .toLowerCase()
+          .replace(/\b\w/g, c => c.toUpperCase());
+        extra[chave] = { nome, emoji: '🏷️' };
+      }
+    });
+  } catch(e) { /* silencioso */ }
+
+  /* Renderiza um botão para cada departamento extra encontrado */
+  Object.entries(extra).forEach(([chave, info]) => {
+    const btn = document.createElement('button');
+    btn.className = 'dept-btn dept-btn-custom';
+    btn.setAttribute('data-custom-area', chave);
+    btn.onclick = () => _abrirSetorCards(chave);
+    btn.innerHTML = `
+      <span class="dept-btn-emoji">${info.emoji}</span>
+      <div style="flex:1;text-align:left">
+        <span class="dept-btn-nome">${info.nome}</span>
+        <div class="dept-btn-sub">${chave}</div>
+      </div>
+      <span style="font-size:22px;opacity:.45">›</span>`;
+    grid.appendChild(btn);
+  });
 }
 
 function _abrirSetorCards(dept) {
