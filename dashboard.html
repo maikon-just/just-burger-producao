@@ -390,11 +390,17 @@
 <div class="filter-panel">
   <div class="filter-group">
     <span class="filter-label">📅 Data Início</span>
-    <input type="date" id="f-de" class="filter-input"/>
+    <div style="position:relative;cursor:pointer"
+         onclick="var i=document.getElementById('f-de');if(i.showPicker)i.showPicker();else i.click()">
+      <input type="date" id="f-de" class="filter-input" style="cursor:pointer"/>
+    </div>
   </div>
   <div class="filter-group">
     <span class="filter-label">📅 Data Fim</span>
-    <input type="date" id="f-ate" class="filter-input"/>
+    <div style="position:relative;cursor:pointer"
+         onclick="var i=document.getElementById('f-ate');if(i.showPicker)i.showPicker();else i.click()">
+      <input type="date" id="f-ate" class="filter-input" style="cursor:pointer"/>
+    </div>
   </div>
   <div class="filter-group">
     <span class="filter-label">⏰ Turno</span>
