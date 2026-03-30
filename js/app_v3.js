@@ -2566,16 +2566,24 @@ function _tocarAlertaPendencias() {
 function _doPrintPreview() {
   const src  = document.getElementById('print-preview-body');
   const zone = document.getElementById('print-zone');
-  if (src && zone) {
-    zone.innerHTML = src.innerHTML;   /* copia conteúdo para zona limpa */
-  }
-  window.print();
-  /* Após o diálogo fechar: limpa zona e fecha modal */
-  setTimeout(function() {
-    if (zone) zone.innerHTML = '';
-    const overlay = document.getElementById('modal-print-preview');
-    if (overlay) overlay.classList.add('hidden');
-  }, 800);
+  if (!src || !zone) { window.print(); return; }
+
+  /* 1. Copia o conteúdo para a zona limpa (fora de qualquer fixed/overlay) */
+  zone.innerHTML = src.innerHTML;
+
+  /* 2. Aguarda 2 frames para o browser renderizar o conteúdo no DOM
+        antes de capturar o print — essencial no Chrome Android/Samsung */
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      window.print();
+      /* 3. Após o diálogo fechar: limpa zona e fecha modal */
+      setTimeout(function() {
+        zone.innerHTML = '';
+        const overlay = document.getElementById('modal-print-preview');
+        if (overlay) overlay.classList.add('hidden');
+      }, 1000);
+    });
+  });
 }
 
 /* ══ UTILITÁRIOS ═════════════════════════════════════════ */
