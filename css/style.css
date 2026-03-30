@@ -1236,5 +1236,10 @@ body:not(.has-bottom-nav) .tasks-footer { bottom:0; }
     font-family: Arial, sans-serif !important;
   }
 
-  body { background: #fff; margin: 0; padding: 0; }
+  body {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 0 !important;   /* remove o 100vh que gera página extra */
+  }
 }
