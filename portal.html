@@ -14,8 +14,10 @@
   <!-- Fontes e ícones -->
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
+  <!-- Versão / cache-bust -->
+  <script src="js/versao.js?v=20260330"></script>
   <!-- Firebase helper -->
-  <script src="js/firebase_v2.js?v=20260329"></script>
+  <script src="js/firebase_v2.js?v=20260330"></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -891,7 +893,8 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- Service Worker: força atualização automática a cada deploy -->
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js')
+  const swUrl = new URL('sw.js', window.location.href).href;
+  navigator.serviceWorker.register(swUrl)
     .then(reg => {
       reg.update();
       console.log('[SW] Registrado no portal:', reg.scope);
