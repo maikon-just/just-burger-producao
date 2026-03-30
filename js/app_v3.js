@@ -1171,11 +1171,8 @@ async function iniciarProducao() {
     _cache.sessoes=null; /* invalida cache de sessões */
   } catch(e) { console.error('Erro ao salvar etapa1:', e); }
 
-  /* Abre impressão da folha de produção */
-  printColaborador();
-
-  /* Volta para a tela de cards */
-  showToast('✅ Etapa 1 salva! Entre novamente para finalizar.');
+  /* Volta para a tela de cards — impressão fica disponível pelo botão Imprimir */
+  showToast('✅ Etapa 1 salva! Use o botão Imprimir para a folha de produção.');
   _mostrarTelaSetor(_deptAtual);
 }
 
@@ -1477,23 +1474,34 @@ function _autoPrintPendencias(tarefas,s1,s2,col,turno,dia) {
     const feito=d2.produzida!==undefined?d2.produzida:0;
     const rest=Math.max(0,(prog||0)-feito);
     const ck=isChecklist(t);
-    return `<tr><td>${t.categoria||''}</td><td>${t.item}</td>
+    return `<tr>
+      <td style="font-size:11px;color:#555">${t.categoria||''}</td>
+      <td><strong>${t.item}</strong></td>
       <td>${ck?'—':fmt(prog)+' '+(t.unidade||'')}</td>
       <td>${ck?'—':fmt(feito)+' '+(t.unidade||'')}</td>
       <td style="color:#c0392b;font-weight:900">${ck?'—':fmt(rest)+' '+(t.unidade||'')}</td>
-      <td>${sl2[d2.status||'']}</td><td>${d2.motivo||'—'}</td></tr>`;
+      <td>${sl2[d2.status||'']}</td>
+      <td style="font-size:11px">${d2.motivo||'—'}</td>
+    </tr>`;
   }).join('');
-  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>⚠️ Pendências — ${col}</title>
-    <style>body{font-family:Arial,sans-serif;font-size:12px;padding:20px}h1{font-size:18px;margin:0 0 4px}
-    p{font-size:12px;color:#555;margin:0 0 16px}table{width:100%;border-collapse:collapse}
-    th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}th{background:#f5f5f5;font-weight:700}</style>
-    </head><body onload="window.print();setTimeout(function(){window.close()},500)">
-    <h1>⚠️ Pendências — ${col}</h1>
-    <p>Turno: ${turno==='dia'?'☀️ Dia':'🌙 Noite'} · ${dObj?dObj.label:dia} · ${today()}</p>
-    <table><thead><tr><th>Categoria</th><th>Item</th><th>Programado</th><th>Produzido</th><th>Restante</th><th>Status</th><th>Motivo</th></tr></thead>
-    <tbody>${linhas}</tbody></table></body></html>`;
-  const w=window.open('','_blank','width=800,height=600');
-  if (w) { w.document.write(html); w.document.close(); }
+  const conteudo=`
+    <h1 style="font-size:18px;margin:0 0 4px;font-family:Arial,sans-serif">⚠️ Pendências — ${col}</h1>
+    <p style="font-size:12px;color:#555;margin:0 0 16px;font-family:Arial,sans-serif">
+      Turno: ${turno==='dia'?'☀️ Dia':'🌙 Noite'} &nbsp;·&nbsp; ${dObj?dObj.label:dia} &nbsp;·&nbsp; ${today()}
+    </p>
+    <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px">
+      <thead><tr>
+        <th style="background:#f5f5f5;padding:6px 8px;border:1px solid #ccc">Categoria</th>
+        <th style="background:#f5f5f5;padding:6px 8px;border:1px solid #ccc">Item</th>
+        <th style="background:#f5f5f5;padding:6px 8px;border:1px solid #ccc">Programado</th>
+        <th style="background:#f5f5f5;padding:6px 8px;border:1px solid #ccc">Produzido</th>
+        <th style="background:#fee2e2;padding:6px 8px;border:1px solid #ccc;color:#c0392b">Restante</th>
+        <th style="background:#f5f5f5;padding:6px 8px;border:1px solid #ccc">Status</th>
+        <th style="background:#f5f5f5;padding:6px 8px;border:1px solid #ccc">Motivo</th>
+      </tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>`;
+  _abrirPreviewImpressao(conteudo);
 }
 
 function printColaborador() {
@@ -1504,43 +1512,32 @@ function printColaborador() {
     const estoque=ck?'—':fmt(d1.estoque!==undefined?d1.estoque:0)+' '+(t.unidade||'');
     const prog=ck?'Checklist':fmt(d1.programada!==undefined?d1.programada:(t.quantidade_padrao||0))+' '+(t.unidade||'');
     return `<tr>
-      <td>${t.categoria||''}</td>
-      <td><strong>${t.item}</strong></td>
-      <td style="font-weight:700;font-size:13px">${ck?'—':media}</td>
-      <td style="font-weight:700;font-size:13px">${estoque}</td>
-      <td style="font-weight:900;font-size:14px;color:#e8590c">${prog}</td>
+      <td style="font-size:11px;color:#555">${t.categoria||''}</td>
+      <td><strong style="font-size:12px">${t.item}</strong></td>
+      <td style="font-weight:700;font-size:12px;color:#1a1d2e">${ck?'—':media}</td>
+      <td style="font-weight:700;font-size:12px">${estoque}</td>
+      <td style="font-weight:900;font-size:13px;color:#e8590c">${prog}</td>
       <td style="width:50px;background:#f9fafb">&nbsp;</td>
     </tr>`;
   }).join('');
-  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${S.colaborador}</title>
-    <style>
-      body{font-family:Arial,sans-serif;font-size:12px;padding:20px}
-      h1{font-size:18px;margin:0 0 4px}
-      .info{font-size:12px;color:#555;margin:0 0 16px}
-      table{width:100%;border-collapse:collapse}
-      th,td{border:1px solid #ccc;padding:7px 8px;text-align:left}
-      th{background:#f0f0f0;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
-      tr:hover{background:#fafafa}
-      .col-media{color:#1a1a2e;font-size:12px}
-      .col-prog{color:#e8590c;font-size:13px;font-weight:900}
-      .col-verif{background:#fafafa;text-align:center}
-    </style>
-    </head><body onload="window.print();setTimeout(function(){window.close()},500)">
-    <h1>📋 ${S.colaborador}</h1>
-    <p class="info">Turno: ${S.turno==='dia'?'☀️ Dia':'🌙 Noite'} · ${dObj?dObj.label:S.dia} · ${today()}</p>
-    <table>
+  const conteudo=`
+    <h1 style="font-size:18px;margin:0 0 4px;font-family:Arial,sans-serif">📋 ${S.colaborador}</h1>
+    <p style="font-size:12px;color:#555;margin:0 0 16px;font-family:Arial,sans-serif">
+      Turno: ${S.turno==='dia'?'☀️ Dia':'🌙 Noite'} &nbsp;·&nbsp;
+      ${dObj?dObj.label:S.dia} &nbsp;·&nbsp; ${today()}
+    </p>
+    <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif">
       <thead><tr>
-        <th>Categoria</th>
-        <th>Item</th>
-        <th class="col-media">📊 Média</th>
-        <th class="col-media">📦 Estoque</th>
-        <th class="col-prog">🎯 A Produzir</th>
-        <th class="col-verif">✓ Verificar</th>
+        <th style="background:#f0f0f0;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;border:1px solid #ccc">Categoria</th>
+        <th style="background:#f0f0f0;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;border:1px solid #ccc">Item</th>
+        <th style="background:#f0f0f0;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;border:1px solid #ccc">📊 Média</th>
+        <th style="background:#f0f0f0;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;border:1px solid #ccc">📦 Estoque</th>
+        <th style="background:#f0f0f0;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;border:1px solid #ccc;color:#e8590c">🎯 A Produzir</th>
+        <th style="background:#f0f0f0;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;border:1px solid #ccc">✓ Verificar</th>
       </tr></thead>
       <tbody>${linhas}</tbody>
-    </table></body></html>`;
-  const w=window.open('','_blank','width=800,height=600');
-  if (w) { w.document.write(html); w.document.close(); }
+    </table>`;
+  _abrirPreviewImpressao(conteudo);
 }
 
 /* ══ RESULTADOS / PENDÊNCIAS DO DIA ═════════════════════ */
@@ -2465,12 +2462,38 @@ function printAllCollabs() {
 function printEspelho() { printAllCollabs(); }
 
 function _triggerPrint(titulo,sub,headerRow,linhas) {
-  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${titulo}</title>
-    <style>body{font-family:Arial,sans-serif;font-size:11px;padding:20px}h1{font-size:16px;margin:0 0 2px}p{font-size:11px;color:#555;margin:0 0 12px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:5px 7px;text-align:left}th{background:#f0f0f0;font-weight:700}tr:nth-child(even) td{background:#fafafa}</style>
-    </head><body onload="window.print();setTimeout(function(){window.close()},500)"><h1>${titulo}</h1><p>${sub}</p>
-    <table><thead>${headerRow}</thead><tbody>${linhas}</tbody></table></body></html>`;
-  const w=window.open('','_blank','width=900,height=700');
-  if (w) { w.document.write(html); w.document.close(); }
+  const conteudo=`
+    <h1 style="font-size:16px;margin:0 0 2px;font-family:Arial,sans-serif">${titulo}</h1>
+    <p style="font-size:11px;color:#555;margin:0 0 12px;font-family:Arial,sans-serif">${sub}</p>
+    <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:11px">
+      <thead>${headerRow}</thead>
+      <tbody>${linhas}</tbody>
+    </table>`;
+  _abrirPreviewImpressao(conteudo);
+}
+
+/* ── Abre o modal de pré-visualização inline (sem window.open) ──
+   Compatível com tablets Android/Samsung que bloqueiam popups     */
+function _abrirPreviewImpressao(htmlConteudo) {
+  const overlay = document.getElementById('modal-print-preview');
+  const body    = document.getElementById('print-preview-body');
+  if (!overlay || !body) {
+    /* Fallback para ambientes sem o modal (ex: dashboard.html) */
+    try {
+      const w = window.open('','_blank');
+      if (w) {
+        w.document.write('<html><head><meta charset="UTF-8"><style>body{font-family:Arial,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:6px 8px}th{background:#f0f0f0}</style></head><body>');
+        w.document.write(htmlConteudo);
+        w.document.write('</body></html>');
+        w.document.close();
+      }
+    } catch(e) {}
+    return;
+  }
+  body.innerHTML = htmlConteudo;
+  overlay.classList.remove('hidden');
+  /* Scrolla para o topo do preview */
+  overlay.scrollTop = 0;
 }
 
 /* ══ UTILITÁRIOS ═════════════════════════════════════════ */
