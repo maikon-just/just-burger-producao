@@ -657,9 +657,8 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
     if (tipoFalta&&S.leaderOk)  acao=`_gerenciarFalta('${ne}','${tipoFalta}','remover')`;
     else if (jaFinaliz)          acao=`_clickColab('${ne}','__reabrir__')`;
     else                         acao=`_clickColab('${ne}','__selecionar__')`;
-    // Botão Falta aparece sempre (exceto se já há falta ou finalizou)
-    // Ao clicar, pede senha do líder se não estiver logado
-    const btnFalta=(!tipoFalta&&!jaFinaliz)
+    // Botão Falta: só aparece para líderes/admins
+    const btnFalta=((!tipoFalta&&!jaFinaliz) && (S.leaderOk||_isLider()))
       ?`<div class="collab-falta-row"><button class="btn-falta-card" onclick="event.stopPropagation();_abrirFaltaComSenha('${ne}')">🚫 Registrar Falta</button></div>`:'';
     return `<div class="${wrapClass}">
       <button class="collab-card ${cor}${jaFinaliz?' collab-done':''}${isEtapa1Ok?' collab-etapa1':''}${tipoFalta?' collab-falta':''}" onclick="${acao}">
@@ -961,11 +960,9 @@ async function _carregarRegistrosAtendimento(nome) {
 function _prepararModoAtendimento() {
   S.producaoIniciada=true;
   S.tarefas.forEach(t=>{ if (!S.s1[t.id]) S.s1[t.id]={estoque:0,programada:1,confirmed:true}; });
+  /* Banner de fase oculto */
   const banner=document.getElementById('prod-banner');
-  if (banner) banner.className='step-banner step-banner-2';
-  const bIcon=document.getElementById('prod-banner-icon'); if (bIcon) bIcon.textContent='✅';
-  const bTitle=document.getElementById('prod-banner-title'); if (bTitle) bTitle.textContent='Modo Atendimento — Finalização';
-  const bSub=document.getElementById('prod-banner-sub'); if (bSub) bSub.textContent='Marque as tarefas conforme forem concluídas';
+  if (banner) banner.classList.add('hidden');
 }
 
 /* ══ CHIPS DE NAVEGAÇÃO ══════════════════════════════════ */
@@ -992,13 +989,9 @@ function renderStep1() {
   if (fill) fill.style.width=(total?Math.round(confirmed/total*100):0)+'%';
   if (txt)  txt.textContent=`${confirmed} / ${total} programados`;
 
+  /* Banner de fase oculto — não exibir faixa amarela */
   const banner=document.getElementById('prod-banner');
-  if (banner) {
-    banner.className='step-banner step-banner-1';
-    const bIcon=document.getElementById('prod-banner-icon'); if (bIcon) bIcon.textContent='📋';
-    const bTitle=document.getElementById('prod-banner-title'); if (bTitle) bTitle.textContent='Etapa 1 — Programe as quantidades';
-    const bSub=document.getElementById('prod-banner-sub'); if (bSub) bSub.textContent='Toque em cada card para definir estoque e quantidade a produzir';
-  }
+  if (banner) banner.classList.add('hidden');
 
   list.innerHTML=S.tarefas.map(t=>{
     const cc=getCatColor(t.categoria);
@@ -1143,9 +1136,9 @@ function confirmS1() {
 }
 
 async function iniciarProducao() {
-  /* Oculta o botão imediatamente para evitar cliques duplos */
+  /* Desabilita temporariamente para evitar cliques duplos, mas não oculta */
   const iniBtn = document.getElementById('btn-sm-start-footer');
-  if (iniBtn) { iniBtn.classList.add('hidden'); iniBtn.disabled = true; }
+  if (iniBtn) { iniBtn.disabled = true; iniBtn.style.opacity='0.5'; }
 
   S.producaoIniciada=true;
   /* Garante que todos os cards sem s1 usem o padrão */
