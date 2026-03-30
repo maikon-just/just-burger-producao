@@ -535,9 +535,13 @@ function selectDia(dia) {
 
 /* ══ DEPARTAMENTO ════════════════════════════════════════ */
 function _getDept(nome, tarefaDept) {
-  /* Prioridade: campo departamento gravado na própria tarefa (colaboradores novos/custom) */
+  /* 1º: campo departamento gravado na própria tarefa (colaboradores novos/custom) */
   if (tarefaDept) return tarefaDept;
-  return COLLAB_DEPT[(nome||'').toUpperCase()] || 'PRODUCAO';
+  /* 2º: mapa estático para colaboradores antigos */
+  const fromMap = COLLAB_DEPT[(nome||'').toUpperCase()];
+  if (fromMap) return fromMap;
+  /* 3º: colaborador não reconhecido e sem campo dept → não cai em setor errado */
+  return '__NONE__';
 }
 
 function _irParaDept() {
@@ -557,13 +561,22 @@ const _AREAS_FIXAS = new Set(['PRODUCAO','OPERACAO','ATENDIMENTO']);
 async function _carregarAreasExtras() {
   const grid = document.getElementById('dept-btn-grid');
   if (!grid) return;
-  /* Remove botões extras inseridos anteriormente (marcados com data-custom) */
+  /* Remove botões extras inseridos anteriormente */
   grid.querySelectorAll('[data-custom-area]').forEach(el => el.remove());
 
   /* Mapa final: chave → { nome, emoji } */
   const extra = {};
 
-  /* Fonte 1: coleção 'areas' cadastrada pelo usuário em medias.html */
+  /* Sempre busca todas as tarefas frescos do Firebase para ter dados completos */
+  let tarefas = [];
+  try {
+    tarefas = await _fbGetAll('tarefas');
+    _cache.tarefas = tarefas;
+  } catch(e) {
+    tarefas = _cache.tarefas || [];
+  }
+
+  /* Fonte 1: coleção 'areas' cadastrada pelo usuário */
   try {
     const areas = await _fbGetAll('areas');
     areas
@@ -571,27 +584,40 @@ async function _carregarAreasExtras() {
       .forEach(a => { extra[a.chave] = { nome: a.nome, emoji: a.emoji || '🏷️' }; });
   } catch(e) { /* silencioso */ }
 
-  /* Fonte 2: campo 'departamento' das tarefas já carregadas no cache
-     Cobre colaboradores criados via Nova Tarefa mesmo sem cadastrar área */
-  try {
-    const tarefas = _cache.tarefas && _cache.tarefas.length
-      ? _cache.tarefas
-      : await _fbGetAll('tarefas');
-    if (!_cache.tarefas || !_cache.tarefas.length) _cache.tarefas = tarefas;
+  /* Fonte 2: campo 'departamento' direto nas tarefas */
+  tarefas.forEach(t => {
+    const chave = (t.departamento || '').toUpperCase().trim();
+    if (chave && !_AREAS_FIXAS.has(chave) && !extra[chave]) {
+      const nome = chave.replace(/_/g,' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+      extra[chave] = { nome, emoji: '🏷️' };
+    }
+  });
 
-    tarefas.forEach(t => {
-      const chave = (t.departamento || '').toUpperCase().trim();
-      if (chave && !_AREAS_FIXAS.has(chave) && !extra[chave]) {
-        /* Deriva um nome legível a partir da chave (substitui _ por espaço, Title Case) */
-        const nome = chave.replace(/_/g,' ')
-          .toLowerCase()
-          .replace(/\b\w/g, c => c.toUpperCase());
-        extra[chave] = { nome, emoji: '🏷️' };
+  /* Fonte 3: colaboradores sem campo 'departamento' na tarefa mas que têm
+     OUTRA tarefa (mesmo colaborador) COM departamento — propaga o valor.
+     Isso corrige tarefas criadas antes da v18 (ex: MAIKON TESTE).        */
+  const deptPorColab = {};
+  tarefas.forEach(t => {
+    if (t.departamento && t.colaborador)
+      deptPorColab[(t.colaborador||'').toUpperCase()] = t.departamento.toUpperCase().trim();
+  });
+
+  /* Atualiza o cache local para que _getDept funcione imediatamente */
+  tarefas.forEach(t => {
+    if (!t.departamento && t.colaborador) {
+      const dept = deptPorColab[(t.colaborador||'').toUpperCase()];
+      if (dept) {
+        t.departamento = dept; /* corrige em memória — sem patch no Firebase */
+        /* Detecta departamento extra vindo desta fonte também */
+        if (!_AREAS_FIXAS.has(dept) && !extra[dept]) {
+          const nome = dept.replace(/_/g,' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+          extra[dept] = { nome, emoji: '🏷️' };
+        }
       }
-    });
-  } catch(e) { /* silencioso */ }
+    }
+  });
 
-  /* Renderiza um botão para cada departamento extra encontrado */
+  /* Renderiza um botão para cada departamento extra */
   Object.entries(extra).forEach(([chave, info]) => {
     const btn = document.createElement('button');
     btn.className = 'dept-btn dept-btn-custom';
