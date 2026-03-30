@@ -342,6 +342,8 @@ body:not(.has-bottom-nav) .tasks-footer { bottom:0; }
 .dept-btn-operacao:hover    { border-color:#16a34a; background:#f0fdf4; }
 .dept-btn-atendimento{ border-color:#60a5fa; }
 .dept-btn-atendimento:hover { border-color:#2563eb; background:#eff6ff; }
+.dept-btn-custom      { border-color:#0891b2; }
+.dept-btn-custom:hover{ border-color:#0e7490; background:#ecfeff; }
 .dept-btn-emoji { font-size:36px; }
 .dept-btn-nome  { font-size:18px; font-weight:900; flex:1; text-align:left; }
 .dept-btn-sub   { font-size:12px; color:var(--text2); font-weight:600; margin-top:2px; }
