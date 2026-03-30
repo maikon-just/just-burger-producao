@@ -125,6 +125,19 @@
 </div>
 <script>
 (function(){
+  /* Bypass automático: líder/admin autenticado via portal não precisa digitar senha */
+  try {
+    const raw = sessionStorage.getItem('jb_user');
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u && (u.papel === 'lider' || u.papel === 'admin')) {
+        document.getElementById('pw-overlay').style.display = 'none';
+        document.body.style.overflow = '';
+        return; /* sai sem configurar handlers — overlay já oculto */
+      }
+    }
+  } catch(e) {}
+
   document.body.style.overflow='hidden';
   function _pwEnter(){
     const v=document.getElementById('pw-input').value;
