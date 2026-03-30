@@ -1,11 +1,11 @@
 /* ═══════════════════════════════════════════════════════════
    Just Burger 🍔 — Service Worker
-   Versão: 20260329-1
+   Versão: 20260329-2
    Estratégia: Network First com fallback para cache
    A cada novo deploy, incremente a versão CACHE_NAME abaixo
 ═══════════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'justburger-v20260329-1';
+const CACHE_NAME = 'justburger-v20260329-2';
 
 /* Arquivos que serão cacheados */
 const CACHE_FILES = [
