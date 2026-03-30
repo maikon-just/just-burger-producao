@@ -99,6 +99,9 @@
     .btn-confirm.green:hover{background:#15803d}
     #toast-med{position:fixed;bottom:84px;left:50%;transform:translateX(-50%) translateY(80px);background:#1e293b;color:#fff;padding:10px 22px;border-radius:30px;font-size:13px;font-weight:600;z-index:9999;transition:transform .3s;pointer-events:none;white-space:nowrap;box-shadow:0 6px 24px rgba(0,0,0,0.2);}
     #toast-med.show{transform:translateX(-50%) translateY(0)}
+    .nc-dia-lbl{display:flex;align-items:center;gap:5px;background:#f8f9fc;border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;cursor:pointer;font-size:12px;font-weight:700;transition:all .15s;user-select:none;}
+    .nc-dia-lbl:has(input:checked){background:#ede9fe;border-color:#7c3aed;color:#7c3aed;}
+    .nc-dia-lbl input{accent-color:#7c3aed;width:14px;height:14px;cursor:pointer;}
     @media(max-width:600px){.filter-bar{flex-direction:column;align-items:flex-start}.colab-sel{max-width:100%;width:100%}.form-row{grid-template-columns:1fr}.row-actions{flex-wrap:wrap}}
   </style>
 </head>
@@ -193,6 +196,7 @@
   <button class="btn-refresh" onclick="carregar()"><i class="fas fa-sync-alt"></i> Atualizar</button>
   <button class="btn-nova" onclick="abrirModalNova()"><i class="fas fa-plus"></i> Nova Tarefa</button>
   <button class="btn-nova" onclick="abrirModalRenomear()"><i class="fas fa-user-edit"></i> Renomear Colab.</button>
+  <button class="btn-nova" onclick="abrirModalNovoColab()" style="background:#7c3aed"><i class="fas fa-user-plus"></i> Novo Colaborador</button>
 </div>
 
 <div class="count-bar" id="count-bar">
@@ -273,6 +277,67 @@
     <div class="modal-footer">
       <button class="btn-cancel" onclick="fecharModalTrocar()">Cancelar</button>
       <button class="btn-confirm" onclick="confirmarTrocar()"><i class="fas fa-exchange-alt"></i> Mover Tarefa</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOVO COLABORADOR -->
+<div class="modal-overlay hidden" id="modal-novo-colab">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-hdr">
+      <h3>👤 Novo Colaborador</h3>
+      <button class="modal-close" onclick="fecharModalNovoColab()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-group">
+        <label>Nome do Colaborador *</label>
+        <input type="text" id="nc-nome" placeholder="Nome completo"/>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Departamento *</label>
+          <select id="nc-depto">
+            <option value="">-- Selecione --</option>
+            <option value="Produção">🍳 Produção</option>
+            <option value="Atendimento">🛎️ Atendimento</option>
+            <option value="Câmaras">❄️ Câmaras</option>
+            <option value="Limpeza">🧹 Limpeza</option>
+            <option value="Administrativo">📋 Administrativo</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Turno *</label>
+          <select id="nc-turno">
+            <option value="dia">☀️ Dia</option>
+            <option value="noite">🌙 Noite</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Dias de trabalho na semana *</label>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px" id="nc-dias-grid">
+          <label class="nc-dia-lbl"><input type="checkbox" value="segunda"/> Segunda</label>
+          <label class="nc-dia-lbl"><input type="checkbox" value="terca"/>   Terça</label>
+          <label class="nc-dia-lbl"><input type="checkbox" value="quarta"/>  Quarta</label>
+          <label class="nc-dia-lbl"><input type="checkbox" value="quinta"/>  Quinta</label>
+          <label class="nc-dia-lbl"><input type="checkbox" value="sexta"/>   Sexta</label>
+          <label class="nc-dia-lbl"><input type="checkbox" value="sabado"/>  Sábado</label>
+          <label class="nc-dia-lbl"><input type="checkbox" value="domingo"/> Domingo</label>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:6px">
+          Será criado um card para cada dia selecionado. Adicione as tarefas depois.
+        </p>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fecharModalNovoColab()">Cancelar</button>
+      <button class="btn-confirm" style="background:#7c3aed" id="btn-confirmar-nc" onclick="salvarNovoColab()">
+        <i class="fas fa-user-plus"></i> Criar Colaborador
+      </button>
     </div>
   </div>
 </div>
@@ -643,6 +708,80 @@ async function confirmarRenomear(){
 }
 
 function _emoji(n){const e=['👨‍🍳','👩‍🍳','🧑‍🍳','😎','🙂','🤩','💪','🔥','⭐','🌟'];let s=0;for(let i=0;i<n.length;i++)s+=n.charCodeAt(i);return e[s%e.length];}
+
+/* ══ NOVO COLABORADOR ════════════════════════════════════ */
+function abrirModalNovoColab(){
+  document.getElementById('nc-nome').value='';
+  document.getElementById('nc-depto').value='';
+  document.getElementById('nc-turno').value=M.turno||'dia';
+  /* desmarca todos os dias */
+  document.querySelectorAll('#nc-dias-grid input[type=checkbox]').forEach(c=>c.checked=false);
+  document.getElementById('modal-novo-colab').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('nc-nome').focus(),100);
+}
+function fecharModalNovoColab(){
+  document.getElementById('modal-novo-colab').classList.add('hidden');
+}
+
+async function salvarNovoColab(){
+  const nome   = document.getElementById('nc-nome').value.trim();
+  const depto  = document.getElementById('nc-depto').value;
+  const turno  = document.getElementById('nc-turno').value;
+  const dias   = [...document.querySelectorAll('#nc-dias-grid input:checked')].map(c=>c.value);
+
+  if(!nome)  { showToastM('⚠️ Informe o nome do colaborador!'); return; }
+  if(!depto) { showToastM('⚠️ Selecione o departamento!');      return; }
+  if(!dias.length){ showToastM('⚠️ Selecione pelo menos um dia!'); return; }
+
+  const btn=document.getElementById('btn-confirmar-nc');
+  btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Criando…';
+
+  /* Verifica se colaborador já existe para evitar duplicata */
+  const jaExiste=M.todos.some(t=>t.colaborador.toLowerCase()===nome.toLowerCase());
+  if(jaExiste){
+    showToastM('⚠️ Colaborador já existe! Use "Nova Tarefa" para adicionar tarefas.');
+    btn.disabled=false; btn.innerHTML='<i class="fas fa-user-plus"></i> Criar Colaborador';
+    return;
+  }
+
+  /* Cria uma tarefa-placeholder por dia selecionado
+     O card aparecerá na lista de médias e o usuário adiciona as tarefas reais depois */
+  let ok=0, err=0;
+  for(const dia of dias){
+    try{
+      await _fbPost('tarefas',{
+        colaborador: nome,
+        departamento: depto,
+        turno: turno,
+        dia_semana: dia,
+        categoria: depto,
+        item: `[Adicionar tarefa — ${nome}]`,
+        quantidade_padrao: 0,
+        unidade: 'checklist',
+        ordem: 999,
+      });
+      ok++;
+    } catch(e){ err++; }
+  }
+
+  btn.disabled=false; btn.innerHTML='<i class="fas fa-user-plus"></i> Criar Colaborador';
+
+  if(err===0){
+    showToastM(`✅ Colaborador criado em ${ok} dia(s)! Adicione as tarefas agora.`);
+    fecharModalNovoColab();
+    /* Recarrega e posiciona filtro no turno/primeiro dia do novo colab */
+    M.turno=turno;
+    document.getElementById('btn-dia').classList.toggle('active',turno==='dia');
+    document.getElementById('btn-noite').classList.toggle('active',turno==='noite');
+    await carregar();
+    /* Seleciona o novo colaborador no filtro */
+    const sel=document.getElementById('sel-colab');
+    if(sel){ sel.value=nome; renderTabela(); }
+  } else {
+    showToastM(`⚠️ ${ok} criados, ${err} com erro.`);
+  }
+}
+
 let _tmt;
 function showToastM(msg){const el=document.getElementById('toast-med');el.textContent=msg;el.classList.add('show');clearTimeout(_tmt);_tmt=setTimeout(()=>el.classList.remove('show'),2500);}
 </script>
