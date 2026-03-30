@@ -166,35 +166,32 @@ body {
 .welcome-hero h2 { font-size:20px; font-weight:900; margin-bottom:6px; }
 .welcome-hero p  { font-size:13px; color:var(--text2); }
 
-/* ── DATA SELECTOR HOME — caixa única clicável ── */
+/* ── DATA SELECTOR HOME — caixa compacta e centralizada ── */
 .home-date-wrap {
   display:flex; flex-direction:column; align-items:center;
-  gap:8px; margin-bottom:22px; width:100%;
+  gap:6px; margin-bottom:22px;
 }
 .home-date-box {
   position:relative; cursor:pointer;
-  display:flex; align-items:center; gap:12px;
+  display:inline-flex; align-items:center; gap:10px;
   background:#FFFBE6; border:2px solid #EAB308;
-  border-radius:16px; padding:16px 22px;
-  width:100%; box-shadow:0 2px 12px rgba(234,179,8,.18);
+  border-radius:14px; padding:12px 20px;
+  box-shadow:0 2px 10px rgba(234,179,8,.18);
   transition:border-color .2s, box-shadow .2s;
   user-select:none;
 }
 .home-date-box:hover, .home-date-box:active {
-  border-color:#ca8a04; box-shadow:0 6px 24px rgba(234,179,8,.32);
+  border-color:#ca8a04; box-shadow:0 4px 18px rgba(234,179,8,.32);
 }
 .home-date-icon {
-  font-size:22px; color:#ca8a04; flex-shrink:0;
+  font-size:18px; color:#ca8a04; flex-shrink:0;
 }
 .home-date-val {
-  flex:1; font-size:18px; font-weight:900; color:#1a1a2e;
-  letter-spacing:.3px;
-}
-.home-date-chevron {
-  font-size:13px; color:#ca8a04; flex-shrink:0;
+  font-size:17px; font-weight:900; color:#1a1a2e;
+  letter-spacing:.3px; white-space:nowrap;
 }
 .home-date-weekday {
-  font-size:14px; font-weight:800; color:#6b7280;
+  font-size:13px; font-weight:800; color:#6b7280;
   text-align:center; letter-spacing:.4px;
 }
 /* legacy */
@@ -551,11 +548,11 @@ body:not(.has-bottom-nav) .tasks-footer { bottom:0; }
   color:#fff; border:none;
 }
 .btn-sm-start:hover { opacity:.9; }
-/* ── Botões de turno (Iniciar / Finalizar) — grande, linha única ── */
+/* ── Botões de turno (Iniciar / Finalizar) ── */
 .btn-turno-action {
-  width:100%; display:flex; align-items:center; justify-content:center;
-  gap:8px; padding:13px 20px; border-radius:12px;
-  font-size:15px; font-weight:900; cursor:pointer; font-family:inherit;
+  display:inline-flex; align-items:center; justify-content:center;
+  gap:8px; padding:11px 28px; border-radius:12px;
+  font-size:13px; font-weight:900; cursor:pointer; font-family:inherit;
   border:none; transition:all .2s;
 }
 .btn-turno-iniciar {
