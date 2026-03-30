@@ -4,6 +4,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
   <title>Just Burger — Portal</title>
 
   <!-- Firebase -->
@@ -13,7 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
   <!-- Firebase helper -->
-  <script src="js/firebase_v2.js"></script>
+  <script src="js/firebase_v2.js?v=20260329"></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -824,11 +826,13 @@ function _abrirSistema(url, id) {
     sess.sistema_ativo = id;
     sessionStorage.setItem('jb_user', JSON.stringify(sess));
   } catch(e) {}
-  /* Links externos abrem em nova aba; internos na mesma aba */
+  /* Links externos abrem em nova aba; internos na mesma aba com cache-buster */
   if (url.startsWith('http://') || url.startsWith('https://')) {
     window.open(url, '_blank', 'noopener');
   } else {
-    window.location.href = url;
+    /* Adiciona ?_cb=timestamp para forçar o browser a não usar cache */
+    const sep = url.includes('?') ? '&' : '?';
+    window.location.href = url + sep + '_cb=' + Date.now();
   }
 }
 
@@ -882,6 +886,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inp) inp.focus();
   }, 250);
 });
+</script>
+
+<!-- Service Worker: força atualização automática a cada deploy -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js')
+    .then(reg => {
+      reg.update();
+      console.log('[SW] Registrado no portal:', reg.scope);
+    })
+    .catch(err => console.warn('[SW] Falha:', err));
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
+}
 </script>
 </body>
 </html>
