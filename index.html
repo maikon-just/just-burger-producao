@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
   <!-- CSS principal -->
-  <link rel="stylesheet" href="css/style.css?v=20260330"/>
+  <link rel="stylesheet" href="css/style.css?v=20260330b"/>
   <!-- Auth Guard: redireciona para portal se não houver sessão -->
   <script>
     (function _authGuard() {
@@ -343,8 +343,8 @@
     <span class="progress-bar-text" id="s1-progress-text">0 / 0 programados</span>
   </div>
 
-  <!-- Banner de fase -->
-  <div class="step-banner step-banner-1" id="prod-banner">
+  <!-- Banner de fase (oculto por padrão — sem faixa amarela) -->
+  <div class="step-banner hidden" id="prod-banner">
     <span class="step-banner-icon" id="prod-banner-icon">📋</span>
     <div>
       <strong id="prod-banner-title">Etapa 1 — Programe as quantidades</strong>
@@ -357,11 +357,6 @@
 
   <!-- Footer compacto -->
   <footer class="tasks-footer" id="s1-footer">
-    <div class="btn-pending-info" id="btn-pending-info">
-      <i class="fas fa-info-circle"></i>
-      <span id="pending-count-text">Toque nos cards acima para programar</span>
-    </div>
-
     <!-- Botões de ação da produção -->
     <div class="s1-action-row" id="s1-action-row">
 
@@ -807,22 +802,24 @@
     </div>
     <div class="modal-body modal-body-compact">
 
-      <!-- ══ MODO EXECUÇÃO (checklist/sem qtd) ══ -->
+      <!-- ══ MODO EXECUÇÃO — checklist / tarefa sem quantidade ══ -->
+      <!-- Mostra SOMENTE o bloco azul "Inicie sua tarefa agora" -->
       <div id="s1-checklist-mode" class="hidden">
-        <div style="display:flex;align-items:center;justify-content:center;gap:12px;
-                    background:#f0f9ff;border:2px solid #bae6fd;border-radius:12px;
-                    padding:18px 20px;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:14px;
+                    background:#f0f9ff;border:2px solid #bae6fd;border-radius:14px;
+                    padding:20px 22px;">
           <span style="font-size:28px">🔧</span>
-          <span style="font-size:14px;color:#0369a1;font-weight:800">Inicie sua tarefa agora</span>
+          <span style="font-size:15px;color:#0369a1;font-weight:900">Inicie sua tarefa agora</span>
         </div>
       </div>
 
-      <!-- ══ MODO EXCEÇÃO (qtd = 0) ══ -->
+      <!-- ══ MODO EXCEÇÃO — quantidade = 0 no BD ══ -->
+      <!-- Mostra SOMENTE o bloco laranja de exceção, sem campo de estoque -->
       <div id="s1-excecao-mode" class="hidden">
         <div style="display:flex;align-items:center;justify-content:center;gap:12px;
-                    background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;
-                    padding:16px 18px;">
-          <span style="font-size:26px">⚡</span>
+                    background:#fff7ed;border:2px solid #fed7aa;border-radius:14px;
+                    padding:18px 20px;">
+          <span style="font-size:28px">⚡</span>
           <div>
             <strong style="display:block;font-size:14px;font-weight:900;color:#92400e">Tarefa de Exceção</strong>
             <span style="font-size:12px;color:#b45309;font-weight:700">Quantidade zero — confirme para executar</span>
@@ -830,19 +827,19 @@
         </div>
       </div>
 
-      <!-- ══ MODO QUANTIDADE (qtd > 0) ══ -->
+      <!-- ══ MODO QUANTIDADE — tem quantidade padrão > 0 ══ -->
       <div id="s1-qty-mode" style="display:none">
 
-        <!-- 1. Referência: quantidade padrão do BD -->
-        <div class="calc-card" style="margin-bottom:12px">
-          <div class="calc-row-item">
-            <span>📋 Quantidade a fazer (padrão)</span>
-            <strong class="calc-num" id="calc-padrao-display">—</strong>
-          </div>
+        <!-- 1. Quantidade a fazer (referência do BD) -->
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;
+                    padding:12px 16px;margin-bottom:10px">
+          <span style="font-size:13px;font-weight:800;color:#475569">📋 Quantidade a fazer</span>
+          <span style="font-size:15px;font-weight:900;color:#ea580c" id="calc-padrao-display">—</span>
         </div>
 
-        <!-- 2. Informe o estoque atual -->
-        <div class="field-label" style="text-align:center;margin-bottom:8px">
+        <!-- 2. Label + controles de estoque -->
+        <div style="font-size:12px;font-weight:800;color:#0369a1;margin-bottom:8px;text-align:center">
           📦 Informe a quantidade em estoque abaixo
         </div>
         <div class="qty-row compact" style="justify-content:center;flex-wrap:wrap;gap:6px;margin-bottom:14px">
@@ -988,10 +985,10 @@
 </div>
 
 <!-- Scripts — ordem importa! -->
-<script src="js/versao.js?v=20260330"></script>
-<script src="js/data.js?v=20260330"></script>
-<script src="js/firebase_v2.js?v=20260330"></script>
-<script src="js/app_v3.js?v=20260330"></script>
+<script src="js/versao.js?v=20260330b"></script>
+<script src="js/data.js?v=20260330b"></script>
+<script src="js/firebase_v2.js?v=20260330b"></script>
+<script src="js/app_v3.js?v=20260330b"></script>
 
 <!-- Service Worker: força atualização automática a cada deploy -->
 <script>
