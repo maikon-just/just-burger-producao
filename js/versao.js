@@ -1,27 +1,39 @@
 /* ═══════════════════════════════════════════════════════════
-   Just Burger 🍔 — Controle de Versão
-   ⚠️  ATUALIZE O NÚMERO ABAIXO A CADA DEPLOY NO GITHUB!
-   Isso garante que o browser baixe os arquivos novos.
-
-   Como usar:
-   1. Mude o número de BUILD_DATE para a data atual (AAAAMMDD)
-   2. Suba este arquivo junto com os demais no GitHub
+   Just Burger 🍔 — Service Worker
+   ⚠️  A cada novo deploy, troque o número abaixo (ex: v4, v5...)
+       Isso força todos os browsers a baixar tudo de novo.
 ═══════════════════════════════════════════════════════════ */
 
-const JB_VERSION = {
-  build: '20260330-20',
-  data:  '30/03/2026',
-  autor: 'Just Burger Produção',
-};
+const VERSAO = 'justburger-v20260330-20';
 
-/* Exibe versão no console para diagnóstico */
-console.log(`🍔 Just Burger v${JB_VERSION.build} — build ${JB_VERSION.data}`);
+/* ── INSTALL ── apaga cache antigo e registra o novo ── */
+self.addEventListener('install', event => {
+  console.log('[SW] Install:', VERSAO);
+  self.skipWaiting(); /* ativa imediatamente sem esperar fechar abas */
+  event.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.map(k => caches.delete(k))))
+      .catch(() => {})
+  );
+});
 
-/* Força reload dos scripts com cache-bust dinâmico */
-(function _forceCacheBust() {
-  const v = JB_VERSION.build;
-  /* Informa o SW da versão atual */
-  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({ type: 'VERSION', version: v });
-  }
-})();
+/* ── ACTIVATE ── assume controle de todas as abas abertas ── */
+self.addEventListener('activate', event => {
+  console.log('[SW] Activate:', VERSAO);
+  event.waitUntil(self.clients.claim());
+});
+
+/* ── FETCH ── Network First: sempre busca da rede ── */
+self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') return;
+
+  const url = new URL(event.request.url);
+
+  /* Deixa passar: Firebase, CDN, fontes externas */
+  if (url.hostname !== self.location.hostname) return;
+
+  event.respondWith(
+    fetch(event.request, { cache: 'no-store' })   /* força rede sem cache */
+      .catch(() => caches.match(event.request))    /* fallback: cache se offline */
+  );
+});
