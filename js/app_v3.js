@@ -1456,7 +1456,8 @@ async function finalizarTurno() {
   finally { showLoading(false); }
 
   closeModal('modal-finish');
-  if (!completo) _autoPrintPendencias(S.tarefas.slice(),{...S.s1},{...S.s2},S.colaborador,S.turno,S.dia);
+  /* Toca alerta sonoro se houver pendências */
+  if (!completo) _tocarAlertaPendencias();
 
   S.s1={}; S.s2={}; S.producaoIniciada=false;
   _cache.sessoes=null; _cache._registros=null;
@@ -2496,6 +2497,70 @@ function _abrirPreviewImpressao(htmlConteudo) {
   overlay.classList.remove('hidden');
   /* Scrolla para o topo do preview */
   overlay.scrollTop = 0;
+}
+
+/* ── Alerta sonoro quando finaliza turno com pendências ── */
+function _tocarAlertaPendencias() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+
+    /* Sequência de 3 bipes urgentes (tons descendentes) */
+    const notas = [880, 660, 440]; /* Hz: Lá5, Mi5, Lá4 */
+    notas.forEach(function(freq, i) {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.type = 'square'; /* tom mais penetrante */
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.35);
+
+      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.35);
+      gain.gain.linearRampToValueAtTime(1, ctx.currentTime + i * 0.35 + 0.02);
+      gain.gain.setValueAtTime(1, ctx.currentTime + i * 0.35 + 0.25);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + i * 0.35 + 0.32);
+
+      osc.start(ctx.currentTime + i * 0.35);
+      osc.stop(ctx.currentTime + i * 0.35 + 0.35);
+    });
+
+    /* Repete a sequência uma segunda vez após 1.2s */
+    setTimeout(function() {
+      try {
+        const ctx2 = new AudioCtx();
+        notas.forEach(function(freq, i) {
+          const osc  = ctx2.createOscillator();
+          const gain = ctx2.createGain();
+          osc.connect(gain);
+          gain.connect(ctx2.destination);
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(freq, ctx2.currentTime + i * 0.35);
+          gain.gain.setValueAtTime(0, ctx2.currentTime + i * 0.35);
+          gain.gain.linearRampToValueAtTime(1, ctx2.currentTime + i * 0.35 + 0.02);
+          gain.gain.setValueAtTime(1, ctx2.currentTime + i * 0.35 + 0.25);
+          gain.gain.linearRampToValueAtTime(0, ctx2.currentTime + i * 0.35 + 0.32);
+          osc.start(ctx2.currentTime + i * 0.35);
+          osc.stop(ctx2.currentTime + i * 0.35 + 0.35);
+        });
+      } catch(e) {}
+    }, 1200);
+
+  } catch(e) {
+    console.warn('[JB] Alerta sonoro não suportado:', e);
+  }
+}
+
+/* ── Botão Imprimir do preview: mantém modal visível e dispara print ── */
+function _doPrintPreview() {
+  /* NÃO esconde o modal — o @media print cuida de mostrar só #print-preview-body */
+  window.print();
+  /* Após o diálogo fechar, esconde o modal */
+  setTimeout(function() {
+    const overlay = document.getElementById('modal-print-preview');
+    if (overlay) overlay.classList.add('hidden');
+  }, 500);
 }
 
 /* ══ UTILITÁRIOS ═════════════════════════════════════════ */
