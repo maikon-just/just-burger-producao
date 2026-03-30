@@ -248,7 +248,11 @@
   <div class="modal-box">
     <div class="modal-hdr"><h3>➕ Nova Tarefa</h3><button class="modal-close" onclick="fecharModalNova()">✕</button></div>
     <div class="modal-body">
-      <div class="form-group"><label>Colaborador *</label><input type="text" id="nt-colab" list="nt-colab-list" placeholder="Digite ou selecione…"/><datalist id="nt-colab-list"></datalist></div>
+      <div class="form-group"><label>Colaborador *</label><input type="text" id="nt-colab" list="nt-colab-list" placeholder="Digite ou selecione…" oninput="_autoFillDepto()"/><datalist id="nt-colab-list"></datalist></div>
+      <div class="form-group">
+        <label>Departamento *</label>
+        <select id="nt-depto"><option value="">-- Selecione --</option></select>
+      </div>
       <div class="form-row">
         <div class="form-group"><label>Turno</label><select id="nt-turno"><option value="dia">☀️ Dia</option><option value="noite">🌙 Noite</option></select></div>
         <div class="form-group"><label>Dia</label><select id="nt-dia"><option value="segunda">Segunda</option><option value="terca">Terça</option><option value="quarta">Quarta</option><option value="quinta">Quinta</option><option value="sexta">Sexta</option><option value="sabado">Sábado</option><option value="domingo">Domingo</option></select></div>
@@ -641,7 +645,7 @@ function toggleNovaCategoria(){
   document.getElementById('nt-cat-nova').style.display=chk?'block':'none';
   document.getElementById('nt-cat').style.display=chk?'none':'block';
 }
-function abrirModalNova(){
+async function abrirModalNova(){
   document.getElementById('nt-turno').value=M.turno;document.getElementById('nt-dia').value=M.dia;
   document.getElementById('nt-item').value='';document.getElementById('nt-qty').value=0;
   document.getElementById('nt-unidade').value='un';document.getElementById('nt-ordem').value=99;
@@ -653,15 +657,23 @@ function abrirModalNova(){
   document.getElementById('nt-cat').innerHTML='<option value="">-- Selecione --</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
   const colabs=[...new Set(M.todos.map(t=>t.colaborador).filter(Boolean))].sort();
   document.getElementById('nt-colab-list').innerHTML=colabs.map(c=>`<option value="${c}">`).join('');
+  /* carrega departamentos sempre atualizados (fixos + customizados) */
+  await _carregarOpcoesDepto();
+  /* popula também o select #nt-depto copiando as opções */
+  const srcOpts=[...document.getElementById('nc-depto').options];
+  const ntDepto=document.getElementById('nt-depto');
+  ntDepto.innerHTML=srcOpts.map(o=>`<option value="${o.value}">${o.textContent}</option>`).join('');
   document.getElementById('modal-nova').classList.remove('hidden');
   setTimeout(()=>document.getElementById('nt-colab').focus(),100);
 }
 function fecharModalNova(){document.getElementById('modal-nova').classList.add('hidden');}
 
 async function salvarNovaTarefa(){
-  const colab=document.getElementById('nt-colab').value.trim();
-  const item=document.getElementById('nt-item').value.trim();
+  const colab =document.getElementById('nt-colab').value.trim();
+  const item  =document.getElementById('nt-item').value.trim();
+  const depto =document.getElementById('nt-depto').value;
   if(!colab){showToastM('⚠️ Informe o colaborador!');return;}
+  if(!depto){showToastM('⚠️ Selecione o departamento!');return;}
   if(!item){showToastM('⚠️ Informe o item/tarefa!');return;}
   const useNova=document.getElementById('nt-cat-chk').checked;
   const cat=useNova?document.getElementById('nt-cat-nova').value.trim():document.getElementById('nt-cat').value.trim();
@@ -671,7 +683,9 @@ async function salvarNovaTarefa(){
     await _fbPost('tarefas',{
       turno:document.getElementById('nt-turno').value,
       dia_semana:document.getElementById('nt-dia').value,
-      colaborador:colab,categoria:cat||'Geral',item,
+      colaborador:colab,
+      departamento:depto,
+      categoria:cat||'Geral',item,
       quantidade_padrao:Number(document.getElementById('nt-qty').value)||0,
       unidade:document.getElementById('nt-unidade').value||'un',
       ordem:Number(document.getElementById('nt-ordem').value)||99
@@ -903,6 +917,18 @@ async function salvarNovaArea(){
     console.error(e);
   } finally{
     btn.disabled=false; btn.innerHTML='<i class="fas fa-layer-group"></i> Criar Departamento';
+  }
+}
+
+/* Auto-preenche o departamento ao digitar/selecionar o colaborador no modal Nova Tarefa */
+function _autoFillDepto(){
+  const nomeDigitado=document.getElementById('nt-colab').value.trim().toUpperCase();
+  if(!nomeDigitado) return;
+  /* Busca a tarefa desse colaborador em M.todos para pegar o departamento salvo */
+  const tarefa=M.todos.find(t=>t.colaborador&&t.colaborador.toUpperCase()===nomeDigitado&&t.departamento);
+  if(tarefa&&tarefa.departamento){
+    const sel=document.getElementById('nt-depto');
+    if([...sel.options].some(o=>o.value===tarefa.departamento)) sel.value=tarefa.departamento;
   }
 }
 
