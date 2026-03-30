@@ -534,7 +534,9 @@ function selectDia(dia) {
 }
 
 /* ══ DEPARTAMENTO ════════════════════════════════════════ */
-function _getDept(nome) {
+function _getDept(nome, tarefaDept) {
+  /* Prioridade: campo departamento gravado na própria tarefa (colaboradores novos/custom) */
+  if (tarefaDept) return tarefaDept;
   return COLLAB_DEPT[(nome||'').toUpperCase()] || 'PRODUCAO';
 }
 
@@ -637,7 +639,7 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
   const map={};
   todasTarefas.forEach(t=>{
     const matchDia=t.data_especifica ? t.data_especifica===dtTrab : t.dia_semana===S.dia;
-    if (t.turno===S.turno && matchDia && _getDept(t.colaborador)===dept)
+    if (t.turno===S.turno && matchDia && _getDept(t.colaborador, t.departamento)===dept)
       map[t.colaborador]=(map[t.colaborador]||0)+1;
   });
   let nomes=Object.keys(map).sort();
