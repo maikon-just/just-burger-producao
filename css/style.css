@@ -1222,20 +1222,40 @@ body:not(.has-bottom-nav) .tasks-footer { bottom:0; }
 }
 
 @media print {
-  /* Oculta absolutamente tudo */
-  * { visibility: hidden !important; }
-  /* Mostra somente o conteúdo do preview */
-  #print-preview-body,
-  #print-preview-body * { visibility: visible !important; }
-  /* Posiciona o conteúdo no topo da página */
-  #print-preview-body {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
+  /* Esconde tudo via display:none — mais confiável no Chrome Android
+     do que visibility:hidden, que mantém espaço e gera páginas vazias */
+  body > *:not(#modal-print-preview) { display: none !important; }
+
+  /* Modal: remove overlay e deixa fluir como bloco normal */
+  #modal-print-preview {
+    position: static !important;
+    display: block !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
     width: 100% !important;
-    background: #fff !important;
-    padding: 20px !important;
-    box-sizing: border-box !important;
+    max-width: 100% !important;
+    overflow: visible !important;
   }
-  body { background:#fff; margin:0; padding:0; }
+
+  /* Container interno: remove flex e min-height que forçam páginas extras */
+  #modal-print-preview > div {
+    display: block !important;
+    min-height: 0 !important;
+    box-shadow: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Barra de botões: oculta no print */
+  #modal-print-preview .no-print { display: none !important; }
+
+  /* Conteúdo: flui normalmente, sem position */
+  #print-preview-body {
+    display: block !important;
+    padding: 16px !important;
+    width: 100% !important;
+  }
+
+  body { background: #fff; margin: 0; padding: 0; }
 }
