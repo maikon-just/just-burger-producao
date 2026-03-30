@@ -1515,34 +1515,40 @@ function _autoPrintPendencias(tarefas,s1,s2,col,turno,dia) {
 
 function printColaborador() {
   const dObj=DIAS_LIST.find(d=>d.key===S.dia);
-  const linhas=S.tarefas.map(t=>{
+  /* Célula padrão: borda mais escura para separação visual clara */
+  const TD='border:1.5px solid #aaa;padding:7px 8px;vertical-align:middle;';
+  /* Célula de quantidade: valor centralizado */
+  const TDC=TD+'text-align:center;';
+  const linhas=S.tarefas.map((t,i)=>{
     const d1=S.s1[t.id]||{}; const ck=isChecklist(t);
     const media=fmt(t.quantidade_padrao||0)+' '+(t.unidade||'');
     const estoque=ck?'—':fmt(d1.estoque!==undefined?d1.estoque:0)+' '+(t.unidade||'');
     const prog=ck?'Checklist':fmt(d1.programada!==undefined?d1.programada:(t.quantidade_padrao||0))+' '+(t.unidade||'');
-    return `<tr>
-      <td style="font-size:11px;color:#555">${t.categoria||''}</td>
-      <td><strong style="font-size:12px">${t.item}</strong></td>
-      <td style="font-weight:700;font-size:12px;color:#1a1d2e">${ck?'—':media}</td>
-      <td style="font-weight:700;font-size:12px">${estoque}</td>
-      <td style="font-weight:900;font-size:13px;color:#e8590c">${prog}</td>
-      <td style="width:50px;background:#f9fafb">&nbsp;</td>
+    const bg=i%2===0?'#ffffff':'#f0f4ff'; /* zebra: branco / azul-claro suave */
+    return `<tr style="background:${bg}">
+      <td style="${TD}font-size:11px;color:#555">${t.categoria||''}</td>
+      <td style="${TD}"><strong style="font-size:12px">${t.item}</strong></td>
+      <td style="${TDC}font-weight:700;font-size:12px;color:#1a1d2e">${ck?'—':media}</td>
+      <td style="${TDC}font-weight:700;font-size:12px">${estoque}</td>
+      <td style="${TDC}font-weight:900;font-size:13px;color:#e8590c">${prog}</td>
+      <td style="${TDC}width:50px">&nbsp;</td>
     </tr>`;
   }).join('');
+  const TH='background:#1a1d2e;color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:8px;border:1.5px solid #333;text-align:center;';
   const conteudo=`
     <h1 style="font-size:18px;margin:0 0 4px;font-family:Arial,sans-serif">📋 ${S.colaborador}</h1>
-    <p style="font-size:12px;color:#555;margin:0 0 16px;font-family:Arial,sans-serif">
+    <p style="font-size:12px;color:#555;margin:0 0 12px;font-family:Arial,sans-serif">
       Turno: ${S.turno==='dia'?'☀️ Dia':'🌙 Noite'} &nbsp;·&nbsp;
       ${dObj?dObj.label:S.dia} &nbsp;·&nbsp; ${today()}
     </p>
-    <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif">
+    <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;border:1.5px solid #aaa;">
       <thead><tr>
-        <th style="background:#f0f0f0;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;border:1px solid #ccc">Categoria</th>
-        <th style="background:#f0f0f0;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;border:1px solid #ccc">Item</th>
-        <th style="background:#f0f0f0;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;border:1px solid #ccc">📊 Média</th>
-        <th style="background:#f0f0f0;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;border:1px solid #ccc">📦 Estoque</th>
-        <th style="background:#f0f0f0;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;border:1px solid #ccc;color:#e8590c">🎯 A Produzir</th>
-        <th style="background:#f0f0f0;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;border:1px solid #ccc">✓ Verificar</th>
+        <th style="${TH}text-align:left">Categoria</th>
+        <th style="${TH}text-align:left">Item</th>
+        <th style="${TH}">📊 Média</th>
+        <th style="${TH}">📦 Estoque</th>
+        <th style="${TH}color:#f97316">🎯 A Produzir</th>
+        <th style="${TH}">✓ Verificar</th>
       </tr></thead>
       <tbody>${linhas}</tbody>
     </table>`;
