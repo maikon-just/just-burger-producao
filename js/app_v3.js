@@ -343,7 +343,7 @@ function _injetarBotaoLiderNaHome() {
 async function _prefetchCache() {
   try {
     const [t,s] = await Promise.all([_fbGetAll('tarefas'),_fbGetAll('sessoes')]);
-    _cache.tarefas = t; _cache.sessoes = s;
+    _cache.tarefas = _resolverDeptTarefas(t); _cache.sessoes = s;
   } catch(e) {}
 }
 
@@ -534,13 +534,32 @@ function selectDia(dia) {
 }
 
 /* ══ DEPARTAMENTO ════════════════════════════════════════ */
+/* Propaga o campo 'departamento' em memória para tarefas do mesmo colaborador
+   que foram criadas antes do campo existir. Não altera o Firebase.           */
+function _resolverDeptTarefas(tarefas) {
+  /* Passo 1: monta mapa colaborador → departamento usando tarefas que JÁ têm o campo */
+  const deptPorColab = {};
+  tarefas.forEach(t => {
+    if (t.departamento && t.colaborador)
+      deptPorColab[(t.colaborador).toUpperCase()] = t.departamento.toUpperCase().trim();
+  });
+  /* Passo 2: preenche em memória quem não tem */
+  tarefas.forEach(t => {
+    if (!t.departamento && t.colaborador) {
+      const d = deptPorColab[(t.colaborador).toUpperCase()];
+      if (d) t.departamento = d;
+    }
+  });
+  return tarefas;
+}
+
 function _getDept(nome, tarefaDept) {
-  /* 1º: campo departamento gravado na própria tarefa (colaboradores novos/custom) */
+  /* 1º: campo departamento gravado na própria tarefa (inclui propagação em memória) */
   if (tarefaDept) return tarefaDept;
-  /* 2º: mapa estático para colaboradores antigos */
+  /* 2º: mapa estático para colaboradores legados */
   const fromMap = COLLAB_DEPT[(nome||'').toUpperCase()];
   if (fromMap) return fromMap;
-  /* 3º: colaborador não reconhecido e sem campo dept → não cai em setor errado */
+  /* 3º: desconhecido — não cai em setor errado */
   return '__NONE__';
 }
 
@@ -567,24 +586,23 @@ async function _carregarAreasExtras() {
   /* Mapa final: chave → { nome, emoji } */
   const extra = {};
 
-  /* Sempre busca todas as tarefas frescos do Firebase para ter dados completos */
-  let tarefas = [];
+  /* ── Busca dados do Firebase em paralelo ── */
+  let tarefas = [], areas = [];
   try {
-    tarefas = await _fbGetAll('tarefas');
+    [tarefas, areas] = await Promise.all([_fbGetAll('tarefas'), _fbGetAll('areas')]);
+    /* Propaga departamento em memória para tarefas antigas sem o campo */
+    _resolverDeptTarefas(tarefas);
     _cache.tarefas = tarefas;
   } catch(e) {
     tarefas = _cache.tarefas || [];
   }
 
-  /* Fonte 1: coleção 'areas' cadastrada pelo usuário */
-  try {
-    const areas = await _fbGetAll('areas');
-    areas
-      .filter(a => a.ativo !== false && !_AREAS_FIXAS.has(a.chave))
-      .forEach(a => { extra[a.chave] = { nome: a.nome, emoji: a.emoji || '🏷️' }; });
-  } catch(e) { /* silencioso */ }
+  /* Fonte 1: coleção 'areas' do Firebase (Novo Departamento criado pelo usuário) */
+  areas
+    .filter(a => a.ativo !== false && !_AREAS_FIXAS.has(a.chave))
+    .forEach(a => { extra[a.chave] = { nome: a.nome, emoji: a.emoji || '🏷️' }; });
 
-  /* Fonte 2: campo 'departamento' direto nas tarefas */
+  /* Fonte 2: campo 'departamento' das tarefas (já propagado acima para tarefas antigas) */
   tarefas.forEach(t => {
     const chave = (t.departamento || '').toUpperCase().trim();
     if (chave && !_AREAS_FIXAS.has(chave) && !extra[chave]) {
@@ -593,31 +611,7 @@ async function _carregarAreasExtras() {
     }
   });
 
-  /* Fonte 3: colaboradores sem campo 'departamento' na tarefa mas que têm
-     OUTRA tarefa (mesmo colaborador) COM departamento — propaga o valor.
-     Isso corrige tarefas criadas antes da v18 (ex: MAIKON TESTE).        */
-  const deptPorColab = {};
-  tarefas.forEach(t => {
-    if (t.departamento && t.colaborador)
-      deptPorColab[(t.colaborador||'').toUpperCase()] = t.departamento.toUpperCase().trim();
-  });
-
-  /* Atualiza o cache local para que _getDept funcione imediatamente */
-  tarefas.forEach(t => {
-    if (!t.departamento && t.colaborador) {
-      const dept = deptPorColab[(t.colaborador||'').toUpperCase()];
-      if (dept) {
-        t.departamento = dept; /* corrige em memória — sem patch no Firebase */
-        /* Detecta departamento extra vindo desta fonte também */
-        if (!_AREAS_FIXAS.has(dept) && !extra[dept]) {
-          const nome = dept.replace(/_/g,' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-          extra[dept] = { nome, emoji: '🏷️' };
-        }
-      }
-    }
-  });
-
-  /* Renderiza um botão para cada departamento extra */
+  /* ── Renderiza um botão para cada departamento extra encontrado ── */
   Object.entries(extra).forEach(([chave, info]) => {
     const btn = document.createElement('button');
     btn.className = 'dept-btn dept-btn-custom';
@@ -679,7 +673,7 @@ function _mostrarTelaSetor(dept) {
   }
   grid.innerHTML='<div style="padding:40px;text-align:center;color:#888"><div style="font-size:36px;animation:spin 1s linear infinite;display:inline-block">⏳</div><br><span style="font-size:13px;font-weight:600;margin-top:8px;display:block">Carregando...</span></div>';
   Promise.all([_fbGetAll('tarefas'),_fbGetAll('sessoes'),_fbGetAll('faltas')]).then(res=>{
-    _cache.tarefas=res[0]; _cache.sessoes=res[1]; _cache._faltas=res[2];
+    _cache.tarefas=_resolverDeptTarefas(res[0]); _cache.sessoes=res[1]; _cache._faltas=res[2];
     _preencherGridSetor(grid,dept,_cache.tarefas,_cache.sessoes);
   }).catch(()=>{
     grid.innerHTML='<div style="padding:40px;color:#dc2626;text-align:center">❌ Erro ao carregar. Verifique a conexão.</div>';
