@@ -900,11 +900,12 @@
         </div>
       </div>
 
-      <!-- Botões de status: apenas 100% e Não Executado na mesma linha -->
+      <!-- Botões de status: 100%, Parcial e Não Executado centralizados na mesma linha -->
       <div class="field-label">📊 Como ficou?</div>
-      <div class="status-btns-row3" style="grid-template-columns:1fr 1fr">
-        <button class="sbtn sbtn-total" data-status="total"          onclick="selectStatus('total')">✅ 100%</button>
-        <button class="sbtn sbtn-nao"   data-status="nao_finalizado" onclick="selectStatus('nao_finalizado')">❌ Não Executado</button>
+      <div class="status-btns-row3">
+        <button class="sbtn sbtn-total"   data-status="total"          onclick="selectStatus('total')">✅ 100%</button>
+        <button class="sbtn sbtn-parcial" data-status="parcial"        onclick="selectStatus('parcial')">⚠️ Parcial</button>
+        <button class="sbtn sbtn-nao"     data-status="nao_finalizado" onclick="selectStatus('nao_finalizado')">❌ Não Exec.</button>
       </div>
 
       <!-- Campo ocultos de quantidade (mantido para compatibilidade de dados) -->
@@ -920,12 +921,13 @@
         </div>
       </div>
 
-      <!-- Motivos — só aparece para Não Executado -->
+      <!-- Motivos — aparece para Parcial e Não Executado -->
       <div id="motivos-wrap" class="hidden">
         <div class="field-label">💬 Motivo <span class="required-mark">*obrigatório</span></div>
-        <div class="motivo-btns-grid" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="motivo-btns-grid">
           <button class="motivo-btn" onclick="selectMotivo('⏰ Tempo insuficiente')">⏰ Tempo</button>
-          <button class="motivo-btn" onclick="selectMotivo('🔧 Equipamento')">🔧 Equip.</button>
+          <button class="motivo-btn" onclick="selectMotivo('🔧 Equipamento')">🔧 Equipamento</button>
+          <button class="motivo-btn" onclick="selectMotivo('📦 Falta de insumos')">📦 Insumos</button>
           <button class="motivo-btn" data-motivo-outros onclick="selectMotivo('Outros')">🔄 Outros</button>
         </div>
         <textarea id="motivo-custom" class="motivo-input hidden" placeholder="Descreva o motivo..." rows="2"></textarea>
