@@ -201,13 +201,12 @@
     <select class="colab-sel" id="sel-colab" onchange="renderTabela()"><option value="">Todos</option></select>
     <button class="btn-refresh" onclick="carregar()"><i class="fas fa-sync-alt"></i> Atualizar</button>
   </div>
-  <!-- Linha 2: ações — Novo Colaborador · Nova Área · Nova Tarefa · Renomear Colab. | Salvar Tudo -->
+  <!-- Linha 2: ações — Novo Colaborador · Novo Departamento · Nova Tarefa · Renomear Colab. · Salvar Tudo -->
   <div class="filter-row2">
     <button class="btn-nova" onclick="abrirModalNovoColab()" style="background:#7c3aed"><i class="fas fa-user-plus"></i> Novo Colaborador</button>
-    <button class="btn-nova-area" onclick="abrirModalNovaArea()"><i class="fas fa-layer-group"></i> Nova Área</button>
+    <button class="btn-nova-area" onclick="abrirModalNovaArea()"><i class="fas fa-layer-group"></i> Novo Departamento</button>
     <button class="btn-nova" onclick="abrirModalNova()"><i class="fas fa-plus"></i> Nova Tarefa</button>
     <button class="btn-nova" onclick="abrirModalRenomear()" style="background:#64748b"><i class="fas fa-user-edit"></i> Renomear Colab.</button>
-    <div style="flex:1"></div>
     <button class="btn-save-all" onclick="salvarTodos()"><i class="fas fa-save"></i> Salvar Tudo</button>
   </div>
 </div>
@@ -356,13 +355,13 @@
 <div class="modal-overlay hidden" id="modal-nova-area">
   <div class="modal-box" style="max-width:440px">
     <div class="modal-hdr">
-      <h3>🏷️ Nova Área</h3>
+      <h3>🏷️ Novo Departamento</h3>
       <button class="modal-close" onclick="fecharModalNovaArea()">✕</button>
     </div>
     <div class="modal-body">
 
       <div class="form-group">
-        <label>Nome da Área *</label>
+        <label>Nome do Departamento *</label>
         <input type="text" id="na-nome" placeholder="Ex: Limpeza, Câmaras, Estoque…" maxlength="40"/>
       </div>
 
@@ -753,12 +752,13 @@ async function confirmarRenomear(){
 function _emoji(n){const e=['👨‍🍳','👩‍🍳','🧑‍🍳','😎','🙂','🤩','💪','🔥','⭐','🌟'];let s=0;for(let i=0;i<n.length;i++)s+=n.charCodeAt(i);return e[s%e.length];}
 
 /* ══ NOVO COLABORADOR ════════════════════════════════════ */
-function abrirModalNovoColab(){
+async function abrirModalNovoColab(){
   document.getElementById('nc-nome').value='';
-  document.getElementById('nc-depto').value='';
   document.getElementById('nc-turno').value=M.turno||'dia';
   /* desmarca todos os dias */
   document.querySelectorAll('#nc-dias-grid input[type=checkbox]').forEach(c=>c.checked=false);
+  /* carrega departamentos (fixos + customizados) sempre atualizados */
+  await _carregarOpcoesDepto();
   document.getElementById('modal-novo-colab').classList.remove('hidden');
   setTimeout(()=>document.getElementById('nc-nome').focus(),100);
 }
@@ -838,11 +838,40 @@ function fecharModalNovaArea(){
   document.getElementById('modal-nova-area').classList.add('hidden');
 }
 
+/* ── Áreas fixas que sempre existem ── */
+const _DEPTOS_FIXOS = [
+  {chave:'PRODUCAO',  nome:'Produção',    emoji:'🏗️'},
+  {chave:'OPERACAO',  nome:'Operação',    emoji:'⚙️'},
+  {chave:'ATENDIMENTO',nome:'Atendimento',emoji:'🛎️'},
+];
+
+/* Popula o <select id="nc-depto"> com fixos + customizados do Firebase */
+async function _carregarOpcoesDepto(){
+  const sel=document.getElementById('nc-depto');
+  sel.innerHTML='<option value="">-- Selecione --</option>';
+  /* Sempre adiciona os três fixos */
+  _DEPTOS_FIXOS.forEach(d=>{
+    const o=document.createElement('option');
+    o.value=d.chave; o.textContent=d.emoji+' '+d.nome;
+    sel.appendChild(o);
+  });
+  /* Adiciona os customizados (que não sejam duplicata das fixas) */
+  try{
+    const areas=await _fbGetAll('areas');
+    const fixasSet=new Set(_DEPTOS_FIXOS.map(d=>d.chave));
+    areas.filter(a=>a.ativo!==false&&!fixasSet.has(a.chave)).forEach(a=>{
+      const o=document.createElement('option');
+      o.value=a.chave; o.textContent=(a.emoji||'🏷️')+' '+a.nome;
+      sel.appendChild(o);
+    });
+  }catch(e){ /* silencioso — os fixos já estão lá */ }
+}
+
 async function salvarNovaArea(){
   const nome  = document.getElementById('na-nome').value.trim();
   const emoji = document.getElementById('na-emoji').value.trim() || '🏷️';
 
-  if(!nome){ showToastM('⚠️ Informe o nome da área!'); return; }
+  if(!nome){ showToastM('⚠️ Informe o nome do departamento!'); return; }
 
   const btn=document.getElementById('btn-confirmar-na');
   btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Criando…';
@@ -850,24 +879,30 @@ async function salvarNovaArea(){
   try{
     /* Verifica duplicata pelo nome (case-insensitive) */
     const existentes = await _fbGetAll('areas');
-    const jaExiste = existentes.some(a=>a.nome.toLowerCase()===nome.toLowerCase());
+    const fixaNomes  = _DEPTOS_FIXOS.map(d=>d.nome.toLowerCase());
+    const jaExiste   = existentes.some(a=>a.nome.toLowerCase()===nome.toLowerCase())
+                    || fixaNomes.includes(nome.toLowerCase());
     if(jaExiste){
-      showToastM('⚠️ Já existe uma área com esse nome!');
-      btn.disabled=false; btn.innerHTML='<i class="fas fa-layer-group"></i> Criar Área';
+      showToastM('⚠️ Já existe um departamento com esse nome!');
+      btn.disabled=false; btn.innerHTML='<i class="fas fa-layer-group"></i> Criar Departamento';
       return;
     }
 
-    /* Gera chave uppercase sem espaços para uso no app */
+    /* Gera chave uppercase sem acentos */
     const chave = nome.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'_');
 
     await _fbPost('areas',{ nome, emoji, chave, ativo:true });
-    showToastM(`✅ Área "${nome}" criada! O botão já aparece na tela de entrada.`);
+
+    /* Atualiza imediatamente o select de departamentos do modal Novo Colaborador */
+    await _carregarOpcoesDepto();
+
+    showToastM(`✅ Departamento "${nome}" criado! Botão já disponível na tela de entrada.`);
     fecharModalNovaArea();
   } catch(e){
-    showToastM('❌ Erro ao criar área. Tente novamente.');
+    showToastM('❌ Erro ao criar departamento. Tente novamente.');
     console.error(e);
   } finally{
-    btn.disabled=false; btn.innerHTML='<i class="fas fa-layer-group"></i> Criar Área';
+    btn.disabled=false; btn.innerHTML='<i class="fas fa-layer-group"></i> Criar Departamento';
   }
 }
 
