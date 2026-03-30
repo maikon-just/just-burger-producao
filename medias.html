@@ -56,6 +56,8 @@
     .med-table tr:last-child td{border-bottom:none}
     .cat-chip{display:inline-block;padding:2px 8px;border-radius:6px;background:rgba(37,99,235,0.1);color:var(--blue);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
     .item-name{font-weight:600;color:var(--text)}
+    .item-name-inp{width:100%;font-weight:600;color:var(--text);background:#fff;border:1.5px solid var(--border);border-radius:7px;padding:5px 8px;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;}
+    .item-name-inp:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(230,168,0,.15);}
     .qty-ctrl{display:flex;align-items:center;gap:5px;justify-content:center}
     .qty-btn{width:28px;height:28px;border:1.5px solid var(--border);background:#fff;color:var(--text);border-radius:6px;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all .12s;}
     .qty-btn:hover{background:var(--border)}
@@ -376,7 +378,7 @@ function renderTabela(){
           <tr id="row-${t.id}">
             <td style="text-align:center"><input type="checkbox" class="row-chk" data-id="${t.id}" style="width:15px;height:15px;accent-color:#dc2626;cursor:pointer" onchange="_onChkChange()"/></td>
             <td><span class="cat-chip">${t.categoria||'Geral'}</span></td>
-            <td><span class="item-name">${t.item||'—'}</span></td>
+            <td><input class="item-name-inp" type="text" id="ni-${t.id}" value="${(t.item||'').replace(/"/g,'&quot;')}" placeholder="Nome da tarefa" oninput="markDirty('${t.id}')"/></td>
             <td><div class="qty-ctrl">
               <button class="qty-btn minus" onclick="adjQty('${t.id}',-10)">−10</button>
               <button class="qty-btn minus" onclick="adjQty('${t.id}',-1)">−</button>
@@ -400,15 +402,22 @@ function adjQty(id,delta){ const inp=document.getElementById(`qi-${id}`); if(!in
 function markDirty(id){ const btn=document.getElementById(`sbtn-${id}`); if(btn){btn.classList.remove('saved');btn.innerHTML='<i class="fas fa-save"></i> Salvar';} }
 
 async function salvarItem(id){
-  const inp=document.getElementById(`qi-${id}`);const btn=document.getElementById(`sbtn-${id}`);
+  const inp=document.getElementById(`qi-${id}`);
+  const ninp=document.getElementById(`ni-${id}`);
+  const btn=document.getElementById(`sbtn-${id}`);
   if(!inp||!btn) return;
   const qty=Number(inp.value);
+  const nomeNovo=(ninp?ninp.value.trim():'');
+  if(ninp&&!nomeNovo){showToastM('⚠️ O nome da tarefa não pode ser vazio!');ninp.focus();return;}
   btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';btn.disabled=true;
   try{
-    await _fbPatch('tarefas',id,{quantidade_padrao:qty});
+    const patch={quantidade_padrao:qty};
+    if(ninp) patch.item=nomeNovo;
+    await _fbPatch('tarefas',id,patch);
     btn.innerHTML='<i class="fas fa-check"></i> Salvo';btn.classList.add('saved');
-    const t=M.tarefas.find(x=>x.id===id);if(t) t.quantidade_padrao=qty;
-    showToastM('✅ Quantidade salva!');
+    const t=M.tarefas.find(x=>x.id===id);
+    if(t){ t.quantidade_padrao=qty; if(ninp) t.item=nomeNovo; }
+    showToastM('✅ Salvo!');
   }catch(e){btn.innerHTML='<i class="fas fa-save"></i> Salvar';showToastM('❌ Erro: '+e.message);}
   finally{btn.disabled=false;}
 }
