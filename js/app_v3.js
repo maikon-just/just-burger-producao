@@ -211,12 +211,12 @@ document.addEventListener('DOMContentLoaded', () => {
     /* Filtra grade de colaboradores para só mostrar os do departamento dele */
   } else {
     showScreen('screen-welcome');
-    /* Lider logado: já está autenticado, ocultar botão líder e deixar painel acessível */
+    /* Lider logado: já está autenticado, ocultar botão líder flutuante pois está no rodapé */
     if (_isLider()) {
       S.leaderOk = true;
       const btnLider = document.querySelector('.btn-leader-access');
       if (btnLider) btnLider.style.display = 'none';
-      _injetarBotaoLiderNaHome();
+      /* Não injeta botão duplicado — o rodapé global já tem o acesso ao Painel do Líder */
     }
   }
 });
@@ -388,8 +388,10 @@ function _updateWorkDateDisplay(ds) {
   const valEl     = document.getElementById('work-date-val');
   const dt  = new Date(ds+'T12:00:00');
   const dn  = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
-  const mn  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const dateStr = `${dt.getDate()} / ${mn[dt.getMonth()]} / ${dt.getFullYear()}`;
+  const dd  = String(dt.getDate()).padStart(2,'0');
+  const mm  = String(dt.getMonth()+1).padStart(2,'0');
+  const yyyy = dt.getFullYear();
+  const dateStr = `${dd}/${mm}/${yyyy}`;
   const diaStr  = dn[dt.getDay()];
   if (valEl)     valEl.textContent     = dateStr;
   if (weekdayEl) weekdayEl.textContent = diaStr;
@@ -1059,8 +1061,7 @@ let _s1Id=null;
 function openS1Modal(id) {
   const t=S.tarefas.find(x=>x.id===id);
   if (!t) return;
-  // Inicia produção automaticamente ao clicar no primeiro card
-  if (!S.producaoIniciada) { S.producaoIniciada=true; }
+  // NÃO inicia produção ao abrir o modal — só inicia ao clicar em "Iniciar Turno"
   _s1Id=id;
   const ck  =isChecklist(t);
   const conf=S.s1[id]||{};
