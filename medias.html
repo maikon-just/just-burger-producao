@@ -25,7 +25,9 @@
     .top-bar a{background:var(--card2);border:1px solid var(--border);color:var(--text);padding:7px 13px;border-radius:8px;font-size:12px;font-family:inherit;display:flex;align-items:center;gap:5px;transition:all .15s;text-decoration:none;}
     .top-bar a:hover{background:var(--border)}
 
-    .filter-bar{background:#fff;border-bottom:1px solid var(--border);padding:10px 16px;display:flex;gap:8px;flex-wrap:nowrap;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,0.07);position:sticky;top:var(--tb-h,56px);z-index:90;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .filter-bar{background:#fff;border-bottom:1px solid var(--border);padding:8px 16px;display:flex;flex-direction:column;gap:8px;box-shadow:0 2px 8px rgba(0,0,0,0.07);position:sticky;top:var(--tb-h,56px);z-index:90;}
+    .filter-row1{display:flex;gap:8px;flex-wrap:nowrap;align-items:center;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .filter-row2{display:flex;gap:8px;flex-wrap:nowrap;align-items:center;border-top:1px solid var(--border);padding-top:7px;}
     .filter-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
     .toggle-group,.dia-btns{display:flex;gap:4px;flex-wrap:nowrap;flex-shrink:0}
     .tgl{padding:6px 13px;border:1.5px solid var(--border);background:#fff;color:var(--muted);border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;transition:all .15s;}
@@ -36,8 +38,10 @@
     .colab-sel:focus{border-color:var(--yellow)}
     .btn-refresh{background:var(--yellow);color:#fff;border:none;padding:7px 14px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;}
     .btn-refresh:hover{background:var(--yd)}
-    .btn-nova{background:var(--blue);color:#fff;border:none;padding:7px 14px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;margin-left:auto;}
+    .btn-nova{background:var(--blue);color:#fff;border:none;padding:7px 14px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;white-space:nowrap;}
     .btn-nova:hover{background:#1d4ed8}
+    .btn-nova-area{background:#0891b2;color:#fff;border:none;padding:7px 14px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;white-space:nowrap;}
+    .btn-nova-area:hover{background:#0e7490}
 
     .count-bar{background:#fff;border-bottom:1px solid var(--border);padding:7px 20px;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;position:sticky;top:var(--fb-bottom,106px);z-index:89;box-shadow:0 2px 6px rgba(0,0,0,0.05);}
     .count-bar strong{color:var(--text)}
@@ -176,27 +180,36 @@
 </div>
 
 <div class="filter-bar">
-  <span class="filter-label">Turno</span>
-  <div class="toggle-group">
-    <button class="tgl active" id="btn-dia"   onclick="setTurno('dia')">☀️ Dia</button>
-    <button class="tgl"        id="btn-noite" onclick="setTurno('noite')">🌙 Noite</button>
+  <!-- Linha 1: filtros de turno, dia, colaborador e atualizar -->
+  <div class="filter-row1">
+    <span class="filter-label">Turno</span>
+    <div class="toggle-group">
+      <button class="tgl active" id="btn-dia"   onclick="setTurno('dia')">☀️ Dia</button>
+      <button class="tgl"        id="btn-noite" onclick="setTurno('noite')">🌙 Noite</button>
+    </div>
+    <span class="filter-label">Dia</span>
+    <div class="dia-btns">
+      <button class="dbtn" data-d="segunda" onclick="setDia('segunda')">SEG</button>
+      <button class="dbtn" data-d="terca"   onclick="setDia('terca')">TER</button>
+      <button class="dbtn" data-d="quarta"  onclick="setDia('quarta')">QUA</button>
+      <button class="dbtn" data-d="quinta"  onclick="setDia('quinta')">QUI</button>
+      <button class="dbtn" data-d="sexta"   onclick="setDia('sexta')">SEX</button>
+      <button class="dbtn" data-d="sabado"  onclick="setDia('sabado')">SAB</button>
+      <button class="dbtn" data-d="domingo" onclick="setDia('domingo')">DOM</button>
+    </div>
+    <span class="filter-label">Colab.</span>
+    <select class="colab-sel" id="sel-colab" onchange="renderTabela()"><option value="">Todos</option></select>
+    <button class="btn-refresh" onclick="carregar()"><i class="fas fa-sync-alt"></i> Atualizar</button>
   </div>
-  <span class="filter-label">Dia</span>
-  <div class="dia-btns">
-    <button class="dbtn" data-d="segunda" onclick="setDia('segunda')">SEG</button>
-    <button class="dbtn" data-d="terca"   onclick="setDia('terca')">TER</button>
-    <button class="dbtn" data-d="quarta"  onclick="setDia('quarta')">QUA</button>
-    <button class="dbtn" data-d="quinta"  onclick="setDia('quinta')">QUI</button>
-    <button class="dbtn" data-d="sexta"   onclick="setDia('sexta')">SEX</button>
-    <button class="dbtn" data-d="sabado"  onclick="setDia('sabado')">SAB</button>
-    <button class="dbtn" data-d="domingo" onclick="setDia('domingo')">DOM</button>
+  <!-- Linha 2: ações — Novo Colaborador · Nova Área · Nova Tarefa · Renomear Colab. | Salvar Tudo -->
+  <div class="filter-row2">
+    <button class="btn-nova" onclick="abrirModalNovoColab()" style="background:#7c3aed"><i class="fas fa-user-plus"></i> Novo Colaborador</button>
+    <button class="btn-nova-area" onclick="abrirModalNovaArea()"><i class="fas fa-layer-group"></i> Nova Área</button>
+    <button class="btn-nova" onclick="abrirModalNova()"><i class="fas fa-plus"></i> Nova Tarefa</button>
+    <button class="btn-nova" onclick="abrirModalRenomear()" style="background:#64748b"><i class="fas fa-user-edit"></i> Renomear Colab.</button>
+    <div style="flex:1"></div>
+    <button class="btn-save-all" onclick="salvarTodos()"><i class="fas fa-save"></i> Salvar Tudo</button>
   </div>
-  <span class="filter-label">Colab.</span>
-  <select class="colab-sel" id="sel-colab" onchange="renderTabela()"><option value="">Todos</option></select>
-  <button class="btn-refresh" onclick="carregar()"><i class="fas fa-sync-alt"></i> Atualizar</button>
-  <button class="btn-nova" onclick="abrirModalNova()"><i class="fas fa-plus"></i> Nova Tarefa</button>
-  <button class="btn-nova" onclick="abrirModalRenomear()"><i class="fas fa-user-edit"></i> Renomear Colab.</button>
-  <button class="btn-nova" onclick="abrirModalNovoColab()" style="background:#7c3aed"><i class="fas fa-user-plus"></i> Novo Colaborador</button>
 </div>
 
 <div class="count-bar" id="count-bar">
@@ -207,7 +220,6 @@
       <button onclick="excluirLote()" style="background:#dc2626;color:#fff;border:none;padding:5px 14px;border-radius:7px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit"><i class="fas fa-trash"></i> Excluir</button>
       <button onclick="limparSelecao()" style="background:none;border:1px solid #dde1ed;color:var(--muted);padding:5px 10px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Desmarcar</button>
     </div>
-    <button class="btn-save-all" onclick="salvarTodos()"><i class="fas fa-save"></i> Salvar Tudo</button>
   </div>
 </div>
 
@@ -335,6 +347,39 @@
       <button class="btn-cancel" onclick="fecharModalNovoColab()">Cancelar</button>
       <button class="btn-confirm" style="background:#7c3aed" id="btn-confirmar-nc" onclick="salvarNovoColab()">
         <i class="fas fa-user-plus"></i> Criar Colaborador
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOVA ÁREA -->
+<div class="modal-overlay hidden" id="modal-nova-area">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-hdr">
+      <h3>🏷️ Nova Área</h3>
+      <button class="modal-close" onclick="fecharModalNovaArea()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-group">
+        <label>Nome da Área *</label>
+        <input type="text" id="na-nome" placeholder="Ex: Limpeza, Câmaras, Estoque…" maxlength="40"/>
+      </div>
+
+      <div class="form-group">
+        <label>Emoji / Ícone (opcional)</label>
+        <input type="text" id="na-emoji" placeholder="Ex: 🧹 ❄️ 📦" maxlength="4" style="font-size:22px;text-align:center;width:70px"/>
+      </div>
+
+      <p style="font-size:11px;color:var(--muted);margin-top:-6px">
+        Após criar, o botão desta área aparecerá automaticamente na tela de seleção de departamento para os colaboradores.
+      </p>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fecharModalNovaArea()">Cancelar</button>
+      <button class="btn-confirm" style="background:#0891b2" id="btn-confirmar-na" onclick="salvarNovaArea()">
+        <i class="fas fa-layer-group"></i> Criar Área
       </button>
     </div>
   </div>
@@ -777,6 +822,52 @@ async function salvarNovoColab(){
     if(sel){ sel.value=nome; renderTabela(); }
   } else {
     showToastM(`⚠️ ${ok} criados, ${err} com erro.`);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   NOVA ÁREA
+═══════════════════════════════════════════ */
+function abrirModalNovaArea(){
+  document.getElementById('na-nome').value='';
+  document.getElementById('na-emoji').value='';
+  document.getElementById('modal-nova-area').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('na-nome').focus(),100);
+}
+function fecharModalNovaArea(){
+  document.getElementById('modal-nova-area').classList.add('hidden');
+}
+
+async function salvarNovaArea(){
+  const nome  = document.getElementById('na-nome').value.trim();
+  const emoji = document.getElementById('na-emoji').value.trim() || '🏷️';
+
+  if(!nome){ showToastM('⚠️ Informe o nome da área!'); return; }
+
+  const btn=document.getElementById('btn-confirmar-na');
+  btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Criando…';
+
+  try{
+    /* Verifica duplicata pelo nome (case-insensitive) */
+    const existentes = await _fbGetAll('areas');
+    const jaExiste = existentes.some(a=>a.nome.toLowerCase()===nome.toLowerCase());
+    if(jaExiste){
+      showToastM('⚠️ Já existe uma área com esse nome!');
+      btn.disabled=false; btn.innerHTML='<i class="fas fa-layer-group"></i> Criar Área';
+      return;
+    }
+
+    /* Gera chave uppercase sem espaços para uso no app */
+    const chave = nome.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'_');
+
+    await _fbPost('areas',{ nome, emoji, chave, ativo:true });
+    showToastM(`✅ Área "${nome}" criada! O botão já aparece na tela de entrada.`);
+    fecharModalNovaArea();
+  } catch(e){
+    showToastM('❌ Erro ao criar área. Tente novamente.');
+    console.error(e);
+  } finally{
+    btn.disabled=false; btn.innerHTML='<i class="fas fa-layer-group"></i> Criar Área';
   }
 }
 
