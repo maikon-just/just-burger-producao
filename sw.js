@@ -4,7 +4,7 @@
        Isso força todos os browsers a baixar tudo de novo.
 ═══════════════════════════════════════════════════════════ */
 
-const VERSAO = 'justburger-v20260330-11';
+const VERSAO = 'justburger-v20260330-12';
 
 /* ── INSTALL ── apaga cache antigo e registra o novo ── */
 self.addEventListener('install', event => {
