@@ -964,10 +964,14 @@
      MODAL — PRÉ-VISUALIZAÇÃO DE IMPRESSÃO
      (substitui window.open — compatível com tablets)
 ══════════════════════════════════════════ -->
-<div class="modal-overlay hidden" id="modal-print-preview" style="z-index:10000;align-items:flex-start;padding:0">
+<!-- ══════════════════════════════════════════
+     MODAL — PRÉ-VISUALIZAÇÃO DE IMPRESSÃO
+     (substitui window.open — compatível com tablets)
+══════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-print-preview" style="z-index:10000;align-items:flex-start;padding:0;overflow-y:auto;">
   <div style="background:#fff;width:100%;max-width:860px;
               margin:0 auto;display:block;font-family:Arial,sans-serif">
-    <!-- Barra superior do preview (oculta no print) -->
+    <!-- Barra superior (oculta no print via classe no-print) -->
     <div style="position:sticky;top:0;z-index:10;background:#1a1d2e;color:#fff;
                 display:flex;align-items:center;gap:10px;padding:12px 16px;
                 box-shadow:0 2px 8px rgba(0,0,0,.3)" class="no-print">
@@ -985,10 +989,13 @@
         <i class="fas fa-print"></i> Imprimir
       </button>
     </div>
-    <!-- Conteúdo dinâmico gerado pelo JS -->
+    <!-- Conteúdo dinâmico exibido na tela -->
     <div id="print-preview-body" style="padding:24px;"></div>
   </div>
 </div>
+
+<!-- Zona de impressão: fora de qualquer overlay/fixed, usada apenas pelo @media print -->
+<div id="print-zone" style="display:none;"></div>
 
 <!-- ══ BOTTOM NAV GLOBAL ══ -->
 <div class="global-bottom-nav" id="global-bottom-nav">
