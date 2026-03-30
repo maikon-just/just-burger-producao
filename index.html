@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
   <!-- CSS principal -->
-  <link rel="stylesheet" href="css/style.css?v=20260329"/>
+  <link rel="stylesheet" href="css/style.css?v=20260330"/>
   <!-- Auth Guard: redireciona para portal se não houver sessão -->
   <script>
     (function _authGuard() {
@@ -988,24 +988,25 @@
 </div>
 
 <!-- Scripts — ordem importa! -->
-<script src="js/data.js?v=20260329"></script>
-<script src="js/firebase_v2.js?v=20260329"></script>
-<script src="js/app_v3.js?v=20260329"></script>
+<script src="js/versao.js?v=20260330"></script>
+<script src="js/data.js?v=20260330"></script>
+<script src="js/firebase_v2.js?v=20260330"></script>
+<script src="js/app_v3.js?v=20260330"></script>
 
 <!-- Service Worker: força atualização automática a cada deploy -->
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js')
+  /* Caminho relativo — funciona tanto em raiz quanto em subpasta do GitHub Pages */
+  const swUrl = new URL('sw.js', window.location.href).href;
+  navigator.serviceWorker.register(swUrl)
     .then(reg => {
-      /* Verifica atualização imediatamente */
-      reg.update();
+      reg.update(); /* verifica nova versão imediatamente */
       console.log('[SW] Registrado:', reg.scope);
     })
-    .catch(err => console.warn('[SW] Falha ao registrar:', err));
+    .catch(err => console.warn('[SW] Falha:', err));
 
-  /* Quando o SW atualizar, recarrega a página automaticamente */
+  /* Quando o SW trocar de versão, recarrega a página */
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    console.log('[SW] Nova versão detectada — recarregando...');
     window.location.reload();
   });
 }
