@@ -1024,33 +1024,11 @@
   </div>
 </div>
 
-<!-- Scripts com cache-bust por timestamp — baixa sempre a versão mais recente -->
-<script>
-var _jbCb = Date.now();
-</script>
-<script id="s-versao"></script>
-<script id="s-data"></script>
-<script id="s-firebase"></script>
-<script id="s-app"></script>
-<script>
-(function(){
-  /* document.currentScript é null em onload, por isso usamos getElementById */
-  var map = [
-    ['s-versao',  'js/versao.js'],
-    ['s-data',    'js/data.js'],
-    ['s-firebase','js/firebase_v2.js'],
-    ['s-app',     'js/app_v3.js']
-  ];
-  function loadNext(i){
-    if(i >= map.length) return;
-    var el = document.getElementById(map[i][0]);
-    el.onload  = function(){ loadNext(i+1); };
-    el.onerror = function(){ console.error('Falha:', map[i][1]); loadNext(i+1); };
-    el.src = map[i][1] + '?_cb=' + _jbCb;
-  }
-  loadNext(0);
-})();
-</script>
+<!-- Scripts — ordem importa! -->
+<script src="js/versao.js?v=20260331-26"></script>
+<script src="js/data.js?v=20260331-26"></script>
+<script src="js/firebase_v2.js?v=20260331-26"></script>
+<script src="js/app_v3.js?v=20260331-26"></script>
 
 <!-- Service Worker: força atualização automática a cada deploy -->
 <script>
