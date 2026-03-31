@@ -583,33 +583,37 @@ async function _carregarAreasExtras() {
   /* Remove botões extras inseridos anteriormente */
   grid.querySelectorAll('[data-custom-area]').forEach(el => el.remove());
 
-  /* Mapa final: chave → { nome, emoji } */
+  /* Mapa final: chave → { nome, emoji } — nunca inclui as 3 fixas */
   const extra = {};
 
-  /* ── Busca dados do Firebase em paralelo ── */
-  let tarefas = [], areas = [];
+  /* ── Fonte 1: coleção 'areas' (Novo Departamento criado pelo usuário) ── */
   try {
-    [tarefas, areas] = await Promise.all([_fbGetAll('tarefas'), _fbGetAll('areas')]);
-    /* Propaga departamento em memória para tarefas antigas sem o campo */
+    const areas = await _fbGetAll('areas');
+    console.log('[JB] areas no Firebase:', areas);
+    areas
+      .filter(a => a.ativo !== false && !_AREAS_FIXAS.has((a.chave||'').toUpperCase()))
+      .forEach(a => {
+        const chave = (a.chave||'').toUpperCase().trim();
+        if (chave) extra[chave] = { nome: a.nome || chave, emoji: a.emoji || '🏷️' };
+      });
+  } catch(e) { console.warn('[JB] Erro ao buscar areas:', e); }
+
+  /* ── Fonte 2: campo 'departamento' das tarefas ── */
+  try {
+    const tarefas = await _fbGetAll('tarefas');
     _resolverDeptTarefas(tarefas);
     _cache.tarefas = tarefas;
-  } catch(e) {
-    tarefas = _cache.tarefas || [];
-  }
+    console.log('[JB] tarefas carregadas:', tarefas.length, '| depts:', [...new Set(tarefas.map(t=>t.departamento).filter(Boolean))]);
+    tarefas.forEach(t => {
+      const chave = (t.departamento || '').toUpperCase().trim();
+      if (chave && !_AREAS_FIXAS.has(chave) && !extra[chave]) {
+        const nome = chave.replace(/_/g,' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+        extra[chave] = { nome, emoji: '🏷️' };
+      }
+    });
+  } catch(e) { console.warn('[JB] Erro ao buscar tarefas:', e); }
 
-  /* Fonte 1: coleção 'areas' do Firebase (Novo Departamento criado pelo usuário) */
-  areas
-    .filter(a => a.ativo !== false && !_AREAS_FIXAS.has(a.chave))
-    .forEach(a => { extra[a.chave] = { nome: a.nome, emoji: a.emoji || '🏷️' }; });
-
-  /* Fonte 2: campo 'departamento' das tarefas (já propagado acima para tarefas antigas) */
-  tarefas.forEach(t => {
-    const chave = (t.departamento || '').toUpperCase().trim();
-    if (chave && !_AREAS_FIXAS.has(chave) && !extra[chave]) {
-      const nome = chave.replace(/_/g,' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-      extra[chave] = { nome, emoji: '🏷️' };
-    }
-  });
+  console.log('[JB] departamentos extras detectados:', extra);
 
   /* ── Renderiza um botão para cada departamento extra encontrado ── */
   Object.entries(extra).forEach(([chave, info]) => {
@@ -625,6 +629,7 @@ async function _carregarAreasExtras() {
       </div>
       <span style="font-size:22px;opacity:.45">›</span>`;
     grid.appendChild(btn);
+    console.log('[JB] botão renderizado:', chave, info.nome);
   });
 }
 
