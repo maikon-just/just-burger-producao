@@ -632,14 +632,29 @@ async function _carregarAreasExtras() {
     extra[chave] = { nome, emoji: '🏷️' };
   });
 
-  /* ── Departamentos que têm pelo menos 1 tarefa ─────────────────────── */
-  const deptComTarefa = new Set(
-    tarefasRaw.map(t => String(t.departamento || '').toUpperCase().trim()).filter(Boolean)
+  /* ── Departamentos que têm pelo menos 1 tarefa para o turno+dia atual ─
+     Regra: só aparece se houver colaborador (não-teste) com tarefa
+     no turno e dia selecionados. Assim o card some quando não há
+     ninguém escalado — idêntico ao que acontece com os cards do setor. */
+  const dtTrab = S.dataTrabalho || today();
+  const deptComCard = new Set(
+    tarefasRaw
+      .filter(t => {
+        if (_isColabTeste(t.colaborador)) return false;
+        if (!t.departamento) return false;
+        if (t.turno !== S.turno) return false;
+        const matchDia = t.data_especifica
+          ? t.data_especifica === dtTrab
+          : t.dia_semana === S.dia;
+        return matchDia;
+      })
+      .map(t => String(t.departamento).toUpperCase().trim())
+      .filter(Boolean)
   );
 
-  /* ── Filtra extras sem tarefas e ordena A→Z ────────────────────────── */
+  /* ── Filtra extras sem cards ativos no dia/turno e ordena A→Z ──────── */
   const extraVisivel = Object.entries(extra)
-    .filter(([chave]) => deptComTarefa.has(chave) && !_DEPTS_IGNORAR.has(chave))
+    .filter(([chave]) => deptComCard.has(chave) && !_DEPTS_IGNORAR.has(chave))
     .sort(([,a],[,b]) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
   console.log('[JB-DEPT] extras visíveis:', extraVisivel.map(([k])=>k));
@@ -2526,31 +2541,23 @@ function _isColabTeste(nome) {
   return false;
 }
 
-/* Cache dos colaboradores válidos para o modal Nova Tarefa */
-let _teColabCache = [];
-
+/* ══ POPULATE COLABORADOR — select padrão HTML ═══════════
+   Preenche o <select id="te-colab"> com colaboradores que
+   têm tarefas ativas, excluindo nomes de teste, A→Z.
+══════════════════════════════════════════════════════════ */
 async function _populateTeColab(selected) {
-  const inp   = document.getElementById('te-colab');
-  const lista = document.getElementById('te-colab-lista');
-  if (!inp || !lista) return;
+  const sel = document.getElementById('te-colab');
+  if (!sel) return;
 
-  /* Regra:
-     1. Colaboradores com tarefas (qualquer) — excluindo os de teste
-     2. Ordenados A→Z
-     OBS: a regra de "cadastrado no mesmo dia" foi removida pois causava
-          lista vazia quando o turno já estava configurado há mais de 24h */
   let cols = [];
   try {
     const banco = await _fbGetAll('tarefas');
-
-    /* Colaboradores que têm pelo menos 1 tarefa e não são de teste */
     cols = [...new Set(
       banco
         .filter(t => t.colaborador && !_isColabTeste(t.colaborador))
         .map(t => t.colaborador)
     )].sort((a,b) => a.localeCompare(b,'pt-BR'));
 
-    /* Fallback: se banco vazio, usa lista estática sem os de teste */
     if (!cols.length) {
       cols = TODOS_COLABS
         .filter(c => !_isColabTeste(c))
@@ -2562,67 +2569,15 @@ async function _populateTeColab(selected) {
       .sort((a,b) => a.localeCompare(b,'pt-BR'));
   }
 
-  _teColabCache = cols;
-  _renderListaColab(cols, selected);
+  sel.innerHTML = '<option value="">— Selecione —</option>' +
+    cols.map(c => `<option value="${c}"${c===selected?' selected':''}>${(COLLAB_EMOJI[c]||'👤')+' '+c}</option>`).join('');
 
-  if (selected) inp.value = selected;
-  else inp.value = '';
-}
-
-function _renderListaColab(cols, selected) {
-  const lista = document.getElementById('te-colab-lista');
-  if (!lista) return;
-  /* Garante container sempre branco (evita dark-mode do Android) */
-  lista.style.cssText = (lista.style.cssText || '') +
-    ';background:#ffffff!important;color:#1a1a2e!important';
-  if (!cols.length) {
-    lista.innerHTML = '<div style="padding:12px 16px;background:#fff;color:#9ca3af;font-size:13px;font-weight:600">Nenhum colaborador encontrado</div>';
-    return;
-  }
-  lista.innerHTML = cols.map(c => {
-    const isSel = c === selected;
-    const bg    = isSel ? '#ede9fe' : '#ffffff';
-    return `
-    <button type="button"
-      onclick="_selecionarColab('${c.replace(/'/g,"\\'")}');event.preventDefault()"
-      style="width:100%;text-align:left;padding:11px 16px;border:none;
-             border-bottom:1px solid #f0f0f5;
-             background:${bg};color:#1a1a2e;
-             font-family:inherit;font-size:14px;font-weight:${isSel?'900':'600'};
-             cursor:pointer;display:flex;align-items:center;gap:10px;
-             transition:background .12s;-webkit-tap-highlight-color:transparent"
-      onmouseenter="this.style.background='#f5f3ff'"
-      onmouseleave="this.style.background='${bg}'">
-      <span style="font-size:20px;line-height:1">${COLLAB_EMOJI[c]||'👤'}</span>
-      <span style="flex:1;color:#1a1a2e">${c}</span>
-      ${isSel?'<span style="color:#7c3aed;font-size:18px;font-weight:900">✓</span>':''}
-    </button>`;
-  }).join('');
-}
-
-function _selecionarColab(nome) {
-  const inp   = document.getElementById('te-colab');
-  const lista = document.getElementById('te-colab-lista');
-  if (inp) inp.value = nome;
-  if (lista) { lista.style.display = 'none'; }
-  /* Auto-fill departamento se disponível */
-  if (typeof _autoFillDepto === 'function') _autoFillDepto();
-}
-
-function _filtrarListaColab(texto) {
-  const lista = document.getElementById('te-colab-lista');
-  if (!lista) return;
-  lista.style.display = 'block';
-  const q = (texto || '').toUpperCase().trim();
-  const filtrado = q
-    ? _teColabCache.filter(c => c.toUpperCase().includes(q))
-    : _teColabCache;
-  _renderListaColab(filtrado, document.getElementById('te-colab')?.value || '');
+  if (selected) sel.value = selected;
 }
 
 async function saveTaskEdit() {
   const id=document.getElementById('te-id').value;
-  /* te-colab agora é um <input> com datalist — pega valor e normaliza em maiúsculas */
+  /* te-colab é um <select> padrão — pega valor selecionado */
   let colab=(document.getElementById('te-colab').value||'').trim().toUpperCase();
   const body={
     colaborador:colab,
@@ -2961,13 +2916,25 @@ async function _carregarOpcoesDepto() {
     extras = areas
       .filter(a => a.ativo !== false)
       .filter(a => {
-        const key = (a.chave || (a.nome||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_').replace(/[^A-Z0-9_]/g,''));
-        return !_AREAS_FIXAS_KEYS.includes(key);
+        const key = (a.chave || (a.nome||'').toUpperCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+          .replace(/\s+/g,'_').replace(/[^A-Z0-9_]/g,''));
+        /* Exclui fixos e itens da blacklist de departamentos */
+        return !_AREAS_FIXAS_KEYS.includes(key) && !_DEPTS_IGNORAR.has(key);
+      })
+      /* Exclui nomes claramente de teste (contém "teste", "test", "area nova" etc) */
+      .filter(a => {
+        const n = (a.nome || a.chave || '').toLowerCase().trim();
+        return !n.includes('teste') && !n.includes('test ') && n !== 'area nova' && n !== 'area_nova';
       })
       .map(a => ({
-        valor: (a.chave || (a.nome||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_').replace(/[^A-Z0-9_]/g,'')),
+        valor: (a.chave || (a.nome||'').toUpperCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+          .replace(/\s+/g,'_').replace(/[^A-Z0-9_]/g,'')),
         label: (a.emoji ? a.emoji+' ' : '🏷️ ') + (a.nome || a.chave || '?')
-      }));
+      }))
+      /* Ordena A→Z */
+      .sort((a,b) => a.label.localeCompare(b.label, 'pt-BR'));
   } catch(e) { console.warn('[JB] _carregarOpcoesDepto erro extras:', e); }
 
   sel.innerHTML = '<option value="">— Selecione —</option>' +
