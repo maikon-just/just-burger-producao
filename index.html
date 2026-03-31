@@ -1024,11 +1024,28 @@
   </div>
 </div>
 
-<!-- Scripts — ordem importa! -->
-<script src="js/versao.js?v=20260330-24"></script>
-<script src="js/data.js?v=20260330-24"></script>
-<script src="js/firebase_v2.js?v=20260330-24"></script>
-<script src="js/app_v3.js?v=20260330-24"></script>
+<!-- Scripts — cache-bust com timestamp: garante arquivo mais recente sempre -->
+<script>
+(function(){
+  /* Gera um ID único a cada carregamento da página (não usa cache de parâmetro fixo) */
+  var _cb = Date.now();
+  var scripts = [
+    'js/versao.js',
+    'js/data.js',
+    'js/firebase_v2.js',
+    'js/app_v3.js'
+  ];
+  /* Injeta cada script na ordem correta, aguardando o anterior */
+  (function loadNext(i){
+    if(i >= scripts.length) return;
+    var s = document.createElement('script');
+    s.src = scripts[i] + '?_cb=' + _cb;
+    s.onload  = function(){ loadNext(i+1); };
+    s.onerror = function(){ console.error('Falha ao carregar:', scripts[i]); loadNext(i+1); };
+    document.currentScript.parentNode.appendChild(s);
+  })(0);
+})();
+</script>
 
 <!-- Service Worker: força atualização automática a cada deploy -->
 <script>
