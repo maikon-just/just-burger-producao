@@ -245,13 +245,14 @@
       <p>Selecione seu setor</p>
     </div>
     <div class="dept-btn-grid" id="dept-btn-grid">
-      <button class="dept-btn dept-btn-producao" onclick="_abrirSetorCards('PRODUCAO')">
-        <span class="dept-btn-emoji">🏭</span>
+      <!-- Fixos em ordem alfabética: Atendimento → Operação → Produção -->
+      <button class="dept-btn dept-btn-atendimento" onclick="_abrirSetorCards('ATENDIMENTO')">
+        <span class="dept-btn-emoji">🎯</span>
         <div style="flex:1;text-align:left">
-          <span class="dept-btn-nome">Produção</span>
-          <div class="dept-btn-sub">Cozinha · Preparo · Montagem</div>
+          <span class="dept-btn-nome">Atendimento</span>
+          <div class="dept-btn-sub">Caixa · Despacho · Delivery</div>
         </div>
-        <span style="font-size:22px;opacity:.45">›</span>
+        <span class="dept-btn-lock">🔒</span>
       </button>
       <button class="dept-btn dept-btn-operacao" onclick="_abrirSetorCards('OPERACAO')">
         <span class="dept-btn-emoji">⚙️</span>
@@ -261,14 +262,15 @@
         </div>
         <span style="font-size:22px;opacity:.45">›</span>
       </button>
-      <button class="dept-btn dept-btn-atendimento" onclick="_abrirSetorCards('ATENDIMENTO')">
-        <span class="dept-btn-emoji">🎯</span>
+      <button class="dept-btn dept-btn-producao" onclick="_abrirSetorCards('PRODUCAO')">
+        <span class="dept-btn-emoji">🏭</span>
         <div style="flex:1;text-align:left">
-          <span class="dept-btn-nome">Atendimento</span>
-          <div class="dept-btn-sub">Caixa · Despacho · Delivery</div>
+          <span class="dept-btn-nome">Produção</span>
+          <div class="dept-btn-sub">Cozinha · Preparo · Montagem</div>
         </div>
-        <span class="dept-btn-lock">🔒</span>
+        <span style="font-size:22px;opacity:.45">›</span>
       </button>
+      <!-- Departamentos extras injetados dinamicamente pelo JS abaixo dos fixos -->
     </div>
     <div class="screen-bottom-back"><button class="btn-bottom-back" onclick="goToWelcome()">← Voltar</button></div>
   </main>
@@ -1144,10 +1146,10 @@
 </div>
 
 <!-- Scripts — ordem importa! -->
-<script src="js/versao.js?v=20260331-29"></script>
-<script src="js/data.js?v=20260331-29"></script>
-<script src="js/firebase_v2.js?v=20260331-29"></script>
-<script src="js/app_v3.js?v=20260331-29"></script>
+<script src="js/versao.js?v=20260331-30"></script>
+<script src="js/data.js?v=20260331-30"></script>
+<script src="js/firebase_v2.js?v=20260331-30"></script>
+<script src="js/app_v3.js?v=20260331-30"></script>
 
 <!-- Service Worker: força atualização automática a cada deploy -->
 <script>
