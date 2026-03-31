@@ -1,4 +1,4 @@
-/* ══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    JUST BURGER 🍔 — app_v3.js
    Controle de Produção — Firebase Realtime Database (compat)
    Versão: 2026-03-27 — GitHub Edition
@@ -579,9 +579,11 @@ function _irParaDept() {
 const _AREAS_FIXAS = new Set(['PRODUCAO','OPERACAO','ATENDIMENTO']);
 
 /* ══ CARREGAR ÁREAS EXTRAS (Departamentos customizados) ══════════════════
-   Busca a coleção 'areas' no Firebase e insere botões no grid da tela
-   screen-dept para cada departamento além dos 3 fixos.
-   Também varre tarefas para detectar departamentos sem registro em 'areas'.
+   v30 — Melhorias:
+   · Departamentos extras ordenados alfabeticamente
+   · Departamentos sem nenhuma tarefa são ocultados automaticamente
+   · Botão 🗑️ de exclusão em cada departamento extra (só para líderes)
+   · Os 3 fixos (Produção, Operação, Atendimento) nunca somem/excluem
 ═══════════════════════════════════════════════════════════════════════════ */
 async function _carregarAreasExtras() {
   const grid = document.getElementById('dept-btn-grid');
@@ -589,8 +591,11 @@ async function _carregarAreasExtras() {
 
   /* Remove botões customizados inseridos em chamadas anteriores */
   grid.querySelectorAll('[data-custom-area]').forEach(el => el.remove());
+  /* Remove separador anterior se existir */
+  const sepAnt = grid.querySelector('.dept-sep-extra');
+  if (sepAnt) sepAnt.remove();
 
-  /* Mapa final: CHAVE → { nome, emoji } — exclui as 3 áreas fixas */
+  /* Mapa final: CHAVE → { nome, emoji, firebaseId } */
   const extra = {};
 
   /* ── FONTE 1: coleção "areas" do Firebase ──────────────────────────── */
@@ -603,8 +608,7 @@ async function _carregarAreasExtras() {
   }
 
   areasRaw.forEach(a => {
-    if (a.ativo === false) return;           /* ignora inativas */
-    /* Aceita com ou sem campo 'chave' — usa nome como fallback */
+    if (a.ativo === false) return;
     const nomeRaw = String(a.nome || a.chave || '').trim();
     if (!nomeRaw) return;
     const chave = String(a.chave || nomeRaw)
@@ -613,44 +617,69 @@ async function _carregarAreasExtras() {
       .replace(/[^A-Z0-9]/g,'_')
       .trim();
     if (!chave || _AREAS_FIXAS.has(chave)) return;
-    extra[chave] = { nome: a.nome || nomeRaw, emoji: a.emoji || '🏷️' };
+    extra[chave] = { nome: a.nome || nomeRaw, emoji: a.emoji || '🏷️', firebaseId: a.id || null };
   });
 
   /* ── FONTE 2: campo "departamento" das tarefas ─────────────────────── */
   let tarefasRaw = [];
   try {
     tarefasRaw = await _fbGetAll('tarefas');
-    console.log('[JB-DEPT] tarefas (' + tarefasRaw.length + ') | depts únicos:',
-      [...new Set(tarefasRaw.map(t => t.departamento).filter(Boolean))]);
   } catch(e) {
     console.warn('[JB-DEPT] Erro ao buscar tarefas:', e);
   }
 
-  /* Propaga departamento em memória e atualiza cache */
   _resolverDeptTarefas(tarefasRaw);
   _cache.tarefas = tarefasRaw;
 
+  /* Departamentos encontrados nas tarefas (além dos já mapeados por "areas") */
   tarefasRaw.forEach(t => {
     const chave = String(t.departamento || '').toUpperCase().trim();
     if (!chave || _AREAS_FIXAS.has(chave) || extra[chave]) return;
-    /* Formata nome legível a partir da chave: FINANCEIRO → Financeiro */
     const nome = chave.replace(/_/g,' ')
-      .toLowerCase()
-      .replace(/\b\w/g, c => c.toUpperCase());
-    extra[chave] = { nome, emoji: '🏷️' };
+      .toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+    extra[chave] = { nome, emoji: '🏷️', firebaseId: null };
   });
 
-  console.log('[JB-DEPT] departamentos extras para renderizar:', Object.keys(extra));
+  /* ── Conjunto de departamentos QUE TÊM pelo menos 1 tarefa ────────── */
+  const deptComTarefa = new Set(
+    tarefasRaw.map(t => String(t.departamento || '').toUpperCase().trim()).filter(Boolean)
+  );
 
-  /* ── RENDERIZA um botão para cada departamento extra ──────────────── */
-  if (Object.keys(extra).length === 0) {
-    console.log('[JB-DEPT] Nenhum departamento extra encontrado. Apenas os 3 fixos exibidos.');
+  console.log('[JB-DEPT] extras mapeados:', Object.keys(extra));
+  console.log('[JB-DEPT] depts com tarefa:', [...deptComTarefa]);
+
+  /* ── Filtra: oculta áreas extras sem nenhuma tarefa ───────────────── */
+  const extraComTarefa = Object.entries(extra)
+    .filter(([chave]) => deptComTarefa.has(chave))
+    .sort(([,a],[,b]) => a.nome.localeCompare(b.nome, 'pt-BR')); /* ORDEM ALFABÉTICA */
+
+  console.log('[JB-DEPT] extras visíveis (com tarefas):', extraComTarefa.map(([k])=>k));
+
+  if (extraComTarefa.length === 0) {
+    console.log('[JB-DEPT] Nenhum departamento extra com tarefas. Apenas os 3 fixos.');
+    /* Atualiza visibilidade dos 3 fixos baseado em tarefas */
+    _atualizarVisibilidadeFixos(deptComTarefa);
     return;
   }
 
-  Object.entries(extra).forEach(([chave, info]) => {
+  /* ── Separador visual entre fixos e extras ────────────────────────── */
+  const sep = document.createElement('div');
+  sep.className = 'dept-sep-extra';
+  sep.style.cssText = 'font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;padding:4px 2px 2px;';
+  sep.textContent = '— Outros departamentos —';
+  grid.appendChild(sep);
+
+  /* ── Renderiza botões extras em ordem alfabética ──────────────────── */
+  const isLider = S.leaderOk || _isLider();
+
+  extraComTarefa.forEach(([chave, info]) => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;display:flex;align-items:stretch;gap:0';
+    wrap.setAttribute('data-custom-area-wrap', chave);
+
     const btn = document.createElement('button');
     btn.className = 'dept-btn dept-btn-custom';
+    btn.style.cssText = 'flex:1;border-radius:14px 0 0 14px;';
     btn.setAttribute('data-custom-area', chave);
     btn.onclick = () => _abrirSetorCards(chave);
     btn.innerHTML =
@@ -660,9 +689,75 @@ async function _carregarAreasExtras() {
         `<div class="dept-btn-sub">${chave}</div>` +
       `</div>` +
       `<span style="font-size:22px;opacity:.45">›</span>`;
-    grid.appendChild(btn);
-    console.log('[JB-DEPT] ✅ Botão adicionado:', chave, '→', info.nome);
+
+    wrap.appendChild(btn);
+
+    /* Botão excluir — só aparece para líderes */
+    if (isLider) {
+      const btnDel = document.createElement('button');
+      btnDel.className = 'dept-btn-del-area';
+      btnDel.title = `Excluir departamento ${info.nome}`;
+      btnDel.innerHTML = '🗑️';
+      btnDel.style.cssText =
+        'background:#fee2e2;border:2px solid #fca5a5;border-left:none;' +
+        'border-radius:0 14px 14px 0;padding:0 14px;cursor:pointer;' +
+        'font-size:18px;color:#dc2626;transition:background .2s;flex-shrink:0;';
+      btnDel.onmouseenter = () => { btnDel.style.background='#fecaca'; };
+      btnDel.onmouseleave = () => { btnDel.style.background='#fee2e2'; };
+      btnDel.onclick = (e) => {
+        e.stopPropagation();
+        _excluirDepartamento(chave, info.nome, info.firebaseId, wrap);
+      };
+      wrap.appendChild(btnDel);
+    }
+
+    grid.appendChild(wrap);
+    console.log('[JB-DEPT] ✅ Botão:', chave, '→', info.nome);
   });
+
+  /* Atualiza visibilidade dos fixos */
+  _atualizarVisibilidadeFixos(deptComTarefa);
+}
+
+/* ── Oculta/mostra botões fixos (Produção, Operação, Atendimento)
+   quando não há nenhuma tarefa neles para o turno/dia atual ─────────── */
+function _atualizarVisibilidadeFixos(deptComTarefa) {
+  /* Os 3 fixos SEMPRE ficam visíveis — política do sistema */
+  /* Se quiser ocultar no futuro, descomentar o código abaixo:
+  ['PRODUCAO','OPERACAO','ATENDIMENTO'].forEach(dept => {
+    const btn = document.querySelector(`.dept-btn-${dept.toLowerCase()}`);
+    if (btn) btn.style.display = deptComTarefa.has(dept) ? '' : 'none';
+  });
+  */
+}
+
+/* ── Exclui um departamento do Firebase e remove o botão da tela ────── */
+async function _excluirDepartamento(chave, nome, firebaseId, wrapEl) {
+  const confirm1 = confirm(`Excluir o departamento "${nome}"?\n\n⚠️ ATENÇÃO: Isso NÃO exclui as tarefas vinculadas.\nO botão voltará a aparecer se ainda houver tarefas com esse departamento.`);
+  if (!confirm1) return;
+
+  try {
+    /* Remove do Firebase "areas" se tiver ID */
+    if (firebaseId) {
+      await _fbDelete('areas', firebaseId);
+      showToast(`🗑️ Departamento "${nome}" excluído!`);
+    } else {
+      /* Departamento vem só de tarefas (sem registro em "areas") */
+      /* Neste caso, só remove o botão visualmente — continua existindo nas tarefas */
+      showToast(`⚠️ "${nome}" removido da tela (ainda existe em tarefas)`);
+    }
+    /* Remove o botão da tela com animação */
+    if (wrapEl) {
+      wrapEl.style.transition = 'all .3s';
+      wrapEl.style.opacity = '0';
+      wrapEl.style.maxHeight = '0';
+      wrapEl.style.overflow = 'hidden';
+      setTimeout(() => wrapEl.remove(), 300);
+    }
+  } catch(e) {
+    console.error('[JB-DEPT] Erro ao excluir:', e);
+    showToast('❌ Erro ao excluir departamento');
+  }
 }
 
 function _abrirSetorCards(dept) {
@@ -2210,7 +2305,8 @@ async function loadLeaderData() {
 }
 
 function populateCollabFilter(all) {
-  const nomes=[...new Set((all||[]).map(r=>r.colaborador_card).filter(Boolean))].sort();
+  /* Mostra apenas colaboradores que têm pelo menos 1 registro — ordem alfabética */
+  const nomes=[...new Set((all||[]).map(r=>r.colaborador_card).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   const sel=document.getElementById('filter-colaborador'); if (!sel) return;
   const cur=sel.value;
   sel.innerHTML='<option value="">Todos</option>'+nomes.map(n=>`<option value="${n}"${n===cur?' selected':''}>${n}</option>`).join('');
@@ -2413,7 +2509,8 @@ async function loadTarefasGestao() {
   const colab=((document.getElementById('tar-filter-colab')||{}).value)||'';
   try {
     const all=await _fbGetAll('tarefas');
-    const colabsNoDia=[...new Set(all.filter(t=>t.turno===turno&&t.dia_semana===dia).map(t=>t.colaborador).filter(Boolean))].sort();
+    /* Colaboradores com tarefas nesse turno+dia — ordem alfabética */
+    const colabsNoDia=[...new Set(all.filter(t=>t.turno===turno&&t.dia_semana===dia).map(t=>t.colaborador).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
     const selC=document.getElementById('tar-filter-colab');
     if (selC) { const cur=selC.value; selC.innerHTML='<option value="">Todos</option>'+colabsNoDia.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join(''); }
     let data=all.filter(t=>t.turno===turno&&t.dia_semana===dia);
@@ -2500,11 +2597,14 @@ async function openModalEditTask(id) {
 }
 
 async function _populateTeColab(selected) {
-  let cols=[...TODOS_COLABS];
+  /* Só mostra colaboradores que têm pelo menos 1 tarefa no Firebase */
+  let cols=[];
   try {
     const banco=await _fbGetAll('tarefas');
-    cols=[...new Set([...cols,...banco.map(t=>t.colaborador).filter(Boolean)])].sort();
-  } catch(e) {}
+    cols=[...new Set(banco.map(t=>t.colaborador).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  } catch(e) {
+    cols=[...TODOS_COLABS].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  }
   const sel=document.getElementById('te-colab'); if (!sel) return;
   sel.innerHTML='<option value="">— Selecione —</option>'+cols.map(c=>`<option value="${c}"${c===selected?' selected':''}>${c}</option>`).join('')+'<option value="__novo__">+ Outro (digitar)</option>';
 }
