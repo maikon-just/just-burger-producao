@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Criar Áreas — Just Burger</title>
+<style>
+  body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center;
+         justify-content: center; min-height: 100vh; background: #f1f5f9; margin: 0; }
+  .box { background: #fff; border-radius: 16px; padding: 32px 40px; box-shadow: 0 4px 24px rgba(0,0,0,.1);
+         text-align: center; max-width: 420px; width: 90%; }
+  h2 { margin: 0 0 8px; font-size: 22px; }
+  p  { color: #64748b; font-size: 14px; margin: 0 0 24px; }
+  button { background: #0891b2; color: #fff; border: none; border-radius: 10px;
+           padding: 14px 32px; font-size: 16px; font-weight: 700; cursor: pointer;
+           width: 100%; transition: opacity .2s; }
+  button:hover { opacity: .85; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  #log { margin-top: 20px; font-size: 13px; line-height: 1.8; text-align: left; }
+  .ok  { color: #16a34a; font-weight: 700; }
+  .err { color: #dc2626; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="box">
+  <h2>🏷️ Criar Áreas no Firebase</h2>
+  <p>Clique para gravar <strong>Financeiro</strong> e <strong>Estoque</strong> na coleção <code>areas</code> do Firebase.</p>
+  <button id="btn" onclick="criarAreas()">▶ Criar Agora</button>
+  <div id="log"></div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script>
+const cfg = {
+  apiKey:            "AIzaSyDt1yzxGGzuT2cSdten1bFuXG7yeDQ90Po",
+  authDomain:        "justburger-producao-e9b27.firebaseapp.com",
+  databaseURL:       "https://justburger-producao-e9b27-default-rtdb.firebaseio.com",
+  projectId:         "justburger-producao-e9b27",
+  storageBucket:     "justburger-producao-e9b27.firebasestorage.app",
+  messagingSenderId: "387070713910",
+  appId:             "1:387070713910:web:f156d3247a1715a58ab897"
+};
+firebase.initializeApp(cfg);
+const db = firebase.database();
+
+const AREAS = [
+  { nome: 'Financeiro', chave: 'FINANCEIRO', emoji: '💰', ativo: true },
+  { nome: 'Estoque',    chave: 'ESTOQUE',    emoji: '📦', ativo: true },
+];
+
+async function criarAreas() {
+  const btn = document.getElementById('btn');
+  const log = document.getElementById('log');
+  btn.disabled = true;
+  btn.textContent = '⏳ Criando…';
+  log.innerHTML = '';
+
+  /* Verifica o que já existe */
+  let existentes = [];
+  try {
+    const snap = await db.ref('areas').once('value');
+    const val = snap.val();
+    if (val) existentes = Object.values(val).map(a => (a.chave||'').toUpperCase());
+  } catch(e) {
+    log.innerHTML = '<span class="err">❌ Erro ao conectar ao Firebase: ' + e.message + '</span>';
+    btn.disabled = false; btn.textContent = '▶ Tentar novamente';
+    return;
+  }
+
+  for (const area of AREAS) {
+    if (existentes.includes(area.chave)) {
+      log.innerHTML += `<div class="ok">⚠️ ${area.nome} já existe — pulando.</div>`;
+      continue;
+    }
+    try {
+      const ref = db.ref('areas').push();
+      await ref.set({ ...area, created_at: Date.now(), updated_at: Date.now() });
+      log.innerHTML += `<div class="ok">✅ ${area.emoji} ${area.nome} criado! (id: ${ref.key})</div>`;
+    } catch(e) {
+      log.innerHTML += `<div class="err">❌ Erro ao criar ${area.nome}: ${e.message}</div>`;
+    }
+  }
+
+  btn.textContent = '✅ Concluído!';
+  log.innerHTML += '<br><strong>Pronto! Abra o app e vá em "Qual departamento?" — os botões aparecem automaticamente.</strong>';
+}
+</script>
+</body>
+</html>
