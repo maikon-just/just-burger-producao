@@ -742,7 +742,15 @@
       <input type="hidden" id="te-id"/>
       <div class="filter-group" style="width:100%">
         <label>👤 Colaborador</label>
-        <select id="te-colab" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit"></select>
+        <input type="text" id="te-colab" list="te-colab-list" placeholder="Digite ou escolha..."
+               autocomplete="off" spellcheck="false"
+               style="width:100%;padding:8px 12px;border-radius:8px;border:2px solid #e2e6f0;
+                      font-family:inherit;font-size:14px;font-weight:700;outline:none;
+                      background:#fff;color:#1a1a2e;box-sizing:border-box;
+                      transition:border-color .2s"
+               onfocus="this.style.borderColor='#6366f1'"
+               onblur="this.style.borderColor='#e2e6f0'"/>
+        <datalist id="te-colab-list"></datalist>
       </div>
       <div class="filter-group" style="width:100%">
         <label>⏰ Turno</label>
@@ -1146,10 +1154,10 @@
 </div>
 
 <!-- Scripts — ordem importa! -->
-<script src="js/versao.js?v=20260331-30"></script>
-<script src="js/data.js?v=20260331-30"></script>
-<script src="js/firebase_v2.js?v=20260331-30"></script>
-<script src="js/app_v3.js?v=20260331-30"></script>
+<script src="js/versao.js?v=20260331-31"></script>
+<script src="js/data.js?v=20260331-31"></script>
+<script src="js/firebase_v2.js?v=20260331-31"></script>
+<script src="js/app_v3.js?v=20260331-31"></script>
 
 <!-- Service Worker: força atualização automática a cada deploy -->
 <script>
