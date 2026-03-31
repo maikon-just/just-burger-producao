@@ -2597,46 +2597,46 @@ async function openModalEditTask(id) {
 }
 
 async function _populateTeColab(selected) {
-  /* Só mostra colaboradores que têm pelo menos 1 tarefa no Firebase */
-  let cols=[];
+  /* Mostra colaboradores cadastrados nos últimos 5 dias — ordem A→Z
+     "Cadastrado nos últimos 5 dias" = tarefa com created_at ≥ agora - 5 dias
+     Se não houver nenhum recente, exibe todos os que existem no Firebase       */
+  const inp  = document.getElementById('te-colab');
+  const dl   = document.getElementById('te-colab-list');
+  if (!inp || !dl) return;
+
+  let cols = [];
   try {
-    const banco=await _fbGetAll('tarefas');
-    cols=[...new Set(banco.map(t=>t.colaborador).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    const banco = await _fbGetAll('tarefas');
+    const CINCO_DIAS_MS = 5 * 24 * 60 * 60 * 1000;
+    const corte = Date.now() - CINCO_DIAS_MS;
+
+    /* Colaboradores cujas tarefas foram criadas nos últimos 5 dias */
+    const recentes = [...new Set(
+      banco
+        .filter(t => t.colaborador && Number(t.created_at || 0) >= corte)
+        .map(t => t.colaborador)
+    )].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+    cols = recentes.length > 0
+      ? recentes
+      : [...new Set(banco.map(t => t.colaborador).filter(Boolean))]
+          .sort((a, b) => a.localeCompare(b, 'pt-BR'));
   } catch(e) {
-    cols=[...TODOS_COLABS].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    cols = [...TODOS_COLABS].sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }
-  const sel=document.getElementById('te-colab'); if (!sel) return;
-  sel.innerHTML='<option value="">— Selecione —</option>'+cols.map(c=>`<option value="${c}"${c===selected?' selected':''}>${c}</option>`).join('')+'<option value="__novo__">+ Outro (digitar)</option>';
+
+  /* Preenche o datalist com as opções */
+  dl.innerHTML = cols.map(c => `<option value="${c}"></option>`).join('');
+
+  /* Define valor selecionado no input */
+  if (selected) inp.value = selected;
+  else inp.value = '';
 }
 
 async function saveTaskEdit() {
   const id=document.getElementById('te-id').value;
-  let colab=document.getElementById('te-colab').value;
-  if (colab==='__novo__') {
-    /* Modal customizado no lugar do prompt() nativo */
-    let ov=document.getElementById('_modal_novo_colab');
-    if (!ov){ ov=document.createElement('div'); ov.id='_modal_novo_colab';
-      ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
-      document.body.appendChild(ov); }
-    ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:inherit">
-      <h3 style="font-size:16px;font-weight:900;margin:0 0 14px">👤 Novo Colaborador</h3>
-      <input id="_nc_inp" type="text" placeholder="Nome em MAIÚSCULAS..."
-        style="width:100%;padding:12px 14px;border:2px solid #e2e6f0;border-radius:12px;font-size:15px;font-family:inherit;outline:none;box-sizing:border-box;text-transform:uppercase;margin-bottom:14px"/>
-      <div style="display:flex;gap:10px">
-        <button onclick="document.getElementById('_modal_novo_colab').style.display='none'"
-          style="flex:1;padding:12px;border-radius:12px;border:2px solid #e2e6f0;background:#f9fafb;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">Cancelar</button>
-        <button id="_nc_ok" style="flex:2;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#4f8ef7,#2563eb);color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">Confirmar ✅</button>
-      </div></div>`;
-    ov.style.display='flex';
-    await new Promise(resolve=>{
-      document.getElementById('_nc_ok').onclick=()=>{ ov.style.display='none'; resolve(); };
-      document.getElementById('_nc_inp').onkeydown=e=>{ if(e.key==='Enter'){ ov.style.display='none'; resolve(); } };
-      setTimeout(()=>document.getElementById('_nc_inp').focus(),80);
-    });
-    const val=(document.getElementById('_nc_inp').value||'').trim().toUpperCase();
-    if (!val) return;
-    colab=val;
-  }
+  /* te-colab agora é um <input> com datalist — pega valor e normaliza em maiúsculas */
+  let colab=(document.getElementById('te-colab').value||'').trim().toUpperCase();
   const body={
     colaborador:colab,
     turno:document.getElementById('te-turno').value,
