@@ -21,7 +21,9 @@
   --shadow-md:  0 8px 32px rgba(0,0,0,.15);
 }
 
-html { font-size: 16px; }
+/* Força sempre o modo claro — evita dark mode do Android/Samsung */
+:root { color-scheme: light only; }
+html { font-size: 16px; color-scheme: light; }
 body {
   font-family: 'Nunito', 'Segoe UI', sans-serif;
   background: var(--bg);
@@ -982,11 +984,13 @@ body:not(.has-bottom-nav) .tasks-footer { bottom:0; }
 }
 .modal-overlay.hidden { display:none !important; }
 .modal-box {
-  background:#fff; border-radius:20px;
+  background:#ffffff; border-radius:20px;
   width:100%; max-width:480px; max-height:90vh;
   overflow-y:auto; position:relative;
   animation:slideUp .25s ease;
   box-shadow:0 20px 60px rgba(0,0,0,.35);
+  color-scheme:light;
+  color:#1a1a2e;
 }
 .modal-compact { max-height:88vh; }
 .modal-close {
