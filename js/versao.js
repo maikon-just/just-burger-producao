@@ -9,9 +9,20 @@
 ═══════════════════════════════════════════════════════════ */
 
 const JB_VERSION = {
-  build: '20260331-31',
-  data:  '31/03/2026', /* v31 — campo colaborador: input+datalist, só últimos 5 dias, A→Z */
+  build: '20260331-32',
+  data:  '31/03/2026',
   autor: 'Just Burger Produção',
+  /* v32 — changelog:
+     - Blacklist de departamentos: MOTOCA e outros de teste nunca aparecem
+       mesmo que ainda tenham tarefas no Firebase
+     - Blacklist de colaboradores expandida: MAIKON, JULIANA, MALU, MOTOCA,
+       CCCCC, padrões repetidos (AAAA, CCC…) nunca aparecem em nenhuma lista
+     - Lista do modal Nova Tarefa: mostra TODOS com tarefas (sem limite de 24h),
+       sem os de teste, ordenados A→Z
+     - Filtro de colaboradores do painel líder: exclui nomes de teste
+     - Filtro de colaboradores da aba Tarefas: exclui nomes de teste
+     - Departamento some automaticamente quando não tem tarefas (regra mantida)
+  */
 };
 
 /* Exibe versão no console para diagnóstico */
