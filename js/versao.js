@@ -9,8 +9,8 @@
 ═══════════════════════════════════════════════════════════ */
 
 const JB_VERSION = {
-  build: '20260331-30',
-  data:  '31/03/2026', /* v30 — colabs/depts em ordem alfabética, depts vazios somem, botão excluir dept */
+  build: '20260331-31',
+  data:  '31/03/2026', /* v31 — campo colaborador: input+datalist, só últimos 5 dias, A→Z */
   autor: 'Just Burger Produção',
 };
 
@@ -25,4 +25,3 @@ console.log(`🍔 Just Burger v${JB_VERSION.build} — build ${JB_VERSION.data}`
     navigator.serviceWorker.controller.postMessage({ type: 'VERSION', version: v });
   }
 })();
-
