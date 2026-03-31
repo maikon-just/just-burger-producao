@@ -639,6 +639,9 @@
         <button class="btn-new-task" onclick="openModalNewTask()">
           <i class="fas fa-plus"></i> Nova Tarefa
         </button>
+        <button class="btn-new-colab" onclick="abrirModalNovoColab()">
+          <i class="fas fa-user-plus"></i> Novo Colaborador
+        </button>
       </div>
 
       <div id="tar-count-bar" class="tar-count-bar"></div>
@@ -786,6 +789,122 @@
     <div class="modal-footer">
       <button class="btn-modal-cancel" onclick="closeModal('modal-task-edit')">Cancelar</button>
       <button class="btn-modal-confirm" onclick="saveTaskEdit()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL — NOVO COLABORADOR
+══════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-novo-colab">
+  <div class="modal-box modal-compact" style="max-width:480px">
+    <button class="modal-close" onclick="fecharModalNovoColab()">✕</button>
+    <div class="modal-header-plain">
+      <span class="modal-header-icon">👤</span>
+      <h3>Novo Colaborador</h3>
+    </div>
+    <div class="modal-body modal-body-compact" style="gap:12px">
+
+      <!-- Nome -->
+      <div class="filter-group" style="width:100%">
+        <label>👤 Nome do Colaborador</label>
+        <input type="text" id="nc-nome" placeholder="Nome em MAIÚSCULAS..."
+               style="width:100%;padding:10px 14px;border-radius:10px;border:2px solid #e2e6f0;
+                      font-family:inherit;font-size:15px;font-weight:700;outline:none;
+                      box-sizing:border-box;text-transform:uppercase"
+               oninput="this.value=this.value.toUpperCase()"/>
+      </div>
+
+      <!-- Departamento -->
+      <div class="filter-group" style="width:100%">
+        <label>🏭 Departamento</label>
+        <select id="nc-depto" style="width:100%;padding:10px 14px;border-radius:10px;
+                border:2px solid #e2e6f0;font-family:inherit;font-size:14px;outline:none">
+          <option value="">— Selecione —</option>
+          <option value="PRODUCAO">🏭 Produção</option>
+          <option value="OPERACAO">⚙️ Operação</option>
+          <option value="ATENDIMENTO">🎯 Atendimento</option>
+        </select>
+      </div>
+
+      <!-- Turno -->
+      <div class="filter-group" style="width:100%">
+        <label>⏰ Turno</label>
+        <div style="display:flex;gap:10px">
+          <label style="flex:1;display:flex;align-items:center;gap:8px;
+                        background:#f9fafb;border:2px solid #e2e6f0;border-radius:10px;
+                        padding:10px 14px;cursor:pointer;font-weight:700;font-size:14px"
+                 id="nc-turno-dia-lbl">
+            <input type="radio" name="nc-turno" id="nc-turno-dia" value="dia" checked
+                   onchange="_ncTurnoChange()" style="accent-color:#e8590c;width:16px;height:16px"/>
+            ☀️ Dia
+          </label>
+          <label style="flex:1;display:flex;align-items:center;gap:8px;
+                        background:#f9fafb;border:2px solid #e2e6f0;border-radius:10px;
+                        padding:10px 14px;cursor:pointer;font-weight:700;font-size:14px"
+                 id="nc-turno-noite-lbl">
+            <input type="radio" name="nc-turno" id="nc-turno-noite" value="noite"
+                   onchange="_ncTurnoChange()" style="accent-color:#6366f1;width:16px;height:16px"/>
+            🌙 Noite
+          </label>
+        </div>
+      </div>
+
+      <!-- Dias da Semana -->
+      <div class="filter-group" style="width:100%">
+        <label>📅 Dias de Trabalho</label>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px">
+          <label class="nc-dia-lbl" for="nc-dia-segunda">
+            <input type="checkbox" id="nc-dia-segunda" value="segunda" class="nc-dia-cb"/>
+            <span>SEG</span>
+          </label>
+          <label class="nc-dia-lbl" for="nc-dia-terca">
+            <input type="checkbox" id="nc-dia-terca" value="terca" class="nc-dia-cb"/>
+            <span>TER</span>
+          </label>
+          <label class="nc-dia-lbl" for="nc-dia-quarta">
+            <input type="checkbox" id="nc-dia-quarta" value="quarta" class="nc-dia-cb"/>
+            <span>QUA</span>
+          </label>
+          <label class="nc-dia-lbl" for="nc-dia-quinta">
+            <input type="checkbox" id="nc-dia-quinta" value="quinta" class="nc-dia-cb"/>
+            <span>QUI</span>
+          </label>
+          <label class="nc-dia-lbl" for="nc-dia-sexta">
+            <input type="checkbox" id="nc-dia-sexta" value="sexta" class="nc-dia-cb"/>
+            <span>SEX</span>
+          </label>
+          <label class="nc-dia-lbl" for="nc-dia-sabado">
+            <input type="checkbox" id="nc-dia-sabado" value="sabado" class="nc-dia-cb"/>
+            <span>SAB</span>
+          </label>
+          <label class="nc-dia-lbl" for="nc-dia-domingo">
+            <input type="checkbox" id="nc-dia-domingo" value="domingo" class="nc-dia-cb"/>
+            <span>DOM</span>
+          </label>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button type="button" onclick="_ncSelecionarTodos()"
+            style="flex:1;padding:7px;border-radius:8px;border:1px solid #6366f1;
+                   background:rgba(99,102,241,.08);color:#6366f1;font-family:inherit;
+                   font-size:12px;font-weight:800;cursor:pointer">✅ Todos</button>
+          <button type="button" onclick="_ncDeselecionarTodos()"
+            style="flex:1;padding:7px;border-radius:8px;border:1px solid #e2e6f0;
+                   background:#f9fafb;color:#6b7280;font-family:inherit;
+                   font-size:12px;font-weight:800;cursor:pointer">🗑️ Limpar</button>
+          <button type="button" onclick="_ncSemana()"
+            style="flex:1;padding:7px;border-radius:8px;border:1px solid #10b981;
+                   background:rgba(16,185,129,.08);color:#059669;font-family:inherit;
+                   font-size:12px;font-weight:800;cursor:pointer">📆 Seg–Sex</button>
+        </div>
+      </div>
+
+    </div><!-- /modal-body -->
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="fecharModalNovoColab()">Cancelar</button>
+      <button class="btn-modal-confirm" id="btn-salvar-novo-colab" onclick="salvarNovoColab()">
+        <i class="fas fa-user-plus"></i> Cadastrar
+      </button>
     </div>
   </div>
 </div>
