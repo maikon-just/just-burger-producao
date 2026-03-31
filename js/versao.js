@@ -9,8 +9,8 @@
 ═══════════════════════════════════════════════════════════ */
 
 const JB_VERSION = {
-  build: '20260331-26',
-  data:  '31/03/2026',
+  build: '20260331-28',
+  data:  '31/03/2026', /* v28 — modal Novo Colaborador com depto + dias */
   autor: 'Just Burger Produção',
 };
 
