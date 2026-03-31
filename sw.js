@@ -4,7 +4,7 @@
        Isso força todos os browsers a baixar tudo de novo.
 ═══════════════════════════════════════════════════════════ */
 
-const VERSAO = 'justburger-v20260330-23';
+const VERSAO = 'justburger-v20260330-24';
 
 /* ── INSTALL ── apaga cache antigo e registra o novo ── */
 self.addEventListener('install', event => {
@@ -23,7 +23,7 @@ self.addEventListener('activate', event => {
   event.waitUntil(self.clients.claim());
 });
 
-/* ── FETCH ── Network First: sempre busca da rede ── */
+/* ── FETCH ── Network First: sempre busca da rede, sem cache ── */
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
@@ -32,8 +32,15 @@ self.addEventListener('fetch', event => {
   /* Deixa passar: Firebase, CDN, fontes externas */
   if (url.hostname !== self.location.hostname) return;
 
+  /* Cria nova Request sem cache para TODOS os recursos locais */
+  const reqSemCache = new Request(event.request.url, {
+    method: 'GET',
+    cache: 'no-store',
+    headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+  });
+
   event.respondWith(
-    fetch(event.request, { cache: 'no-store' })   /* força rede sem cache */
-      .catch(() => caches.match(event.request))    /* fallback: cache se offline */
+    fetch(reqSemCache)
+      .catch(() => caches.match(event.request))   /* fallback offline */
   );
 });
