@@ -244,7 +244,7 @@
       <h2>Qual departamento?</h2>
       <p>Selecione seu setor</p>
     </div>
-    <div class="dept-btn-grid">
+    <div class="dept-btn-grid" id="dept-btn-grid">
       <button class="dept-btn dept-btn-producao" onclick="_abrirSetorCards('PRODUCAO')">
         <span class="dept-btn-emoji">🏭</span>
         <div style="flex:1;text-align:left">
@@ -1144,10 +1144,10 @@
 </div>
 
 <!-- Scripts — ordem importa! -->
-<script src="js/versao.js?v=20260331-27"></script>
-<script src="js/data.js?v=20260331-27"></script>
-<script src="js/firebase_v2.js?v=20260331-27"></script>
-<script src="js/app_v3.js?v=20260331-27"></script>
+<script src="js/versao.js?v=20260331-29"></script>
+<script src="js/data.js?v=20260331-29"></script>
+<script src="js/firebase_v2.js?v=20260331-29"></script>
+<script src="js/app_v3.js?v=20260331-29"></script>
 
 <!-- Service Worker: força atualização automática a cada deploy -->
 <script>
@@ -1168,88 +1168,5 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
-<!-- ══ PATCH: _carregarAreasExtras corrigida ══════════════════════════
-     Sobrescreve a função do app_v3.js após o carregamento dos scripts.
-     Garante que departamentos customizados (sem campo 'chave') apareçam.
-════════════════════════════════════════════════════════════════════════ -->
-<script>
-window.addEventListener('load', function() {
-  /* Aguarda os scripts carregarem e sobrescreve a função */
-  var _tentativas = 0;
-  function _patchCarregarAreas() {
-    _tentativas++;
-    if (typeof _fbGetAll !== 'function' || typeof _AREAS_FIXAS === 'undefined') {
-      if (_tentativas < 30) setTimeout(_patchCarregarAreas, 200);
-      return;
-    }
-    /* Sobrescreve _carregarAreasExtras com versão corrigida */
-    window._carregarAreasExtras = async function() {
-      var grid = document.getElementById('dept-btn-grid');
-      if (!grid) return;
-
-      /* Remove botões customizados anteriores */
-      grid.querySelectorAll('[data-custom-area]').forEach(function(el){ el.remove(); });
-
-      var extra = {};
-
-      /* FONTE 1: coleção 'areas' do Firebase */
-      try {
-        var areasRaw = await _fbGetAll('areas');
-        console.log('[PATCH] areas no Firebase:', areasRaw.length, areasRaw);
-        areasRaw.forEach(function(a) {
-          if (a.ativo === false) return;
-          /* Aceita com ou sem campo 'chave' — usa 'nome' como fallback */
-          var nomeRaw = String(a.nome || a.chave || '').trim();
-          if (!nomeRaw) return;
-          var chave = String(a.chave || nomeRaw)
-            .toUpperCase()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-            .replace(/[^A-Z0-9]/g,'_')
-            .trim();
-          if (!chave || _AREAS_FIXAS.has(chave)) return;
-          extra[chave] = { nome: a.nome || nomeRaw, emoji: a.emoji || '🏷️' };
-        });
-      } catch(e) { console.warn('[PATCH] Erro areas:', e); }
-
-      /* FONTE 2: campo 'departamento' das tarefas */
-      try {
-        var tarefasRaw = await _fbGetAll('tarefas');
-        console.log('[PATCH] tarefas:', tarefasRaw.length,
-          'depts:', [...new Set(tarefasRaw.map(function(t){ return t.departamento; }).filter(Boolean))]);
-        _resolverDeptTarefas(tarefasRaw);
-        _cache.tarefas = tarefasRaw;
-        tarefasRaw.forEach(function(t) {
-          var chave = String(t.departamento || '').toUpperCase().trim();
-          if (!chave || _AREAS_FIXAS.has(chave) || extra[chave]) return;
-          var nome = chave.replace(/_/g,' ').toLowerCase().replace(/\b\w/g, function(c){ return c.toUpperCase(); });
-          extra[chave] = { nome: nome, emoji: '🏷️' };
-        });
-      } catch(e) { console.warn('[PATCH] Erro tarefas:', e); }
-
-      console.log('[PATCH] extras encontrados:', Object.keys(extra));
-
-      /* Renderiza botões */
-      Object.entries(extra).forEach(function(entry) {
-        var chave = entry[0], info = entry[1];
-        var btn = document.createElement('button');
-        btn.className = 'dept-btn dept-btn-custom';
-        btn.setAttribute('data-custom-area', chave);
-        btn.onclick = function(){ _abrirSetorCards(chave); };
-        btn.innerHTML =
-          '<span class="dept-btn-emoji">' + info.emoji + '</span>' +
-          '<div style="flex:1;text-align:left">' +
-            '<span class="dept-btn-nome">' + info.nome + '</span>' +
-            '<div class="dept-btn-sub">' + chave + '</div>' +
-          '</div>' +
-          '<span style="font-size:22px;opacity:.45">›</span>';
-        grid.appendChild(btn);
-        console.log('[PATCH] ✅ Botão criado:', chave, info.nome);
-      });
-    };
-    console.log('[PATCH] _carregarAreasExtras sobrescrita com sucesso!');
-  }
-  setTimeout(_patchCarregarAreas, 500);
-});
-</script>
 </body>
 </html>
