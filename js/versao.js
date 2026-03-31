@@ -9,10 +9,10 @@
 ═══════════════════════════════════════════════════════════ */
 
 const JB_VERSION = {
-  build: '20260331-32',
-  data:  '31/03/2026',
+  build: '20260331-33',
+  data:  '31/03/2026', /* v33 */
   autor: 'Just Burger Produção',
-  /* v32 — changelog:
+  /* v33 — changelog:
      - Blacklist de departamentos: MOTOCA e outros de teste nunca aparecem
        mesmo que ainda tenham tarefas no Firebase
      - Blacklist de colaboradores expandida: MAIKON, JULIANA, MALU, MOTOCA,
