@@ -657,12 +657,8 @@ async function abrirModalNova(){
   document.getElementById('nt-cat').innerHTML='<option value="">-- Selecione --</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
   const colabs=[...new Set(M.todos.map(t=>t.colaborador).filter(Boolean))].sort();
   document.getElementById('nt-colab-list').innerHTML=colabs.map(c=>`<option value="${c}">`).join('');
-  /* carrega departamentos sempre atualizados (fixos + customizados) */
+  /* carrega departamentos sempre atualizados (fixos + customizados) em TODOS os selects */
   await _carregarOpcoesDepto();
-  /* popula também o select #nt-depto copiando as opções */
-  const srcOpts=[...document.getElementById('nc-depto').options];
-  const ntDepto=document.getElementById('nt-depto');
-  ntDepto.innerHTML=srcOpts.map(o=>`<option value="${o.value}">${o.textContent}</option>`).join('');
   document.getElementById('modal-nova').classList.remove('hidden');
   setTimeout(()=>document.getElementById('nt-colab').focus(),100);
 }
@@ -859,26 +855,28 @@ const _DEPTOS_FIXOS = [
   {chave:'ATENDIMENTO',nome:'Atendimento',emoji:'🛎️'},
 ];
 
-/* Popula o <select id="nc-depto"> com fixos + customizados do Firebase */
+/* Popula TODOS os selects de departamento com fixos + customizados do Firebase.
+   Chame sempre que abrir modal Novo Colaborador ou Nova Tarefa.              */
 async function _carregarOpcoesDepto(){
-  const sel=document.getElementById('nc-depto');
-  sel.innerHTML='<option value="">-- Selecione --</option>';
-  /* Sempre adiciona os três fixos */
-  _DEPTOS_FIXOS.forEach(d=>{
-    const o=document.createElement('option');
-    o.value=d.chave; o.textContent=d.emoji+' '+d.nome;
-    sel.appendChild(o);
-  });
-  /* Adiciona os customizados (que não sejam duplicata das fixas) */
+  /* Lista de selects a popular */
+  const sels = ['nc-depto','nt-depto']
+    .map(id=>document.getElementById(id))
+    .filter(Boolean);
+  if(!sels.length) return;
+
+  /* Busca áreas customizadas do Firebase */
+  let areasCustom=[];
   try{
-    const areas=await _fbGetAll('areas');
+    const todas=await _fbGetAll('areas');
     const fixasSet=new Set(_DEPTOS_FIXOS.map(d=>d.chave));
-    areas.filter(a=>a.ativo!==false&&!fixasSet.has(a.chave)).forEach(a=>{
-      const o=document.createElement('option');
-      o.value=a.chave; o.textContent=(a.emoji||'🏷️')+' '+a.nome;
-      sel.appendChild(o);
-    });
-  }catch(e){ /* silencioso — os fixos já estão lá */ }
+    areasCustom=todas.filter(a=>a.ativo!==false&&!fixasSet.has(a.chave));
+  }catch(e){}
+
+  /* Monta HTML das opções uma vez e aplica em todos os selects */
+  const opFixas=_DEPTOS_FIXOS.map(d=>`<option value="${d.chave}">${d.emoji} ${d.nome}</option>`).join('');
+  const opCustom=areasCustom.map(a=>`<option value="${a.chave}">${a.emoji||'🏷️'} ${a.nome}</option>`).join('');
+  const html='<option value="">-- Selecione --</option>'+opFixas+opCustom;
+  sels.forEach(sel=>{ sel.innerHTML=html; });
 }
 
 async function salvarNovaArea(){
