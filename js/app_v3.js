@@ -1,4 +1,4 @@
-/* ══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    JUST BURGER 🍔 — app_v3.js
    Controle de Produção — Firebase Realtime Database (compat)
    Versão: 2026-03-27 — GitHub Edition
@@ -604,9 +604,16 @@ async function _carregarAreasExtras() {
 
   areasRaw.forEach(a => {
     if (a.ativo === false) return;           /* ignora inativas */
-    const chave = String(a.chave || '').toUpperCase().trim();
+    /* Aceita com ou sem campo 'chave' — usa nome como fallback */
+    const nomeRaw = String(a.nome || a.chave || '').trim();
+    if (!nomeRaw) return;
+    const chave = String(a.chave || nomeRaw)
+      .toUpperCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[^A-Z0-9]/g,'_')
+      .trim();
     if (!chave || _AREAS_FIXAS.has(chave)) return;
-    extra[chave] = { nome: a.nome || chave, emoji: a.emoji || '🏷️' };
+    extra[chave] = { nome: a.nome || nomeRaw, emoji: a.emoji || '🏷️' };
   });
 
   /* ── FONTE 2: campo "departamento" das tarefas ─────────────────────── */
@@ -2779,5 +2786,172 @@ function getCatEmoji(cat) {
 }
 
 function backToCollabScreen() { showScreen('screen-setor'); }
+
+/* ══════════════════════════════════════════════════════════════════
+   NOVO COLABORADOR — Modal completo com departamento + dias
+══════════════════════════════════════════════════════════════════ */
+
+/** Abre o modal de cadastro de novo colaborador */
+async function abrirModalNovoColab() {
+  // Limpa campos
+  const nome = document.getElementById('nc-nome');
+  const depto = document.getElementById('nc-depto');
+  if (nome) nome.value = '';
+  if (depto) depto.value = '';
+
+  // Turno padrão = turno atual do filtro ou 'dia'
+  const turnoAtual = (document.getElementById('tar-filter-turno')||{}).value || 'dia';
+  const rdDia = document.getElementById('nc-turno-dia');
+  const rdNoite = document.getElementById('nc-turno-noite');
+  if (rdDia) rdDia.checked = (turnoAtual === 'dia');
+  if (rdNoite) rdNoite.checked = (turnoAtual === 'noite');
+  _ncTurnoChange();
+
+  // Desmarca todos os dias
+  document.querySelectorAll('.nc-dia-cb').forEach(cb => cb.checked = false);
+
+  // Carrega departamentos extras do Firebase no select
+  await _carregarOpcoesDepto();
+
+  // Mostra modal
+  document.getElementById('modal-novo-colab').classList.remove('hidden');
+  setTimeout(() => { if (nome) nome.focus(); }, 80);
+}
+
+/** Fecha o modal */
+function fecharModalNovoColab() {
+  document.getElementById('modal-novo-colab').classList.add('hidden');
+}
+
+/** Callback de mudança de turno — destaca label selecionado */
+function _ncTurnoChange() {
+  const diaLbl = document.getElementById('nc-turno-dia-lbl');
+  const noiteLbl = document.getElementById('nc-turno-noite-lbl');
+  const isDia = document.getElementById('nc-turno-dia') && document.getElementById('nc-turno-dia').checked;
+  if (diaLbl) {
+    diaLbl.style.borderColor = isDia ? '#e8590c' : '#e2e6f0';
+    diaLbl.style.background  = isDia ? 'rgba(232,89,12,.08)' : '#f9fafb';
+    diaLbl.style.color       = isDia ? '#e8590c' : '#374151';
+  }
+  if (noiteLbl) {
+    noiteLbl.style.borderColor = !isDia ? '#6366f1' : '#e2e6f0';
+    noiteLbl.style.background  = !isDia ? 'rgba(99,102,241,.08)' : '#f9fafb';
+    noiteLbl.style.color       = !isDia ? '#6366f1' : '#374151';
+  }
+}
+
+/** Seleciona todos os dias */
+function _ncSelecionarTodos() {
+  document.querySelectorAll('.nc-dia-cb').forEach(cb => cb.checked = true);
+}
+/** Desmarca todos os dias */
+function _ncDeselecionarTodos() {
+  document.querySelectorAll('.nc-dia-cb').forEach(cb => cb.checked = false);
+}
+/** Marca apenas Segunda a Sexta */
+function _ncSemana() {
+  document.querySelectorAll('.nc-dia-cb').forEach(cb => {
+    cb.checked = ['segunda','terca','quarta','quinta','sexta'].includes(cb.value);
+  });
+}
+
+/** Carrega opções de departamento no select do modal */
+async function _carregarOpcoesDepto() {
+  const sel = document.getElementById('nc-depto');
+  if (!sel) return;
+
+  // Base fixa
+  const fixos = [
+    { valor:'PRODUCAO',    label:'🏭 Produção' },
+    { valor:'OPERACAO',    label:'⚙️ Operação' },
+    { valor:'ATENDIMENTO', label:'🎯 Atendimento' },
+  ];
+
+  let extras = [];
+  try {
+    const areas = await _fbGetAll('areas');
+    const _AREAS_FIXAS_KEYS = ['PRODUCAO','OPERACAO','ATENDIMENTO'];
+    extras = areas
+      .filter(a => a.ativo !== false)
+      .filter(a => {
+        const key = (a.chave || (a.nome||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_').replace(/[^A-Z0-9_]/g,''));
+        return !_AREAS_FIXAS_KEYS.includes(key);
+      })
+      .map(a => ({
+        valor: (a.chave || (a.nome||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_').replace(/[^A-Z0-9_]/g,'')),
+        label: (a.emoji ? a.emoji+' ' : '🏷️ ') + (a.nome || a.chave || '?')
+      }));
+  } catch(e) { console.warn('[JB] _carregarOpcoesDepto erro extras:', e); }
+
+  sel.innerHTML = '<option value="">— Selecione —</option>' +
+    [...fixos, ...extras].map(o => `<option value="${o.valor}">${o.label}</option>`).join('');
+}
+
+/** Salva o novo colaborador — cria uma tarefa-placeholder por dia selecionado */
+async function salvarNovoColab() {
+  const nome  = (document.getElementById('nc-nome').value || '').trim().toUpperCase();
+  const depto = document.getElementById('nc-depto').value;
+  const turno = document.querySelector('input[name="nc-turno"]:checked')?.value || 'dia';
+  const dias  = [...document.querySelectorAll('.nc-dia-cb:checked')].map(cb => cb.value);
+
+  // Validações
+  if (!nome)  { showToast('⚠️ Informe o nome do colaborador!'); document.getElementById('nc-nome').focus(); return; }
+  if (!depto) { showToast('⚠️ Selecione o departamento!'); document.getElementById('nc-depto').focus(); return; }
+  if (!dias.length) { showToast('⚠️ Marque pelo menos 1 dia de trabalho!'); return; }
+
+  // Bloqueia botão
+  const btn = document.getElementById('btn-salvar-novo-colab');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...'; }
+
+  try {
+    // Verifica duplicata (mesma combinação nome+turno+dia)
+    const existentes = await _fbGetAll('tarefas');
+    const jaExiste = existentes.some(t =>
+      (t.colaborador||'').toUpperCase() === nome &&
+      (t.turno||'') === turno &&
+      dias.includes(t.dia_semana||'')
+    );
+    if (jaExiste) {
+      showToast(`⚠️ "${nome}" já possui tarefas cadastradas para ${turno}!`);
+      return;
+    }
+
+    // Cria uma tarefa-placeholder por dia selecionado
+    const deptoLabel = {
+      PRODUCAO:'Produção', OPERACAO:'Operação', ATENDIMENTO:'Atendimento'
+    }[depto] || depto;
+
+    let criados = 0;
+    for (const dia of dias) {
+      await _fbPost('tarefas', {
+        colaborador:        nome,
+        departamento:       depto,
+        categoria:          depto,
+        turno:              turno,
+        dia_semana:         dia,
+        item:               `[${deptoLabel}] Tarefas de ${nome}`,
+        quantidade_padrao:  0,
+        unidade:            'checklist',
+        ordem:              999,
+      });
+      criados++;
+    }
+
+    _invalidarCache();
+    fecharModalNovoColab();
+    showToast(`✅ Colaborador "${nome}" cadastrado em ${criados} dia(s)!`);
+
+    // Atualiza filtro para o turno/dia do colaborador criado
+    const ftTurno = document.getElementById('tar-filter-turno');
+    if (ftTurno) ftTurno.value = turno;
+    loadTarefasGestao();
+
+  } catch(e) {
+    console.error('[JB] salvarNovoColab erro:', e);
+    showToast('❌ Erro ao cadastrar: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus"></i> Cadastrar'; }
+  }
+}
 
 console.log('🍔 Just Burger — app_v3.js carregado!');
