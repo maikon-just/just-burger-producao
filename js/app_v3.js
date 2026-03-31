@@ -534,6 +534,7 @@ function selectDia(dia) {
 }
 
 /* ══ DEPARTAMENTO ════════════════════════════════════════ */
+/* v20260331-26 — _carregarAreasExtras reescrita */
 /* Propaga o campo 'departamento' em memória para tarefas do mesmo colaborador
    que foram criadas antes do campo existir. Não altera o Firebase.           */
 function _resolverDeptTarefas(tarefas) {
