@@ -666,11 +666,7 @@ function _mostrarTelaSetor(dept) {
   showScreen('screen-setor');
   const grid=document.getElementById('setor-collab-grid');
   if (!grid) return;
-  if (_cache.tarefas&&_cache.tarefas.length>0&&_cache.sessoes) {
-    _preencherGridSetor(grid,dept,_cache.tarefas,_cache.sessoes);
-    _fbGetAll('faltas').then(f=>{ _cache._faltas=f; _preencherGridSetor(grid,dept,_cache.tarefas,_cache.sessoes); }).catch(()=>{});
-    return;
-  }
+  /* Sempre busca dados frescos para garantir que novos departamentos apareçam */
   grid.innerHTML='<div style="padding:40px;text-align:center;color:#888"><div style="font-size:36px;animation:spin 1s linear infinite;display:inline-block">⏳</div><br><span style="font-size:13px;font-weight:600;margin-top:8px;display:block">Carregando...</span></div>';
   Promise.all([_fbGetAll('tarefas'),_fbGetAll('sessoes'),_fbGetAll('faltas')]).then(res=>{
     _cache.tarefas=_resolverDeptTarefas(res[0]); _cache.sessoes=res[1]; _cache._faltas=res[2];
