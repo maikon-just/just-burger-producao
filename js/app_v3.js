@@ -577,59 +577,83 @@ function _irParaDept() {
 /* Chaves fixas que já têm botão estático no HTML — não duplicar */
 const _AREAS_FIXAS = new Set(['PRODUCAO','OPERACAO','ATENDIMENTO']);
 
+/* ══ CARREGAR ÁREAS EXTRAS (Departamentos customizados) ══════════════════
+   Busca a coleção 'areas' no Firebase e insere botões no grid da tela
+   screen-dept para cada departamento além dos 3 fixos.
+   Também varre tarefas para detectar departamentos sem registro em 'areas'.
+═══════════════════════════════════════════════════════════════════════════ */
 async function _carregarAreasExtras() {
   const grid = document.getElementById('dept-btn-grid');
-  if (!grid) return;
-  /* Remove botões extras inseridos anteriormente */
+  if (!grid) { console.warn('[JB-DEPT] #dept-btn-grid não encontrado'); return; }
+
+  /* Remove botões customizados inseridos em chamadas anteriores */
   grid.querySelectorAll('[data-custom-area]').forEach(el => el.remove());
 
-  /* Mapa final: chave → { nome, emoji } — nunca inclui as 3 fixas */
+  /* Mapa final: CHAVE → { nome, emoji } — exclui as 3 áreas fixas */
   const extra = {};
 
-  /* ── Fonte 1: coleção 'areas' (Novo Departamento criado pelo usuário) ── */
+  /* ── FONTE 1: coleção "areas" do Firebase ──────────────────────────── */
+  let areasRaw = [];
   try {
-    const areas = await _fbGetAll('areas');
-    console.log('[JB] areas no Firebase:', areas);
-    areas
-      .filter(a => a.ativo !== false && !_AREAS_FIXAS.has((a.chave||'').toUpperCase()))
-      .forEach(a => {
-        const chave = (a.chave||'').toUpperCase().trim();
-        if (chave) extra[chave] = { nome: a.nome || chave, emoji: a.emoji || '🏷️' };
-      });
-  } catch(e) { console.warn('[JB] Erro ao buscar areas:', e); }
+    areasRaw = await _fbGetAll('areas');
+    console.log('[JB-DEPT] areas no Firebase (' + areasRaw.length + '):', areasRaw);
+  } catch(e) {
+    console.warn('[JB-DEPT] Erro ao buscar areas:', e);
+  }
 
-  /* ── Fonte 2: campo 'departamento' das tarefas ── */
+  areasRaw.forEach(a => {
+    if (a.ativo === false) return;           /* ignora inativas */
+    const chave = String(a.chave || '').toUpperCase().trim();
+    if (!chave || _AREAS_FIXAS.has(chave)) return;
+    extra[chave] = { nome: a.nome || chave, emoji: a.emoji || '🏷️' };
+  });
+
+  /* ── FONTE 2: campo "departamento" das tarefas ─────────────────────── */
+  let tarefasRaw = [];
   try {
-    const tarefas = await _fbGetAll('tarefas');
-    _resolverDeptTarefas(tarefas);
-    _cache.tarefas = tarefas;
-    console.log('[JB] tarefas carregadas:', tarefas.length, '| depts:', [...new Set(tarefas.map(t=>t.departamento).filter(Boolean))]);
-    tarefas.forEach(t => {
-      const chave = (t.departamento || '').toUpperCase().trim();
-      if (chave && !_AREAS_FIXAS.has(chave) && !extra[chave]) {
-        const nome = chave.replace(/_/g,' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-        extra[chave] = { nome, emoji: '🏷️' };
-      }
-    });
-  } catch(e) { console.warn('[JB] Erro ao buscar tarefas:', e); }
+    tarefasRaw = await _fbGetAll('tarefas');
+    console.log('[JB-DEPT] tarefas (' + tarefasRaw.length + ') | depts únicos:',
+      [...new Set(tarefasRaw.map(t => t.departamento).filter(Boolean))]);
+  } catch(e) {
+    console.warn('[JB-DEPT] Erro ao buscar tarefas:', e);
+  }
 
-  console.log('[JB] departamentos extras detectados:', extra);
+  /* Propaga departamento em memória e atualiza cache */
+  _resolverDeptTarefas(tarefasRaw);
+  _cache.tarefas = tarefasRaw;
 
-  /* ── Renderiza um botão para cada departamento extra encontrado ── */
+  tarefasRaw.forEach(t => {
+    const chave = String(t.departamento || '').toUpperCase().trim();
+    if (!chave || _AREAS_FIXAS.has(chave) || extra[chave]) return;
+    /* Formata nome legível a partir da chave: FINANCEIRO → Financeiro */
+    const nome = chave.replace(/_/g,' ')
+      .toLowerCase()
+      .replace(/\b\w/g, c => c.toUpperCase());
+    extra[chave] = { nome, emoji: '🏷️' };
+  });
+
+  console.log('[JB-DEPT] departamentos extras para renderizar:', Object.keys(extra));
+
+  /* ── RENDERIZA um botão para cada departamento extra ──────────────── */
+  if (Object.keys(extra).length === 0) {
+    console.log('[JB-DEPT] Nenhum departamento extra encontrado. Apenas os 3 fixos exibidos.');
+    return;
+  }
+
   Object.entries(extra).forEach(([chave, info]) => {
     const btn = document.createElement('button');
     btn.className = 'dept-btn dept-btn-custom';
     btn.setAttribute('data-custom-area', chave);
     btn.onclick = () => _abrirSetorCards(chave);
-    btn.innerHTML = `
-      <span class="dept-btn-emoji">${info.emoji}</span>
-      <div style="flex:1;text-align:left">
-        <span class="dept-btn-nome">${info.nome}</span>
-        <div class="dept-btn-sub">${chave}</div>
-      </div>
-      <span style="font-size:22px;opacity:.45">›</span>`;
+    btn.innerHTML =
+      `<span class="dept-btn-emoji">${info.emoji}</span>` +
+      `<div style="flex:1;text-align:left">` +
+        `<span class="dept-btn-nome">${info.nome}</span>` +
+        `<div class="dept-btn-sub">${chave}</div>` +
+      `</div>` +
+      `<span style="font-size:22px;opacity:.45">›</span>`;
     grid.appendChild(btn);
-    console.log('[JB] botão renderizado:', chave, info.nome);
+    console.log('[JB-DEPT] ✅ Botão adicionado:', chave, '→', info.nome);
   });
 }
 
