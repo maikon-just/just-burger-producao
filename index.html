@@ -16,57 +16,45 @@
   <!-- CSS principal -->
   <link rel="stylesheet" href="css/style.css?v=20260331-33"/>
 
-  <!-- ═══════════════════════════════════════════════════════════
-       CORREÇÃO DE IMPRESSÃO — adicionado aqui dentro do <head>
-       para garantir que estas regras sejam carregadas ANTES de
-       qualquer script e com prioridade adequada no @media print
-  ═══════════════════════════════════════════════════════════ -->
+  <!-- CORREÇÃO DE IMPRESSÃO -->
   <style>
-    /* Zona de impressão: oculta por CSS (não por style inline),
-       permitindo que @media print consiga sobrescrever */
     #print-zone {
       display: none;
     }
 
     @media print {
-      /* Oculta TUDO na página */
-      body > *:not(#print-zone) {
-        display: none !important;
+      /* Oculta TUDO no body */
+      body * {
         visibility: hidden !important;
       }
 
-      /* Oculta também overlays e modais que possam estar abertos */
-      .modal-overlay,
-      #loading-overlay,
-      #toast,
-      .global-bottom-nav,
-      .no-print {
-        display: none !important;
+      /* Mostra APENAS o print-zone e seu conteúdo */
+      #print-zone,
+      #print-zone * {
+        visibility: visible !important;
       }
 
-      /* Mostra APENAS a zona de impressão */
+      /* position:absolute (não fixed) — fixed causa página em branco no mobile/Safari */
       #print-zone {
         display: block !important;
-        visibility: visible !important;
-        position: fixed !important;
+        position: absolute !important;
         top: 0 !important;
         left: 0 !important;
         width: 100% !important;
-        min-height: 100vh !important;
         background: #fff !important;
         color: #000 !important;
-        z-index: 99999 !important;
         padding: 0 !important;
         margin: 0 !important;
         font-family: Arial, sans-serif !important;
       }
 
-      /* Garante que o conteúdo interno também seja visível */
-      #print-zone * {
-        visibility: visible !important;
+      /* Evita página em branco extra */
+      html, body {
+        height: auto !important;
+        overflow: visible !important;
+        background: #fff !important;
       }
 
-      /* Remove quebras de página indesejadas */
       #print-zone table { page-break-inside: auto; }
       #print-zone tr    { page-break-inside: avoid; page-break-after: auto; }
       #print-zone thead { display: table-header-group; }
@@ -74,19 +62,18 @@
     }
   </style>
 
-  <!-- Auth Guard: redireciona para portal se não houver sessão -->
+  <!-- Auth Guard -->
   <script>
     (function _authGuard() {
       try {
         const raw = sessionStorage.getItem('jb_user');
         if (!raw) {
-          /* Em desenvolvimento (localhost/preview) não redireciona */
           const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
                        || location.hostname.includes('gitpod') || location.hostname.includes('preview')
                        || location.protocol === 'blob:';
           if (!isLocal) window.location.replace('portal.html');
         }
-      } catch(e) { /* silencioso */ }
+      } catch(e) {}
     })();
   </script>
 </head>
@@ -101,9 +88,7 @@
 <!-- TOAST -->
 <div id="toast" class="toast hidden"></div>
 
-<!-- ══════════════════════════════════════════
-     TELA 0 — LOGIN LÍDER
-══════════════════════════════════════════ -->
+<!-- TELA 0 — LOGIN LÍDER -->
 <div id="screen-leader-login" class="screen hidden">
   <div class="login-wrap">
     <div class="login-brand">
@@ -129,11 +114,8 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     TELA 1 — BOAS-VINDAS / TURNO
-══════════════════════════════════════════ -->
+<!-- TELA 1 — BOAS-VINDAS / TURNO -->
 <div id="screen-welcome" class="screen">
-  <!-- Botão Sair (volta ao portal) — aparece só quando há sessão ativa -->
   <div id="welcome-user-bar" style="display:none;
     position:fixed;left:0;right:0;top:0;z-index:190;
     background:rgba(26,26,46,.96);backdrop-filter:blur(10px);
@@ -158,8 +140,6 @@
   </div>
 
   <main class="welcome-body" id="welcome-body-main" style="justify-content:center;padding-top:24px">
-
-    <!-- LOGO -->
     <div style="text-align:center;margin-bottom:28px">
       <img src="images/logo-justburger.png"
            id="main-logo"
@@ -174,7 +154,6 @@
       </div>
     </div>
 
-    <!-- SELETOR DE DATA — caixa compacta e centralizada -->
     <div class="home-date-wrap">
       <div class="home-date-box" onclick="var i=document.getElementById('work-date-input');if(i.showPicker)i.showPicker();else i.click();">
         <i class="fas fa-calendar-alt home-date-icon"></i>
@@ -186,10 +165,8 @@
       <div class="home-date-weekday" id="work-date-display">—</div>
     </div>
 
-    <!-- PROMPT TURNO -->
     <p style="text-align:center;font-size:13px;color:#6b7280;font-weight:700;margin:0 0 16px;">Selecione o turno para iniciar</p>
 
-    <!-- TURNO -->
     <div class="shift-grid">
       <button class="shift-btn shift-day" onclick="selectTurno('dia')">
         <div class="shift-badge">☀️</div>
@@ -208,9 +185,7 @@
   <footer class="welcome-footer" style="display:none"></footer>
 </div>
 
-<!-- ══════════════════════════════════════════
-     TELA — RESULTADOS / PENDÊNCIAS (embutida)
-══════════════════════════════════════════ -->
+<!-- TELA — RESULTADOS / PENDÊNCIAS -->
 <div id="screen-resultados" class="screen hidden">
   <header class="nav-header">
     <button class="btn-back-circle" onclick="goBack('screen-welcome')"><i class="fas fa-arrow-left"></i></button>
@@ -218,11 +193,7 @@
       <span class="nav-chip">📋 Pendências do Dia</span>
     </div>
   </header>
-
-  <!-- Filtros -->
   <div class="res-filter-bar" style="display:flex;flex-direction:column;gap:10px;padding:12px 16px">
-
-    <!-- Campo de data clicável em toda a área -->
     <div>
       <label style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">📅 Data — clique para selecionar</label>
       <div style="position:relative;cursor:pointer"
@@ -239,8 +210,6 @@
                style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2"/>
       </div>
     </div>
-
-    <!-- Turno -->
     <div>
       <label style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">⏰ Turno</label>
       <div class="tar-toggle-group">
@@ -248,16 +217,9 @@
         <button class="tar-toggle"        id="resbtn-noite" onclick="setResTurno('noite')">🌙 Noite</button>
       </div>
     </div>
-
   </div>
-
-  <!-- Resumo -->
   <div class="res-summary-bar" id="res-summary-bar"></div>
-
-  <!-- Lista centralizada -->
   <main id="res-lista" style="flex:1;overflow-y:auto;padding:14px 16px 80px;max-width:700px;margin:0 auto;width:100%"></main>
-
-  <!-- Hidden state inputs -->
   <input type="hidden" id="res-turno" value="dia"/>
   <input type="hidden" id="res-dia"   value="segunda"/>
   <div class="screen-bottom-back" style="padding:16px">
@@ -265,9 +227,7 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     TELA 2 — DIA DA SEMANA
-══════════════════════════════════════════ -->
+<!-- TELA 2 — DIA DA SEMANA -->
 <div id="screen-day" class="screen hidden">
   <header class="nav-header">
     <button class="btn-back-circle" onclick="goBack('screen-welcome')"><i class="fas fa-arrow-left"></i></button>
@@ -286,9 +246,7 @@
   </main>
 </div>
 
-<!-- ══════════════════════════════════════════
-     TELA 2.5 — ESCOLHA DE DEPARTAMENTO
-══════════════════════════════════════════ -->
+<!-- TELA 2.5 — ESCOLHA DE DEPARTAMENTO -->
 <div id="screen-dept" class="screen hidden">
   <header class="nav-header">
     <button class="btn-back-circle" onclick="goToWelcome()"><i class="fas fa-arrow-left"></i></button>
@@ -304,7 +262,6 @@
       <p>Selecione seu setor</p>
     </div>
     <div class="dept-btn-grid" id="dept-btn-grid">
-      <!-- Fixos em ordem alfabética: Atendimento → Operação → Produção -->
       <button class="dept-btn dept-btn-atendimento" onclick="_abrirSetorCards('ATENDIMENTO')">
         <span class="dept-btn-emoji">🎯</span>
         <div style="flex:1;text-align:left">
@@ -329,15 +286,12 @@
         </div>
         <span style="font-size:22px;opacity:.45">›</span>
       </button>
-      <!-- Departamentos extras injetados dinamicamente pelo JS abaixo dos fixos -->
     </div>
     <div class="screen-bottom-back"><button class="btn-bottom-back" onclick="goToWelcome()">← Voltar</button></div>
   </main>
 </div>
 
-<!-- ══════════════════════════════════════════
-     TELA 2.8 — CARDS DO SETOR (DINÂMICOS)
-══════════════════════════════════════════ -->
+<!-- TELA 2.8 — CARDS DO SETOR -->
 <div id="screen-setor" class="screen hidden">
   <header class="nav-header">
     <button class="btn-back-circle" onclick="goBack('screen-dept')"><i class="fas fa-arrow-left"></i></button>
@@ -346,7 +300,6 @@
       <span class="nav-chip chip-day" id="setor-day-chip">Segunda</span>
       <span class="nav-chip" id="setor-dept-chip" style="background:#f97316;color:#fff">🏭 Produção</span>
     </div>
-    <!-- Mini nav -->
     <div class="header-mini-nav">
       <button onclick="abrirResultados()" class="mini-nav-btn" title="Resultados"><i class="fas fa-chart-bar"></i></button>
       <a href="medias.html" class="mini-nav-btn" title="Mídias"><i class="fas fa-photo-video"></i></a>
@@ -360,7 +313,6 @@
       <h2>Quem é você?</h2>
       <p>Toque no seu card para ver suas tarefas</p>
     </div>
-    <!-- Grid de cards — preenchido dinamicamente pelo JS -->
     <div class="collab-grid" id="setor-collab-grid"></div>
     <div style="text-align:center;margin-top:20px;padding-bottom:4px">
       <button onclick="goBack('screen-dept')"
@@ -373,10 +325,7 @@
   </main>
 </div>
 
-<!-- ══════════════════════════════════════════
-     TELA 3 — TELA DE PRODUÇÃO
-     (Etapa 1 = programação + Etapa 2 = finalização)
-══════════════════════════════════════════ -->
+<!-- TELA 3 — PRODUÇÃO -->
 <div id="screen-step1" class="screen hidden">
   <header class="nav-header">
     <button class="btn-back-circle" onclick="backToCollabScreen()"><i class="fas fa-arrow-left"></i></button>
@@ -385,7 +334,6 @@
       <span class="nav-chip chip-day" id="s1-day-chip">Terça</span>
       <span class="nav-chip chip-user" id="s1-user-chip">👤 Colaborador</span>
     </div>
-    <!-- Mini nav -->
     <div class="header-mini-nav">
       <button onclick="abrirResultados()" class="mini-nav-btn" title="Resultados"><i class="fas fa-chart-bar"></i></button>
       <a href="medias.html" class="mini-nav-btn" title="Mídias"><i class="fas fa-photo-video"></i></a>
@@ -396,7 +344,6 @@
     </button>
   </header>
 
-  <!-- Barra de progresso -->
   <div class="progress-bar-wrap">
     <div class="progress-bar-track">
       <div class="progress-bar-fill prog-yellow" id="s1-progress" style="width:0%"></div>
@@ -404,7 +351,6 @@
     <span class="progress-bar-text" id="s1-progress-text">0 / 0 programados</span>
   </div>
 
-  <!-- Banner de fase (oculto por padrão — sem faixa amarela) -->
   <div class="step-banner hidden" id="prod-banner">
     <span class="step-banner-icon" id="prod-banner-icon">📋</span>
     <div>
@@ -413,27 +359,18 @@
     </div>
   </div>
 
-  <!-- Lista de cards de tarefas -->
   <main class="tasks-scroll" id="s1-list"></main>
 
-  <!-- Footer compacto -->
   <footer class="tasks-footer" id="s1-footer">
-    <!-- Botões de ação da produção -->
     <div class="s1-action-row" id="s1-action-row">
-
-      <!-- Linha 1: Iniciar Turno ou Finalizar Turno (centralizados) -->
       <div style="display:flex;justify-content:center;width:100%">
-        <!-- FASE 1: Botão Iniciar -->
         <button class="btn-turno-action btn-turno-iniciar" id="btn-sm-start-footer" onclick="iniciarProducao()">
           🚀 Iniciar Turno
         </button>
-        <!-- FASE 2: Botão Finalizar Turno — aparece quando tudo finalizado -->
         <button class="btn-turno-action btn-turno-finalizar hidden" id="btn-conclude" onclick="openFinishModal()">
           🏁 Finalizar Turno
         </button>
       </div>
-
-      <!-- Linha 2: Imprimir + Voltar (sempre visíveis) -->
       <div class="s1-bottom-row">
         <button class="btn-sm-imprimir" id="btn-imprimir-footer" onclick="doPrintDirect()">
           <i class="fas fa-print"></i> Imprimir
@@ -446,9 +383,7 @@
   </footer>
 </div>
 
-<!-- ══════════════════════════════════════════
-     TELA 7 — PAINEL DO LÍDER
-══════════════════════════════════════════ -->
+<!-- TELA 7 — PAINEL DO LÍDER -->
 <div id="screen-leader" class="screen hidden">
   <header class="nav-header leader-nav">
     <button class="btn-back-circle" onclick="goToWelcome()"><i class="fas fa-arrow-left"></i></button>
@@ -466,7 +401,6 @@
     </button>
   </header>
 
-  <!-- Abas -->
   <div class="leader-tabs">
     <button class="leader-tab active" id="tab-registros"  onclick="switchLeaderTab('registros')">📄 Registros</button>
     <button class="leader-tab" id="tab-pendentes"         onclick="switchLeaderTab('pendentes')">⚠️ Cobranças</button>
@@ -477,11 +411,8 @@
   </div>
 
   <main class="leader-body">
-
-    <!-- FILTROS COMPARTILHADOS -->
     <div class="filter-card">
       <div class="filter-row">
-        <!-- Data De — clicável em toda a área -->
         <div class="filter-group">
           <label>📅 De</label>
           <div style="position:relative;cursor:pointer"
@@ -491,7 +422,6 @@
                    style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2"/>
           </div>
         </div>
-        <!-- Data Até — clicável em toda a área -->
         <div class="filter-group">
           <label>📅 Até</label>
           <div style="position:relative;cursor:pointer"
@@ -528,7 +458,6 @@
       </div>
     </div>
 
-    <!-- Cards resumo -->
     <div class="summary-row">
       <div class="summ-card summ-total">
         <span class="summ-emoji">📋</span>
@@ -557,7 +486,6 @@
       </div>
     </div>
 
-    <!-- ABA: REGISTROS -->
     <div id="leader-panel-registros" class="leader-panel">
       <div class="leader-actions">
         <button class="btn-print-pending" onclick="printPendentes()">
@@ -585,7 +513,6 @@
       </div>
     </div>
 
-    <!-- ABA: COBRANÇAS (pendentes) -->
     <div id="leader-panel-pendentes" class="leader-panel hidden">
       <div class="leader-actions" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -603,7 +530,6 @@
       </div>
     </div>
 
-    <!-- ABA: ESPELHO -->
     <div id="leader-panel-espelho" class="leader-panel hidden">
       <div class="leader-actions">
         <button class="btn-print-all-collab" onclick="printEspelho()">
@@ -615,18 +541,11 @@
       </div>
     </div>
 
-    <!-- ABA: RELATÓRIO ANALÍTICO -->
     <div id="leader-panel-relatorio" class="leader-panel hidden">
       <div class="rel-filters">
         <div class="filter-row" style="flex-wrap:wrap;gap:8px">
-          <div class="filter-group">
-            <label>📅 De</label>
-            <input type="date" id="rel-start"/>
-          </div>
-          <div class="filter-group">
-            <label>📅 Até</label>
-            <input type="date" id="rel-end"/>
-          </div>
+          <div class="filter-group"><label>📅 De</label><input type="date" id="rel-start"/></div>
+          <div class="filter-group"><label>📅 Até</label><input type="date" id="rel-end"/></div>
           <div class="filter-group">
             <label>⏰ Turno</label>
             <select id="rel-turno">
@@ -659,18 +578,14 @@
               <option value="nao_finalizado">❌ Não feito</option>
             </select>
           </div>
-          <button class="btn-filter" onclick="loadRelatorio()">
-            <i class="fas fa-search"></i> Filtrar
-          </button>
+          <button class="btn-filter" onclick="loadRelatorio()"><i class="fas fa-search"></i> Filtrar</button>
         </div>
       </div>
       <div class="summary-row" id="rel-summary-row" style="display:none"></div>
       <div id="relatorio-list"></div>
     </div>
 
-    <!-- ABA: GESTÃO DE TAREFAS -->
     <div id="leader-panel-tarefas" class="leader-panel hidden">
-
       <div class="tar-filter-bar">
         <div class="tar-filter-group">
           <label>⏰ Turno</label>
@@ -684,7 +599,7 @@
           <div class="tar-dias-group" id="tar-dias-btns">
             <button class="tar-dia-btn active" data-dia="segunda" onclick="setTarDia('segunda')">SEG</button>
             <button class="tar-dia-btn" data-dia="terca"   onclick="setTarDia('terca')">TER</button>
-            <button class="tar-dia-btn" data-dia="quarta"  onclick="setTarDia('quarta')">QUI</button>
+            <button class="tar-dia-btn" data-dia="quarta"  onclick="setTarDia('quarta')">QUA</button>
             <button class="tar-dia-btn" data-dia="quinta"  onclick="setTarDia('quinta')">QUI</button>
             <button class="tar-dia-btn" data-dia="sexta"   onclick="setTarDia('sexta')">SEX</button>
             <button class="tar-dia-btn" data-dia="sabado"  onclick="setTarDia('sabado')">SAB</button>
@@ -697,25 +612,17 @@
             <option value="">Todos</option>
           </select>
         </div>
-        <button class="btn-new-task" onclick="openModalNewTask()">
-          <i class="fas fa-plus"></i> Nova Tarefa
-        </button>
-        <button class="btn-new-colab" onclick="abrirModalNovoColab()">
-          <i class="fas fa-user-plus"></i> Novo Colaborador
-        </button>
+        <button class="btn-new-task" onclick="openModalNewTask()"><i class="fas fa-plus"></i> Nova Tarefa</button>
+        <button class="btn-new-colab" onclick="abrirModalNovoColab()"><i class="fas fa-user-plus"></i> Novo Colaborador</button>
       </div>
-
       <div id="tar-count-bar" class="tar-count-bar"></div>
       <div id="tarefas-gestao-list"></div>
-
       <input type="hidden" id="tar-filter-turno" value="dia"/>
       <input type="hidden" id="tar-filter-dia"   value="segunda"/>
     </div>
 
-    <!-- ABA: SEED DE TAREFAS -->
     <div id="leader-panel-seed" class="leader-panel hidden">
       <div style="max-width:700px;margin:0 auto;padding:8px 0 40px">
-        <!-- Cabeçalho -->
         <div style="background:linear-gradient(135deg,#1a2a3a,#0d1117);border:1px solid #30363d;border-radius:14px;padding:20px 22px;margin-bottom:16px">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
             <span style="font-size:30px">🍔</span>
@@ -730,8 +637,6 @@
             para importar todas as tarefas dos colaboradores para o banco de dados.
           </p>
         </div>
-
-        <!-- Botão principal de abertura -->
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
           <a href="seed_tarefas_v3.html" target="_blank"
             style="flex:1;min-width:200px;background:linear-gradient(135deg,#e8590c,#ff7b2f);color:#fff;border:none;
@@ -741,41 +646,32 @@
             <i class="fas fa-external-link-alt"></i> 📤 Abrir Importador de Planilhas
           </a>
         </div>
-
-        <!-- Instruções rápidas -->
         <div style="background:#161b22;border:1px solid #21262d;border-radius:12px;padding:16px 18px;margin-bottom:14px">
           <div style="font-size:13px;font-weight:800;color:#79c0ff;margin-bottom:10px">📋 Como usar:</div>
           <div style="font-size:12px;color:#c9d1d9;display:flex;flex-direction:column;gap:7px">
-            <div>1️⃣ Clique em <strong style="color:#ffa657">Abrir Importador</strong> (abre abaixo)</div>
+            <div>1️⃣ Clique em <strong style="color:#ffa657">Abrir Importador</strong></div>
             <div>2️⃣ Arraste o arquivo <strong>1-TAREFAS DIA DINÁ.xlsx</strong> para a zona ☀️ Dia</div>
             <div>3️⃣ Arraste o arquivo <strong>2-TAREFAS NOITE SANDRO.xlsx</strong> para a zona 🌙 Noite</div>
             <div>4️⃣ Verifique o preview (~21 colaboradores · ~1617 tarefas)</div>
             <div>5️⃣ Clique em <strong style="color:#da3633">Limpar e Reinserir Tarefas</strong></div>
           </div>
         </div>
-
-        <!-- Aviso de uso -->
         <div style="background:#0d1117;border:2px solid #30363d;border-radius:12px;padding:16px 18px;margin-top:8px">
           <div style="font-size:12px;color:#8b949e;text-align:center">
             <i class="fas fa-info-circle" style="color:#ffa657"></i>
-            O importador abre em uma nova aba. Certifique-se de que os arquivos XLSX estão prontos antes de iniciar.
+            O importador abre em uma nova aba.
           </div>
         </div>
-
       </div>
     </div>
 
-    <!-- Botão Voltar centralizado no rodapé do painel líder -->
     <div class="screen-bottom-back" style="padding:16px 0 44px">
       <button class="btn-bottom-back" onclick="goToWelcome()">← Voltar ao Início</button>
     </div>
-
   </main>
 </div>
 
-<!-- ══════════════════════════════════════════
-     MODAL — NOVA / EDITAR TAREFA
-══════════════════════════════════════════ -->
+<!-- MODAL — NOVA / EDITAR TAREFA -->
 <div class="modal-overlay hidden" id="modal-task-edit">
   <div class="modal-box modal-compact">
     <button class="modal-close" onclick="closeModal('modal-task-edit')">✕</button>
@@ -842,9 +738,7 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     MODAL — NOVO COLABORADOR
-══════════════════════════════════════════ -->
+<!-- MODAL — NOVO COLABORADOR -->
 <div class="modal-overlay hidden" id="modal-novo-colab">
   <div class="modal-box modal-compact" style="max-width:480px">
     <button class="modal-close" onclick="fecharModalNovoColab()">✕</button>
@@ -853,8 +747,6 @@
       <h3>Novo Colaborador</h3>
     </div>
     <div class="modal-body modal-body-compact" style="gap:12px">
-
-      <!-- Nome -->
       <div class="filter-group" style="width:100%">
         <label>👤 Nome do Colaborador</label>
         <input type="text" id="nc-nome" placeholder="Nome em MAIÚSCULAS..."
@@ -863,8 +755,6 @@
                       box-sizing:border-box;text-transform:uppercase"
                oninput="this.value=this.value.toUpperCase()"/>
       </div>
-
-      <!-- Departamento -->
       <div class="filter-group" style="width:100%">
         <label>🏭 Departamento</label>
         <select id="nc-depto" style="width:100%;padding:10px 14px;border-radius:10px;
@@ -875,80 +765,37 @@
           <option value="ATENDIMENTO">🎯 Atendimento</option>
         </select>
       </div>
-
-      <!-- Turno -->
       <div class="filter-group" style="width:100%">
         <label>⏰ Turno</label>
         <div style="display:flex;gap:10px">
-          <label style="flex:1;display:flex;align-items:center;gap:8px;
-                        background:#f9fafb;border:2px solid #e2e6f0;border-radius:10px;
-                        padding:10px 14px;cursor:pointer;font-weight:700;font-size:14px"
-                 id="nc-turno-dia-lbl">
-            <input type="radio" name="nc-turno" id="nc-turno-dia" value="dia" checked
-                   onchange="_ncTurnoChange()" style="accent-color:#e8590c;width:16px;height:16px"/>
+          <label style="flex:1;display:flex;align-items:center;gap:8px;background:#f9fafb;border:2px solid #e2e6f0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:14px" id="nc-turno-dia-lbl">
+            <input type="radio" name="nc-turno" id="nc-turno-dia" value="dia" checked onchange="_ncTurnoChange()" style="accent-color:#e8590c;width:16px;height:16px"/>
             ☀️ Dia
           </label>
-          <label style="flex:1;display:flex;align-items:center;gap:8px;
-                        background:#f9fafb;border:2px solid #e2e6f0;border-radius:10px;
-                        padding:10px 14px;cursor:pointer;font-weight:700;font-size:14px"
-                 id="nc-turno-noite-lbl">
-            <input type="radio" name="nc-turno" id="nc-turno-noite" value="noite"
-                   onchange="_ncTurnoChange()" style="accent-color:#6366f1;width:16px;height:16px"/>
+          <label style="flex:1;display:flex;align-items:center;gap:8px;background:#f9fafb;border:2px solid #e2e6f0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:14px" id="nc-turno-noite-lbl">
+            <input type="radio" name="nc-turno" id="nc-turno-noite" value="noite" onchange="_ncTurnoChange()" style="accent-color:#6366f1;width:16px;height:16px"/>
             🌙 Noite
           </label>
         </div>
       </div>
-
-      <!-- Dias da Semana -->
       <div class="filter-group" style="width:100%">
         <label>📅 Dias de Trabalho</label>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px">
-          <label class="nc-dia-lbl" for="nc-dia-segunda">
-            <input type="checkbox" id="nc-dia-segunda" value="segunda" class="nc-dia-cb"/>
-            <span>SEG</span>
-          </label>
-          <label class="nc-dia-lbl" for="nc-dia-terca">
-            <input type="checkbox" id="nc-dia-terca" value="terca" class="nc-dia-cb"/>
-            <span>TER</span>
-          </label>
-          <label class="nc-dia-lbl" for="nc-dia-quarta">
-            <input type="checkbox" id="nc-dia-quarta" value="quarta" class="nc-dia-cb"/>
-            <span>QUA</span>
-          </label>
-          <label class="nc-dia-lbl" for="nc-dia-quinta">
-            <input type="checkbox" id="nc-dia-quinta" value="quinta" class="nc-dia-cb"/>
-            <span>QUI</span>
-          </label>
-          <label class="nc-dia-lbl" for="nc-dia-sexta">
-            <input type="checkbox" id="nc-dia-sexta" value="sexta" class="nc-dia-cb"/>
-            <span>SEX</span>
-          </label>
-          <label class="nc-dia-lbl" for="nc-dia-sabado">
-            <input type="checkbox" id="nc-dia-sabado" value="sabado" class="nc-dia-cb"/>
-            <span>SAB</span>
-          </label>
-          <label class="nc-dia-lbl" for="nc-dia-domingo">
-            <input type="checkbox" id="nc-dia-domingo" value="domingo" class="nc-dia-cb"/>
-            <span>DOM</span>
-          </label>
+          <label class="nc-dia-lbl" for="nc-dia-segunda"><input type="checkbox" id="nc-dia-segunda" value="segunda" class="nc-dia-cb"/><span>SEG</span></label>
+          <label class="nc-dia-lbl" for="nc-dia-terca"><input type="checkbox" id="nc-dia-terca" value="terca" class="nc-dia-cb"/><span>TER</span></label>
+          <label class="nc-dia-lbl" for="nc-dia-quarta"><input type="checkbox" id="nc-dia-quarta" value="quarta" class="nc-dia-cb"/><span>QUA</span></label>
+          <label class="nc-dia-lbl" for="nc-dia-quinta"><input type="checkbox" id="nc-dia-quinta" value="quinta" class="nc-dia-cb"/><span>QUI</span></label>
+          <label class="nc-dia-lbl" for="nc-dia-sexta"><input type="checkbox" id="nc-dia-sexta" value="sexta" class="nc-dia-cb"/><span>SEX</span></label>
+          <label class="nc-dia-lbl" for="nc-dia-sabado"><input type="checkbox" id="nc-dia-sabado" value="sabado" class="nc-dia-cb"/><span>SAB</span></label>
+          <label class="nc-dia-lbl" for="nc-dia-domingo"><input type="checkbox" id="nc-dia-domingo" value="domingo" class="nc-dia-cb"/><span>DOM</span></label>
         </div>
         <div style="margin-top:8px;display:flex;gap:8px">
-          <button type="button" onclick="_ncSelecionarTodos()"
-            style="flex:1;padding:7px;border-radius:8px;border:1px solid #6366f1;
-                   background:rgba(99,102,241,.08);color:#6366f1;font-family:inherit;
-                   font-size:12px;font-weight:800;cursor:pointer">✅ Todos</button>
-          <button type="button" onclick="_ncDeselecionarTodos()"
-            style="flex:1;padding:7px;border-radius:8px;border:1px solid #e2e6f0;
-                   background:#f9fafb;color:#6b7280;font-family:inherit;
-                   font-size:12px;font-weight:800;cursor:pointer">🗑️ Limpar</button>
-          <button type="button" onclick="_ncSemana()"
-            style="flex:1;padding:7px;border-radius:8px;border:1px solid #10b981;
-                   background:rgba(16,185,129,.08);color:#059669;font-family:inherit;
-                   font-size:12px;font-weight:800;cursor:pointer">📆 Seg–Sex</button>
+          <button type="button" onclick="_ncSelecionarTodos()" style="flex:1;padding:7px;border-radius:8px;border:1px solid #6366f1;background:rgba(99,102,241,.08);color:#6366f1;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer">✅ Todos</button>
+          <button type="button" onclick="_ncDeselecionarTodos()" style="flex:1;padding:7px;border-radius:8px;border:1px solid #e2e6f0;background:#f9fafb;color:#6b7280;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer">🗑️ Limpar</button>
+          <button type="button" onclick="_ncSemana()" style="flex:1;padding:7px;border-radius:8px;border:1px solid #10b981;background:rgba(16,185,129,.08);color:#059669;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer">📆 Seg–Sex</button>
         </div>
       </div>
-
-    </div><!-- /modal-body -->
+    </div>
     <div class="modal-footer">
       <button class="btn-modal-cancel" onclick="fecharModalNovoColab()">Cancelar</button>
       <button class="btn-modal-confirm" id="btn-salvar-novo-colab" onclick="salvarNovoColab()">
@@ -958,10 +805,7 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     MODAL A — PROGRAMAR: TAREFA COM QUANTIDADE
-     (quantidade_padrao > 0)
-══════════════════════════════════════════ -->
+<!-- MODAL A — PROGRAMAR: TAREFA COM QUANTIDADE -->
 <div class="modal-overlay hidden" id="modal-s1-qty">
   <div class="modal-box modal-compact">
     <button class="modal-close" onclick="closeModal('modal-s1-qty')">✕</button>
@@ -970,16 +814,10 @@
       <h3 class="modal-title" id="modal-s1-qty-title">Item</h3>
     </div>
     <div class="modal-body modal-body-compact">
-
-      <!-- Quantidade a fazer (referência do BD) -->
-      <div style="display:flex;align-items:center;justify-content:space-between;
-                  background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;
-                  padding:12px 16px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 16px;margin-bottom:10px">
         <span style="font-size:13px;font-weight:800;color:#475569">📋 Quantidade a fazer</span>
         <span style="font-size:15px;font-weight:900;color:#ea580c" id="calc-padrao-display">—</span>
       </div>
-
-      <!-- Label + controles de estoque -->
       <div style="font-size:12px;font-weight:800;color:#0369a1;margin-bottom:8px;text-align:center">
         📦 Informe a quantidade em estoque abaixo
       </div>
@@ -993,16 +831,12 @@
         <button class="qty-btn plus" onclick="adjField('estoque',10)">+10</button>
         <button class="qty-btn plus" onclick="adjField('estoque',100)">+100</button>
       </div>
-
-      <!-- A produzir hoje (calculado automaticamente) -->
       <div class="calc-card" style="border:2px solid #fde68a;background:#fffbeb">
         <div class="calc-row-item calc-highlight">
           <span>⚡ A produzir hoje</span>
           <strong class="calc-num" id="calc-necessario">—</strong>
         </div>
       </div>
-
-      <!-- Ocultos — usados pelo JS -->
       <span id="calc-padrao"    style="display:none">—</span>
       <span id="calc-estoque"   style="display:none">0</span>
       <span id="modal-s1-prog"  style="display:none">0</span>
@@ -1015,10 +849,7 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     MODAL B — PROGRAMAR: TAREFA SEM QUANTIDADE
-     (checklist ou quantidade_padrao = 0)
-══════════════════════════════════════════ -->
+<!-- MODAL B — PROGRAMAR: TAREFA SEM QUANTIDADE -->
 <div class="modal-overlay hidden" id="modal-s1-exec">
   <div class="modal-box modal-compact">
     <button class="modal-close" onclick="closeModal('modal-s1-exec')">✕</button>
@@ -1027,10 +858,7 @@
       <h3 class="modal-title" id="modal-s1-exec-title">Item</h3>
     </div>
     <div class="modal-body modal-body-compact">
-      <!-- Bloco azul: tarefa de execução -->
-      <div style="display:flex;align-items:center;justify-content:center;gap:14px;
-                  background:#f0f9ff;border:2px solid #bae6fd;border-radius:14px;
-                  padding:24px 22px;">
+      <div style="display:flex;align-items:center;justify-content:center;gap:14px;background:#f0f9ff;border:2px solid #bae6fd;border-radius:14px;padding:24px 22px;">
         <span style="font-size:28px">🔧</span>
         <span style="font-size:15px;color:#0369a1;font-weight:900">Inicie sua tarefa agora</span>
       </div>
@@ -1042,12 +870,9 @@
   </div>
 </div>
 
-<!-- alias para compatibilidade com closeModal('modal-s1') chamado em outros lugares -->
 <div id="modal-s1" style="display:none"></div>
 
-<!-- ══════════════════════════════════════════
-     MODAL — FINALIZAR ITEM (Etapa 2)
-══════════════════════════════════════════ -->
+<!-- MODAL — FINALIZAR ITEM (Etapa 2) -->
 <div class="modal-overlay hidden" id="modal-s2">
   <div class="modal-box modal-compact">
     <button class="modal-close" onclick="closeModal('modal-s2')">✕</button>
@@ -1056,8 +881,6 @@
       <h3 class="modal-title" id="modal-s2-title">Item</h3>
     </div>
     <div class="modal-body modal-body-compact" id="modal-s2-body">
-
-      <!-- Quantidade programada (referência) -->
       <div class="info-boxes" id="s2-ref-box">
         <div class="info-box" style="flex:1">
           <span class="info-box-label">🎯 PROGRAMADO</span>
@@ -1067,16 +890,12 @@
           </div>
         </div>
       </div>
-
-      <!-- Botões de status: 100%, Parcial e Não Executado centralizados na mesma linha -->
       <div class="field-label">📊 Como ficou?</div>
       <div class="status-btns-row3">
         <button class="sbtn sbtn-total"   data-status="total"          onclick="selectStatus('total')">✅ 100%</button>
         <button class="sbtn sbtn-parcial" data-status="parcial"        onclick="selectStatus('parcial')">⚠️ Parcial</button>
         <button class="sbtn sbtn-nao"     data-status="nao_finalizado" onclick="selectStatus('nao_finalizado')">❌ Não Exec.</button>
       </div>
-
-      <!-- Campo ocultos de quantidade (mantido para compatibilidade de dados) -->
       <div id="qty-prod-wrap" class="hidden">
         <div class="field-label" id="qty-prod-label">📦 Quantidade Produzida</div>
         <div class="qty-row big">
@@ -1088,8 +907,6 @@
           <button class="qty-btn plus" onclick="adjField('produzida',10)">+10</button>
         </div>
       </div>
-
-      <!-- Motivos — aparece para Parcial e Não Executado -->
       <div id="motivos-wrap" class="hidden">
         <div class="field-label">💬 Motivo <span class="required-mark">*obrigatório</span></div>
         <div class="motivo-btns-grid">
@@ -1100,7 +917,6 @@
         </div>
         <textarea id="motivo-custom" class="motivo-input hidden" placeholder="Descreva o motivo..." rows="2"></textarea>
       </div>
-
     </div>
     <div class="modal-footer" id="s2-modal-footer">
       <button class="btn-modal-cancel" onclick="closeModal('modal-s2')">Cancelar</button>
@@ -1109,9 +925,7 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     MODAL — CONCLUIR TURNO
-══════════════════════════════════════════ -->
+<!-- MODAL — CONCLUIR TURNO -->
 <div class="modal-overlay hidden" id="modal-finish">
   <div class="modal-box modal-compact">
     <div class="modal-header-plain">
@@ -1128,46 +942,28 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     MODAL — PRÉ-VISUALIZAÇÃO DE IMPRESSÃO
-     (substitui window.open — compatível com tablets)
-══════════════════════════════════════════ -->
+<!-- MODAL — PRÉ-VISUALIZAÇÃO DE IMPRESSÃO -->
 <div class="modal-overlay hidden" id="modal-print-preview" style="z-index:10000;align-items:flex-start;padding:0;overflow-y:auto;">
-  <div style="background:#fff;width:100%;max-width:860px;
-              margin:0 auto;display:block;font-family:Arial,sans-serif">
-    <!-- Barra superior (oculta no print via classe no-print) -->
-    <div style="position:sticky;top:0;z-index:10;background:#1a1d2e;color:#fff;
-                display:flex;align-items:center;gap:10px;padding:12px 16px;
-                box-shadow:0 2px 8px rgba(0,0,0,.3)" class="no-print">
+  <div style="background:#fff;width:100%;max-width:860px;margin:0 auto;display:block;font-family:Arial,sans-serif">
+    <div style="position:sticky;top:0;z-index:10;background:#1a1d2e;color:#fff;display:flex;align-items:center;gap:10px;padding:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,.3)" class="no-print">
       <button onclick="document.getElementById('modal-print-preview').classList.add('hidden')"
-              style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);
-                     color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;
-                     font-weight:800;cursor:pointer;font-family:inherit">
+              style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">
         ✕ Fechar
       </button>
       <span style="flex:1;font-size:14px;font-weight:700;opacity:.8">Folha de Produção</span>
       <button onclick="_doPrintPreview();"
-              style="background:#f97316;border:none;color:#fff;padding:10px 20px;
-                     border-radius:8px;font-size:14px;font-weight:900;cursor:pointer;
-                     font-family:inherit;display:flex;align-items:center;gap:8px">
+              style="background:#f97316;border:none;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px">
         <i class="fas fa-print"></i> Imprimir
       </button>
     </div>
-    <!-- Conteúdo dinâmico exibido na tela -->
     <div id="print-preview-body" style="padding:24px;"></div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     ZONA DE IMPRESSÃO
-     ⚠️ CORREÇÃO APLICADA:
-     - Removido style="display:none" inline (causava folha em branco)
-     - Visibilidade agora controlada 100% via CSS (#print-zone { display:none })
-     - @media print consegue sobrescrever a regra CSS (não sobrescreveria o inline)
-══════════════════════════════════════════ -->
+<!-- ZONA DE IMPRESSÃO — sem style inline (corrigido) -->
 <div id="print-zone"></div>
 
-<!-- ══ BOTTOM NAV GLOBAL ══ -->
+<!-- BOTTOM NAV GLOBAL -->
 <div class="global-bottom-nav" id="global-bottom-nav">
   <div class="footer-links-row">
     <button onclick="typeof abrirResultados==='function'?abrirResultados():window.location.href='resultados_v2.html'" class="footer-link-btn footer-link-blue" id="btn-resultados">
@@ -1194,25 +990,21 @@
   </div>
 </div>
 
-<!-- Scripts — ordem importa! -->
+<!-- Scripts -->
 <script src="js/versao.js?v=20260331-33"></script>
 <script src="js/data.js?v=20260331-33"></script>
 <script src="js/firebase_v2.js?v=20260331-33"></script>
 <script src="js/app_v3.js?v=20260331-33"></script>
 
-<!-- Service Worker: força atualização automática a cada deploy -->
 <script>
 if ('serviceWorker' in navigator) {
-  /* Caminho relativo — funciona tanto em raiz quanto em subpasta do GitHub Pages */
   const swUrl = new URL('sw.js', window.location.href).href;
   navigator.serviceWorker.register(swUrl)
     .then(reg => {
-      reg.update(); /* verifica nova versão imediatamente */
+      reg.update();
       console.log('[SW] Registrado:', reg.scope);
     })
     .catch(err => console.warn('[SW] Falha:', err));
-
-  /* Quando o SW trocar de versão, recarrega a página */
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     window.location.reload();
   });
