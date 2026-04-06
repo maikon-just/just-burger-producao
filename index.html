@@ -15,7 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
   <!-- CSS principal -->
-  <link rel="stylesheet" href="css/style.css?v=20260406-01"/>
+  <link rel="stylesheet" href="css/style.css?v=20260406-02"/>
 
   <!--
     ═══════════════════════════════════════════════════════
@@ -31,61 +31,83 @@
     ═══════════════════════════════════════════════════════
   -->
   <style>
-    /* Área de impressão — oculta via CSS para permitir
-       que @media print consiga sobrescrever */
+    /*
+    ═══════════════════════════════════════════════════════
+    CORREÇÃO DE IMPRESSÃO — TABLET / iOS / ANDROID
+    ═══════════════════════════════════════════════════════
+    PROBLEMA RAIZ: display:none faz o browser NÃO renderizar
+    o elemento. No tablet, mesmo com setTimeout o browser
+    ainda não calculou o layout quando window.print() é
+    chamado → folha em branco.
+
+    SOLUÇÃO: usar visibility:hidden + left:-9999px em vez de
+    display:none. O elemento ESTÁ no DOM e renderizado,
+    só está invisível. Quando o print for chamado, o browser
+    já tem o conteúdo calculado → imprime corretamente.
+    ═══════════════════════════════════════════════════════
+    */
+
+    /* Estado INATIVO: elemento renderizado mas invisível e fora da tela */
     #print-area {
-      display: none;
+      visibility: hidden;
+      position: fixed;
+      left: -9999px;
+      top: 0;
+      width: 210mm;           /* largura A4 */
+      background: #fff;
+      color: #000;
+      font-family: Arial, sans-serif;
+      padding: 12mm;
+      box-sizing: border-box;
+      z-index: -1;
+    }
+
+    /* Estado ATIVO (classe .print-ready adicionada pelo JS) */
+    #print-area.print-ready {
+      visibility: visible;
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: auto;
+      z-index: 999999;
+      padding: 16px;
+      overflow: visible;
     }
 
     @media print {
-      /* Técnica de visibility: oculta tudo mas mantém
-         a área de impressão e seu conteúdo visível.
-         Mais compatível com Safari/iOS/Android do que
-         a técnica de display:none em body > * */
-      html, body {
-        height: auto !important;
-        overflow: visible !important;
-        background: #fff !important;
-        margin: 0 !important;
-        padding: 0 !important;
-      }
-
-      body * {
-        visibility: hidden !important;
+      /* Oculta TUDO exceto #print-area */
+      body > *:not(#print-area) {
+        display: none !important;
       }
 
       #print-area {
-        display: block !important;
         visibility: visible !important;
-        position: absolute !important;
-        top: 0 !important;
+        display: block !important;
+        position: static !important;
         left: 0 !important;
+        top: 0 !important;
         width: 100% !important;
-        min-height: auto !important;
+        height: auto !important;
+        z-index: 1 !important;
+        padding: 8px !important;
+        margin: 0 !important;
         background: #fff !important;
         color: #000 !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        z-index: 99999 !important;
         font-family: Arial, sans-serif !important;
+        overflow: visible !important;
       }
 
       #print-area * {
         visibility: visible !important;
       }
 
-      /* Remove quebras de página indesejadas */
-      #print-area table { page-break-inside: auto !important; }
+      /* Tabelas sem quebra indevida */
+      #print-area table { page-break-inside: auto !important; width: 100% !important; border-collapse: collapse !important; }
       #print-area tr    { page-break-inside: avoid !important; page-break-after: auto !important; }
       #print-area thead { display: table-header-group !important; }
       #print-area tfoot { display: table-footer-group !important; }
-
-      /* Garante que nenhum overlay, modal ou nav apareça */
-      .modal-overlay, .global-bottom-nav, .no-print,
-      #loading-overlay, #toast, nav, header, footer {
-        display: none !important;
-        visibility: hidden !important;
-      }
+      #print-area th, #print-area td { border: 1px solid #999 !important; padding: 5px 7px !important; font-size: 11px !important; }
     }
   </style>
 
@@ -1174,10 +1196,11 @@
 </div>
 
 <!-- ══════════════════════════════════════════
-     ZONA DE IMPRESSÃO
+     ZONA DE IMPRESSÃO v2026-04-06
      ⚠️ SEM style inline — controlado 100% via CSS
-     O JS (app.js) popula este elemento e usa
-     setTimeout para ocultar após window.print()
+     Sempre no DOM com visibility:hidden (NUNCA display:none)
+     para que o browser mantenha o layout calculado no tablet.
+     JS adiciona/remove classe .print-ready para mostrar/ocultar.
 ══════════════════════════════════════════ -->
 <div id="print-area"></div>
 
@@ -1209,10 +1232,10 @@
 </div>
 
 <!-- Scripts — ordem importa! -->
-<script src="js/versao.js?v=20260406-01"></script>
-<script src="js/data.js?v=20260406-01"></script>
-<script src="js/firebase_v2.js?v=20260406-01"></script>
-<script src="js/app_v3.js?v=20260406-01"></script>
+<script src="js/versao.js?v=20260406-02"></script>
+<script src="js/data.js?v=20260406-02"></script>
+<script src="js/firebase_v2.js?v=20260406-02"></script>
+<script src="js/app_v3.js?v=20260406-02"></script>
 
 <!-- Service Worker: força atualização automática a cada deploy -->
 <script>
