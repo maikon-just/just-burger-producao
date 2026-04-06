@@ -1,7 +1,7 @@
-/* ══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    JUST BURGER 🍔 — app_v3.js
    Controle de Produção — Firebase Realtime Database (compat)
-   Versão: 2026-04-06 — Impressão Corrigida
+   Versão: 2026-04-06-v3 — Impressão via iframe (TABLET FIX)
 ═══════════════════════════════════════════════════════════ */
 'use strict';
 
@@ -2478,68 +2478,138 @@ function _abrirPreviewImpressao(htmlConteudo) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   _doPrintPreview — v2026-04-06 TABLET FIX
+   _doPrintPreview — v2026-04-06-v3 IFRAME METHOD
    ══════════════════════════════════════════════════════════════
-   CAUSA RAIZ DA FOLHA EM BRANCO NO TABLET:
-     display:none faz o browser NÃO calcular o layout do elemento.
-     No tablet (iOS Safari / Chrome Android), mesmo com setTimeout
-     o reflow ainda não ocorreu quando window.print() é chamado.
+   SOLUÇÃO DEFINITIVA PARA TABLET (iOS Safari / iPad / Android):
 
-   SOLUÇÃO NOVA:
-     1. #print-area fica SEMPRE no DOM com visibility:hidden
-        (nunca display:none) → browser mantém layout calculado.
-     2. JS insere o conteúdo e adiciona classe .print-ready
-        (torna visível na tela).
-     3. forceReflow: lê offsetHeight para forçar o browser a
-        recalcular o layout ANTES de chamar window.print().
-     4. window.print() é chamado sem setTimeout — o layout já
-        está pronto.
-     5. afterprint remove .print-ready e limpa o conteúdo.
-     6. Fallback setTimeout(4000) para iOS Safari < 13.
+   Técnica: IFRAME OCULTO
+   - Cria (ou reutiliza) um <iframe> oculto no DOM.
+   - Escreve o HTML do conteúdo dentro do iframe.
+   - O iframe tem seu próprio contexto de renderização
+     isolado do resto da página.
+   - Chama iframe.contentWindow.print() depois que o iframe
+     dispara o evento 'load' → garante que o layout está
+     100% calculado antes de imprimir.
+   - Funciona em: PC (Chrome/Firefox/Edge), iPad Safari,
+     iPhone Safari, Android Chrome/Samsung Browser.
+   - Não depende de display:none, visibility, reflow tricks
+     ou setTimeout de tempo arbitrário.
+
+   FALLBACK: se o iframe falhar (popup bloqueado, etc.),
+   usa window.print() direto na página com #print-area.
    ══════════════════════════════════════════════════════════════ */
 function _doPrintPreview() {
-  var src  = document.getElementById('print-preview-body');
-  var area = document.getElementById('print-area');
+  var src = document.getElementById('print-preview-body');
 
-  /* Fallback extremo: se elementos não existirem */
-  if (!src || !area) {
-    window.print();
-    return;
+  /* Sem conteúdo de origem: print simples */
+  if (!src) { window.print(); return; }
+
+  var html = src.innerHTML;
+
+  /* Monta o HTML completo para o iframe */
+  var docHtml = '<!DOCTYPE html><html lang="pt-BR"><head>'
+    + '<meta charset="UTF-8"/>'
+    + '<meta name="viewport" content="width=device-width,initial-scale=1.0"/>'
+    + '<style>'
+    + 'body{margin:0;padding:12px;font-family:Arial,Helvetica,sans-serif;'
+    + '     background:#fff;color:#000;font-size:12px;}'
+    + 'h2,h3{margin:4px 0;}'
+    + 'table{width:100%;border-collapse:collapse;margin-bottom:12px;}'
+    + 'th,td{border:1px solid #999;padding:4px 6px;font-size:11px;text-align:left;}'
+    + 'th{background:#f0f0f0;font-weight:700;}'
+    + 'tr{page-break-inside:avoid;}'
+    + 'thead{display:table-header-group;}'
+    + '.section-title{font-size:14px;font-weight:800;margin:16px 0 6px;'
+    + '  padding:6px 10px;background:#1a1a2e;color:#fff;border-radius:4px;}'
+    + '.collab-header{font-size:13px;font-weight:700;margin:12px 0 4px;'
+    + '  padding:4px 8px;background:#f97316;color:#fff;border-radius:4px;}'
+    + '.status-ok{color:#16a34a;font-weight:700;}'
+    + '.status-parcial{color:#d97706;font-weight:700;}'
+    + '.status-nao{color:#dc2626;font-weight:700;}'
+    + '@media print{'
+    + '  body{padding:6px;}'
+    + '  table{page-break-inside:auto;}'
+    + '}'
+    + '</style>'
+    + '</head><body>' + html + '</body></html>';
+
+  /* Tenta usar o iframe dedicado */
+  var frame = document.getElementById('jb-print-frame');
+
+  /* Se não existe no DOM, cria dinamicamente */
+  if (!frame) {
+    frame = document.createElement('iframe');
+    frame.id = 'jb-print-frame';
+    frame.style.cssText = 'position:fixed;top:-9999px;left:-9999px;'
+      + 'width:1px;height:1px;border:none;visibility:hidden;';
+    document.body.appendChild(frame);
   }
 
-  /* 1. Injeta o conteúdo */
-  area.innerHTML = src.innerHTML;
+  /* Fecha o modal de preview */
+  var closePreviewModal = function () {
+    var overlay = document.getElementById('modal-print-preview');
+    if (overlay) overlay.classList.add('hidden');
+  };
 
-  /* 2. Torna visível adicionando classe (CSS já deixa o layout renderizado) */
-  area.classList.add('print-ready');
+  /* Handler do evento load do iframe */
+  var onFrameLoad = function () {
+    frame.removeEventListener('load', onFrameLoad);
+    try {
+      /* Dispara o print dentro do iframe */
+      frame.contentWindow.focus();
+      frame.contentWindow.print();
 
-  /* 3. forceReflow: faz o browser recalcular o layout agora */
+      /* Fecha o modal após um instante */
+      setTimeout(closePreviewModal, 600);
+    } catch (e) {
+      /* Fallback: print na janela principal */
+      console.warn('[JB] iframe.print() falhou, usando fallback:', e);
+      _doPrintFallback(html, closePreviewModal);
+    }
+  };
+
+  frame.addEventListener('load', onFrameLoad);
+
+  try {
+    /* Escreve o HTML no iframe */
+    frame.contentDocument.open();
+    frame.contentDocument.write(docHtml);
+    frame.contentDocument.close();
+  } catch (e) {
+    /* Fallback se contentDocument falhar (e.g., CSP) */
+    frame.removeEventListener('load', onFrameLoad);
+    console.warn('[JB] iframe write falhou, usando fallback:', e);
+    _doPrintFallback(html, closePreviewModal);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   _doPrintFallback — usa #print-area quando iframe não funciona
+   ══════════════════════════════════════════════════════════════ */
+function _doPrintFallback(html, closeCb) {
+  var area = document.getElementById('print-area');
+  if (!area) { window.print(); if (closeCb) closeCb(); return; }
+
+  area.innerHTML = html;
+  area.style.display = 'block';
+
+  /* Força reflow antes de imprimir */
   void area.offsetHeight;
-  void area.scrollHeight;
 
-  /* 4. Pequeno delay só para garantir que imagens inline sejam pintadas */
   setTimeout(function () {
-
-    /* 5. Chama o print — layout já está calculado */
     window.print();
-
-    /* 6. Limpeza após impressão */
     var cleanup = function () {
-      area.classList.remove('print-ready');
+      area.style.display = 'none';
       area.innerHTML = '';
       window.removeEventListener('afterprint', cleanup);
-      var overlay = document.getElementById('modal-print-preview');
-      if (overlay) overlay.classList.add('hidden');
+      if (closeCb) closeCb();
     };
-
     if ('onafterprint' in window) {
       window.addEventListener('afterprint', cleanup);
     } else {
-      /* iOS Safari antigo sem afterprint */
       setTimeout(cleanup, 4000);
     }
-
-  }, 80);
+  }, 150);
 }
 
 /* ══ ALERTA SONORO ═══════════════════════════════════════ */
@@ -2810,4 +2880,4 @@ async function salvarNovoColab() {
   }
 }
 
-console.log('🍔 Just Burger — app_v3.js v2026-04-06-02 carregado (tablet print fix)!');
+console.log('🍔 Just Burger — app_v3.js v2026-04-06-v3 carregado (iframe print method)!');
