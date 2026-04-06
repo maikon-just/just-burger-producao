@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache"/>
   <meta http-equiv="Expires" content="0"/>
   <title>Just Burger 🍔 Produção</title>
-  <!-- Versão: 2026-04-06 — Impressão Corrigida -->
+  <!-- Versão: 2026-04-06-v3 — Impressão via iframe (TABLET FIX) -->
   <!-- Firebase SDK v9 compat -->
   <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
@@ -15,7 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
   <!-- CSS principal -->
-  <link rel="stylesheet" href="css/style.css?v=20260406-02"/>
+  <link rel="stylesheet" href="css/style.css?v=20260406-03"/>
 
   <!--
     ═══════════════════════════════════════════════════════
@@ -33,78 +33,49 @@
   <style>
     /*
     ═══════════════════════════════════════════════════════
-    CORREÇÃO DE IMPRESSÃO — TABLET / iOS / ANDROID
+    CORREÇÃO DE IMPRESSÃO — TABLET / iOS / ANDROID v3
     ═══════════════════════════════════════════════════════
-    PROBLEMA RAIZ: display:none faz o browser NÃO renderizar
-    o elemento. No tablet, mesmo com setTimeout o browser
-    ainda não calculou o layout quando window.print() é
-    chamado → folha em branco.
-
-    SOLUÇÃO: usar visibility:hidden + left:-9999px em vez de
-    display:none. O elemento ESTÁ no DOM e renderizado,
-    só está invisível. Quando o print for chamado, o browser
-    já tem o conteúdo calculado → imprime corretamente.
+    SOLUÇÃO DEFINITIVA: iframe oculto para impressão.
+    O iframe tem contexto de renderização próprio e garante
+    que o conteúdo esteja calculado antes do print.
+    Funciona em: PC, iPad, iPhone, Android (Chrome/Safari).
+    #print-area mantido apenas para compat. com código legado.
     ═══════════════════════════════════════════════════════
     */
 
-    /* Estado INATIVO: elemento renderizado mas invisível e fora da tela */
-    #print-area {
-      visibility: hidden;
+    /* Iframe de impressão — sempre oculto na UI */
+    #jb-print-frame {
       position: fixed;
+      top: -9999px;
       left: -9999px;
-      top: 0;
-      width: 210mm;           /* largura A4 */
-      background: #fff;
-      color: #000;
-      font-family: Arial, sans-serif;
-      padding: 12mm;
-      box-sizing: border-box;
-      z-index: -1;
+      width: 1px;
+      height: 1px;
+      border: none;
+      visibility: hidden;
     }
 
-    /* Estado ATIVO (classe .print-ready adicionada pelo JS) */
-    #print-area.print-ready {
-      visibility: visible;
-      position: fixed;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: auto;
-      z-index: 999999;
-      padding: 16px;
-      overflow: visible;
+    /* #print-area legado — mantido mas nunca ativa no print normal */
+    #print-area {
+      display: none;
     }
 
     @media print {
-      /* Oculta TUDO exceto #print-area */
+      /* Regra de segurança caso o navegador use a janela principal */
       body > *:not(#print-area) {
         display: none !important;
       }
-
       #print-area {
-        visibility: visible !important;
         display: block !important;
         position: static !important;
-        left: 0 !important;
-        top: 0 !important;
         width: 100% !important;
-        height: auto !important;
-        z-index: 1 !important;
         padding: 8px !important;
         margin: 0 !important;
         background: #fff !important;
         color: #000 !important;
         font-family: Arial, sans-serif !important;
-        overflow: visible !important;
       }
-
-      #print-area * {
-        visibility: visible !important;
-      }
-
-      /* Tabelas sem quebra indevida */
-      #print-area table { page-break-inside: auto !important; width: 100% !important; border-collapse: collapse !important; }
-      #print-area tr    { page-break-inside: avoid !important; page-break-after: auto !important; }
+      #print-area table { width: 100% !important; border-collapse: collapse !important; }
+      #print-area tr    { page-break-inside: avoid !important; }
       #print-area thead { display: table-header-group !important; }
       #print-area tfoot { display: table-footer-group !important; }
       #print-area th, #print-area td { border: 1px solid #999 !important; padding: 5px 7px !important; font-size: 11px !important; }
@@ -1196,13 +1167,14 @@
 </div>
 
 <!-- ══════════════════════════════════════════
-     ZONA DE IMPRESSÃO v2026-04-06
-     ⚠️ SEM style inline — controlado 100% via CSS
-     Sempre no DOM com visibility:hidden (NUNCA display:none)
-     para que o browser mantenha o layout calculado no tablet.
-     JS adiciona/remove classe .print-ready para mostrar/ocultar.
+     ZONA DE IMPRESSÃO v2026-04-06-v3
+     IFRAME METHOD: impressão via iframe oculto
+     Compatível com iOS Safari, iPad, Android Chrome.
+     #print-area mantido para fallback de código legado.
 ══════════════════════════════════════════ -->
 <div id="print-area"></div>
+<!-- Iframe dedicado à impressão (sempre presente no DOM) -->
+<iframe id="jb-print-frame" title="Print Frame"></iframe>
 
 <!-- ══ BOTTOM NAV GLOBAL ══ -->
 <div class="global-bottom-nav" id="global-bottom-nav">
@@ -1232,10 +1204,10 @@
 </div>
 
 <!-- Scripts — ordem importa! -->
-<script src="js/versao.js?v=20260406-02"></script>
-<script src="js/data.js?v=20260406-02"></script>
-<script src="js/firebase_v2.js?v=20260406-02"></script>
-<script src="js/app_v3.js?v=20260406-02"></script>
+<script src="js/versao.js?v=20260406-03"></script>
+<script src="js/data.js?v=20260406-03"></script>
+<script src="js/firebase_v2.js?v=20260406-03"></script>
+<script src="js/app_v3.js?v=20260406-03"></script>
 
 <!-- Service Worker: força atualização automática a cada deploy -->
 <script>
