@@ -118,16 +118,7 @@ let _deptAtual   = 'PRODUCAO';
 let _thanksIv    = null;
 let _atendRegIds = {};
 
-/* ══ SESSÃO DO PORTAL ════════════════════════════════════
-   Lê o usuário logado via portal.html (sessionStorage jb_user).
-   Se não houver sessão, o app roda no modo legado (sem restrições).
-   JB_SESSION.papel:
-     'admin' / 'lider'       → acesso total, sem redirecionamento forçado
-     'colaborador'           → fluxo restrito:
-         - turno_preferido   → seleciona turno automaticamente
-         - departamento      → pula tela de dept, abre direto o setor
-         - nome_card         → pula a grade de cards, abre direto o card
-════════════════════════════════════════════════════════ */
+/* ══ SESSÃO DO PORTAL ════════════════════════════════════ */
 let JB_SESSION = null;
 (function _lerSessaoPortal() {
   try {
@@ -140,7 +131,6 @@ function _isColaborador() {
   return JB_SESSION && JB_SESSION.papel === 'colaborador';
 }
 function _isColaboradorRestrito() {
-  /* Colaborador COM card vinculado → fluxo totalmente automático */
   return JB_SESSION && JB_SESSION.papel === 'colaborador' && !!JB_SESSION.nome_card;
 }
 function _isLider() {
@@ -195,35 +185,23 @@ document.addEventListener('DOMContentLoaded', () => {
   _prefetchCache();
   _checkPendenciasNotif();
 
-  /* ── Restrições visuais (DOM) ── */
   _aplicarRestricoesDom();
-
-  /* ── Barra de usuário logado na home ── */
   _renderUserBar();
 
-  /* ── Fluxo por papel ── */
   if (_isColaboradorRestrito()) {
-    /* Colaborador com card definido → fluxo automático direto ao card */
     _iniciarFluxoColaborador();
   } else if (_isColaborador()) {
-    /* Colaborador SEM card definido → mostra home normal mas restrita */
     showScreen('screen-welcome');
-    /* Filtra grade de colaboradores para só mostrar os do departamento dele */
   } else {
     showScreen('screen-welcome');
-    /* Lider logado: já está autenticado, ocultar botão líder flutuante pois está no rodapé */
     if (_isLider()) {
       S.leaderOk = true;
       const btnLider = document.querySelector('.btn-leader-access');
       if (btnLider) btnLider.style.display = 'none';
-      /* Não injeta botão duplicado — o rodapé global já tem o acesso ao Painel do Líder */
     }
   }
 });
 
-/* ── Barra de usuário logado na home ───────────────────
-   Mostra nome + botão Sair quando há sessão ativa (portal)
-──────────────────────────────────────────────────────── */
 function _renderUserBar() {
   if (!JB_SESSION) return;
   const bar   = document.getElementById('welcome-user-bar');
@@ -241,8 +219,6 @@ function _renderUserBar() {
   if (eEl) eEl.textContent = papelEmoji[JB_SESSION.papel] || '👤';
 
   bar.style.display = 'flex';
-
-  /* Empurra o conteúdo da home para baixo para não ficar atrás da barra */
   if (main) main.style.paddingTop = '72px';
 }
 
@@ -252,26 +228,21 @@ function _sairDoPortal() {
   window.location.href = 'portal.html';
 }
 
-/* ── Aplica restrições visuais para colaborador ─────── */
 function _aplicarRestricoesDom() {
-  if (!_isColaborador()) return;  // só age se for colaborador
+  if (!_isColaborador()) return;
 
-  /* Oculta rodapé de navegação global */
   const nav = document.getElementById('global-bottom-nav');
   if (nav) nav.style.display = 'none';
   document.body.classList.remove('has-bottom-nav');
 
-  /* Oculta botão flutuante do líder */
   const btnLider = document.querySelector('.btn-leader-access');
   if (btnLider) btnLider.style.display = 'none';
 
-  /* Para colaborador COM card: injeta botão sair no canto (redundante mas garante) */
   if (_isColaboradorRestrito()) {
     _injetarBotaoPortal();
   }
 }
 
-/* Botão discreto de saída para o colaborador */
 function _injetarBotaoPortal() {
   if (document.getElementById('btn-voltar-portal')) return;
   const btn = document.createElement('button');
@@ -293,43 +264,32 @@ function _injetarBotaoPortal() {
   document.body.appendChild(btn);
 }
 
-/* ── Fluxo do colaborador restrito ─────────────────────
-   Entra direto no turno → setor → card, sem escolhas
-──────────────────────────────────────────────────────── */
 function _iniciarFluxoColaborador() {
   const sess = JB_SESSION;
-  /* Define data de trabalho */
   initWorkDate();
 
-  /* Define turno: preferido ou pede escolha */
-  const turnoForce = sess.turno_preferido; // 'dia' | 'noite' | ''
+  const turnoForce = sess.turno_preferido;
 
   if (turnoForce === 'dia' || turnoForce === 'noite') {
-    /* Turno fixo: seleciona e pula */
     S.turno = turnoForce;
     const [_y,_m,_d] = (S.dataTrabalho||today()).split('-').map(Number);
     S.dia = DIA_JS_MAP[new Date(_y,_m-1,_d).getDay()];
-    /* Vai direto para o card, sem mostrar dept nem grades */
     _invalidarCache();
     selectColaborador(sess.nome_card);
   } else {
-    /* Turno não definido: mostra só os botões de turno, sem mais nada */
     _mostrarSomenteEscolhaTurno();
   }
 }
 
 function _mostrarSomenteEscolhaTurno() {
-  /* Exibe a tela de boas-vindas simplificada só com turno */
   showScreen('screen-welcome');
-  /* Ocultar botão do líder (não necessário para colaborador) */
   const btnL = document.querySelector('.btn-leader-access');
   if (btnL) btnL.style.display = 'none';
 }
 
-/* ── Injeta botão "Painel Líder" visível na home ────── */
 function _injetarBotaoLiderNaHome() {
   const existing = document.getElementById('btn-lider-direto');
-  if (existing) return; // já existe
+  if (existing) return;
   const btn = document.createElement('button');
   btn.id = 'btn-lider-direto';
   btn.className = 'btn-leader-access';
@@ -410,7 +370,6 @@ function goToWelcome() {
   S.turno=null; S.dia=null; S.colaborador=null;
   S.tarefas=[]; S.s1={}; S.s2={};
   S.producaoIniciada=false;
-  /* Colaborador restrito com turno fixo: volta direto ao card */
   if (_isColaboradorRestrito() && JB_SESSION.turno_preferido) {
     _iniciarFluxoColaborador();
     return;
@@ -420,7 +379,6 @@ function goToWelcome() {
 }
 
 function goToLeaderLogin() {
-  /* Se já está logado como lider/admin via portal, não precisa de senha */
   if (S.leaderOk || _isLider()) {
     S.leaderOk = true;
     openLeaderPanel();
@@ -482,11 +440,7 @@ function abrirSeedFrame() {
   }, 100);
 }
 
-/* ══ TURNO ═══════════════════════════════════════════════
- * Data já escolhida no calendário da home → detecta dia
- * automaticamente e vai DIRETO para o departamento,
- * sem mostrar a tela de seleção de dia da semana.
- * ═══════════════════════════════════════════════════════ */
+/* ══ TURNO ═══════════════════════════════════════════════ */
 function selectTurno(turno) {
   if (!S.dataTrabalho) {
     const inp=document.getElementById('work-date-input');
@@ -494,16 +448,13 @@ function selectTurno(turno) {
   }
   _invalidarCache();
   S.turno=turno;
-  // Detecta dia da semana a partir da data escolhida (local, sem UTC)
   const [_y,_m,_d]=S.dataTrabalho.split('-').map(Number);
   S.dia=DIA_JS_MAP[new Date(_y,_m-1,_d).getDay()];
 
-  /* Colaborador restrito: pula dept e grade, vai direto ao card */
   if (_isColaboradorRestrito()) {
     selectColaborador(JB_SESSION.nome_card);
     return;
   }
-  // Pula a tela de seleção de dia → vai direto para departamento
   _irParaDept();
 }
 
@@ -517,7 +468,6 @@ function renderDayGrid() {
   grid.innerHTML = DIAS_LIST.map((d,idx)=>{
     const isSelected = d.key===diaKey;
     const isHoje     = d.key===DIA_JS_MAP[new Date().getDay()] && dataTrab===today();
-    /* Último item (Domingo, índice 6) fica centralizado na terceira linha */
     const isLast = idx === DIAS_LIST.length - 1;
     return `<button class="day-btn${isSelected?' today':''}${isLast?' day-btn-last':''}" onclick="selectDia('${d.key}')">
       <span class="day-icon">${d.icon}</span>
@@ -534,17 +484,12 @@ function selectDia(dia) {
 }
 
 /* ══ DEPARTAMENTO ════════════════════════════════════════ */
-/* v20260331-26 — _carregarAreasExtras reescrita */
-/* Propaga o campo 'departamento' em memória para tarefas do mesmo colaborador
-   que foram criadas antes do campo existir. Não altera o Firebase.           */
 function _resolverDeptTarefas(tarefas) {
-  /* Passo 1: monta mapa colaborador → departamento usando tarefas que JÁ têm o campo */
   const deptPorColab = {};
   tarefas.forEach(t => {
     if (t.departamento && t.colaborador)
       deptPorColab[(t.colaborador).toUpperCase()] = t.departamento.toUpperCase().trim();
   });
-  /* Passo 2: preenche em memória quem não tem */
   tarefas.forEach(t => {
     if (!t.departamento && t.colaborador) {
       const d = deptPorColab[(t.colaborador).toUpperCase()];
@@ -555,12 +500,9 @@ function _resolverDeptTarefas(tarefas) {
 }
 
 function _getDept(nome, tarefaDept) {
-  /* 1º: campo departamento gravado na própria tarefa (inclui propagação em memória) */
   if (tarefaDept) return tarefaDept;
-  /* 2º: mapa estático para colaboradores legados */
   const fromMap = COLLAB_DEPT[(nome||'').toUpperCase()];
   if (fromMap) return fromMap;
-  /* 3º: desconhecido — não cai em setor errado */
   return '__NONE__';
 }
 
@@ -571,35 +513,23 @@ function _irParaDept() {
   if (tc) tc.textContent=(S.turno==='dia'?'☀️':'🌙')+' '+(S.turno==='dia'?'Dia':'Noite');
   if (dc) dc.textContent=dObj?dObj.short+' '+dObj.icon:S.dia;
   showScreen('screen-dept');
-  /* Carrega áreas customizadas do Firebase e injeta botões extras */
   _carregarAreasExtras();
 }
 
-/* Chaves fixas que já têm botão estático no HTML — não duplicar */
 const _AREAS_FIXAS = new Set(['PRODUCAO','OPERACAO','ATENDIMENTO']);
-
-/* Departamentos de teste/descontinuados — nunca exibir mesmo que tenham tarefas */
 const _DEPTS_IGNORAR = new Set([
   'MOTOCA','TESTE','TEST','TESTANDO','AAAA','BBBB','CCCC','CCCCC',
   'FINANCEIRO_TESTE','ESTOQUE_TESTE',
 ]);
 
-/* ══ CARREGAR ÁREAS EXTRAS (Departamentos customizados) ══════════════════
-   v32 — Regra: só exibe departamentos que têm pelo menos 1 tarefa.
-   Sem botão excluir — some automaticamente quando não há tarefas.
-   Ordem alfabética. Os 3 fixos sempre visíveis.
-═══════════════════════════════════════════════════════════════════════════ */
 async function _carregarAreasExtras() {
   const grid = document.getElementById('dept-btn-grid');
   if (!grid) { console.warn('[JB-DEPT] #dept-btn-grid não encontrado'); return; }
 
-  /* Remove botões e separadores de chamadas anteriores */
   grid.querySelectorAll('[data-custom-area],[data-custom-area-wrap],.dept-sep-extra').forEach(el => el.remove());
 
-  /* Mapa final: CHAVE → { nome, emoji } */
   const extra = {};
 
-  /* ── FONTE 1: coleção "areas" do Firebase ──────────────────────────── */
   let areasRaw = [];
   try {
     areasRaw = await _fbGetAll('areas');
@@ -616,7 +546,6 @@ async function _carregarAreasExtras() {
     extra[chave] = { nome: a.nome || nomeRaw, emoji: a.emoji || '🏷️' };
   });
 
-  /* ── FONTE 2: campo "departamento" das tarefas ─────────────────────── */
   let tarefasRaw = [];
   try {
     tarefasRaw = await _fbGetAll('tarefas');
@@ -632,10 +561,6 @@ async function _carregarAreasExtras() {
     extra[chave] = { nome, emoji: '🏷️' };
   });
 
-  /* ── Departamentos que têm pelo menos 1 tarefa para o turno+dia atual ─
-     Regra: só aparece se houver colaborador (não-teste) com tarefa
-     no turno e dia selecionados. Assim o card some quando não há
-     ninguém escalado — idêntico ao que acontece com os cards do setor. */
   const dtTrab = S.dataTrabalho || today();
   const deptComCard = new Set(
     tarefasRaw
@@ -652,7 +577,6 @@ async function _carregarAreasExtras() {
       .filter(Boolean)
   );
 
-  /* ── Filtra extras sem cards ativos no dia/turno e ordena A→Z ──────── */
   const extraVisivel = Object.entries(extra)
     .filter(([chave]) => deptComCard.has(chave) && !_DEPTS_IGNORAR.has(chave))
     .sort(([,a],[,b]) => a.nome.localeCompare(b.nome, 'pt-BR'));
@@ -661,14 +585,12 @@ async function _carregarAreasExtras() {
 
   if (extraVisivel.length === 0) return;
 
-  /* ── Separador visual ──────────────────────────────────────────────── */
   const sep = document.createElement('div');
   sep.className = 'dept-sep-extra';
   sep.style.cssText = 'font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;padding:6px 2px 2px;text-align:center;';
   sep.textContent = '— Outros departamentos —';
   grid.appendChild(sep);
 
-  /* ── Renderiza botões extras (sem botão excluir) ───────────────────── */
   extraVisivel.forEach(([chave, info]) => {
     const btn = document.createElement('button');
     btn.className = 'dept-btn dept-btn-custom';
@@ -703,7 +625,6 @@ function _mostrarTelaSetor(dept) {
   const labelMap={PRODUCAO:'Produção',OPERACAO:'Operação',ATENDIMENTO:'Atendimento'};
   const emojiMap={PRODUCAO:'🏭',OPERACAO:'⚙️',ATENDIMENTO:'🎯'};
   const corMap  ={PRODUCAO:'#f97316',OPERACAO:'#16a34a',ATENDIMENTO:'#2563eb'};
-  /* Para áreas customizadas: tenta pegar label/emoji do botão já renderizado */
   if (!labelMap[dept]) {
     const btnEl = document.querySelector(`[data-custom-area="${dept}"]`);
     if (btnEl) {
@@ -723,7 +644,6 @@ function _mostrarTelaSetor(dept) {
   showScreen('screen-setor');
   const grid=document.getElementById('setor-collab-grid');
   if (!grid) return;
-  /* Sempre busca dados frescos para garantir que novos departamentos apareçam */
   grid.innerHTML='<div style="padding:40px;text-align:center;color:#888"><div style="font-size:36px;animation:spin 1s linear infinite;display:inline-block">⏳</div><br><span style="font-size:13px;font-weight:600;margin-top:8px;display:block">Carregando...</span></div>';
   Promise.all([_fbGetAll('tarefas'),_fbGetAll('sessoes'),_fbGetAll('faltas')]).then(res=>{
     _cache.tarefas=_resolverDeptTarefas(res[0]); _cache.sessoes=res[1]; _cache._faltas=res[2];
@@ -737,18 +657,16 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
   const dtTrab=S.dataTrabalho||today();
   const map={};
   todasTarefas.forEach(t=>{
-    if (_isColabTeste(t.colaborador)) return; /* Ignora colaboradores de teste */
+    if (_isColabTeste(t.colaborador)) return;
     const matchDia=t.data_especifica ? t.data_especifica===dtTrab : t.dia_semana===S.dia;
     if (t.turno===S.turno && matchDia && _getDept(t.colaborador, t.departamento)===dept)
       map[t.colaborador]=(map[t.colaborador]||0)+1;
   });
   let nomes=Object.keys(map).sort();
-  /* Colaborador com card definido: filtra para mostrar SÓ o card dele */
   if (_isColaboradorRestrito() && JB_SESSION.nome_card) {
     const card = JB_SESSION.nome_card.toUpperCase();
     nomes = nomes.filter(n => n.toUpperCase() === card);
     if (!nomes.length) {
-      /* Card está neste dept mas sem tarefa hoje → mostra aviso amigável */
       grid.innerHTML='<div style="padding:40px;text-align:center"><div style="font-size:40px">😊</div><p style="font-weight:700;margin-top:8px">Sem tarefas para hoje!</p></div>';
       return;
     }
@@ -760,7 +678,6 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
   const sessMap={};
   todasSessoes.forEach(s=>{
     if (s.data===dtTrab&&s.turno===S.turno&&s.dia_semana===S.dia) {
-      /* Prioridade: completo/parcial > etapa1_ok */
       const cur=sessMap[s.colaborador_card];
       if (!cur || s.status_geral==='completo' || s.status_geral==='parcial') {
         sessMap[s.colaborador_card]=s.status_geral;
@@ -772,7 +689,6 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
     if (f.data===dtTrab&&f.turno===S.turno) faltaMap[f.colaborador]=f.tipo;
   });
   const cores=['cc-0','cc-1','cc-2','cc-3','cc-4','cc-5','cc-6','cc-7','cc-8','cc-9','cc-10','cc-11'];
-  /* Centraliza o grid quando há poucos cards */
   if (nomes.length <= 4) grid.classList.add('few-cards');
   else grid.classList.remove('few-cards');
 
@@ -787,7 +703,6 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
     const jaFinaliz=sessStatus==='completo'||sessStatus==='parcial';
     const isCompleto=sessStatus==='completo';
     const tipoFalta=faltaMap[nome];
-    /* Status badge exibido ABAIXO do card — SEM overlay sobreposto ao texto */
     let statusBadge='';
     let wrapClass='collab-card-wrap';
     if (tipoFalta) {
@@ -803,7 +718,6 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
     if (tipoFalta&&S.leaderOk)  acao=`_gerenciarFalta('${ne}','${tipoFalta}','remover')`;
     else if (jaFinaliz)          acao=`_clickColab('${ne}','__reabrir__')`;
     else                         acao=`_clickColab('${ne}','__selecionar__')`;
-    // Botão Falta: só aparece para líderes/admins
     const btnFalta=((!tipoFalta&&!jaFinaliz) && (S.leaderOk||_isLider()))
       ?`<div class="collab-falta-row"><button class="btn-falta-card" onclick="event.stopPropagation();_abrirFaltaComSenha('${ne}')">🚫 Registrar Falta</button></div>`:'';
     return `<div class="${wrapClass}">
@@ -866,7 +780,6 @@ function _abrirModalSenha(emoji,titulo,subtitulo,senhaEsperada,callback) {
 function _clickColab(nome,acao) {
   const pw=COLLAB_PASSWORDS[nome.toUpperCase()];
   if (acao==='__reabrir__') {
-    /* Usa modal bonito — NÃO usa prompt() nativo */
     const confirmarReabrir=()=>{
       _abrirModalSenha('🔑','Reabrir Turno','Senha do líder para confirmar',LEADER_PASSWORD,()=>_reabrirTurnoColab(nome));
     };
@@ -900,7 +813,6 @@ async function _reabrirTurnoColab(nome) {
 
 /* ══ FALTAS ══════════════════════════════════════════════ */
 function _abrirFaltaComSenha(nome) {
-  // Se líder já logado, abre direto; senão pede senha
   if (S.leaderOk) { _abrirModalFalta(nome); return; }
   _abrirModalSenha('🔐','Confirmar Liderança','Senha do líder para registrar falta',LEADER_PASSWORD,()=>_abrirModalFalta(nome));
 }
@@ -927,16 +839,11 @@ function _abrirModalFalta(nome) {
 async function _registrarFalta(nome,tipo) {
   const dt=S.dataTrabalho||today();
   try {
-    // 1. Registra a falta
     await _fbPost('faltas',{colaborador:nome,data:dt,turno:S.turno,dia_semana:S.dia,tipo});
-
-    // 2. Busca todas as tarefas do colaborador para este turno/dia
     const todasTarefas=_cache.tarefas||await _fbGetAll('tarefas');
     const tarefasColab=todasTarefas.filter(t=>
       t.colaborador===nome && t.turno===S.turno && t.dia_semana===S.dia
     );
-
-    // 3. Para cada tarefa, cria uma pendência nos resultados
     for (const t of tarefasColab) {
       await _fbPost('pendencias',{
         data:dt, turno:S.turno, dia_semana:S.dia,
@@ -952,7 +859,6 @@ async function _registrarFalta(nome,tipo) {
         tarefa_id:t.id||'',
       });
     }
-
     const ov=document.getElementById('_modal_falta');
     if (ov) ov.style.display='none';
     _invalidarCache(); _cache._faltas=null;
@@ -964,7 +870,6 @@ async function _registrarFalta(nome,tipo) {
 
 async function _gerenciarFalta(nome,tipo,acao) {
   if (acao==='remover'&&S.leaderOk) {
-    /* Modal de confirmação no lugar do confirm() nativo */
     const ok = await new Promise(resolve=>{
       let ov=document.getElementById('_modal_confirm_falta');
       if (!ov){ ov=document.createElement('div'); ov.id='_modal_confirm_falta';
@@ -1008,7 +913,6 @@ async function selectColaborador(nome) {
     S.tarefas=todasTarefas
       .filter(t=>
         t.turno===S.turno && t.colaborador===nome &&
-        /* tarefa recorrente normal ou tarefa transferida p/ esta data específica */
         (t.data_especifica
           ? t.data_especifica===_dtTrab2
           : t.dia_semana===S.dia
@@ -1017,7 +921,6 @@ async function selectColaborador(nome) {
       .sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     if (!S.tarefas.length) { showToast('😕 Sem tarefas para este colaborador'); return; }
 
-    /* Verifica se já tem sessão "etapa1_ok" salva para este colaborador hoje */
     const dt=S.dataTrabalho||today();
     const todasSessoes=_cache.sessoes||await _fbGetAll('sessoes');
     const sessEtapa1=todasSessoes.find(s=>
@@ -1032,21 +935,17 @@ async function selectColaborador(nome) {
       renderStep2();
       showScreen('screen-step1');
     } else if (sessEtapa1) {
-      /* Já programou — vai direto para Etapa 2 */
       S.sessaoId=sessEtapa1.id;
-      /* Restaura s1 da sessão salva */
       if (sessEtapa1.s1_data) {
         try { Object.assign(S.s1, JSON.parse(sessEtapa1.s1_data)); } catch(e) {}
       }
       S.producaoIniciada=true;
-      /* ── Restaura S.s2 dos registros já gravados ── */
       try {
         const todosRegs=await _fbGetAll('registros');
         const regsColab=todosRegs.filter(r=>
           r.colaborador_card===nome&&r.data===dt&&
           r.turno===S.turno&&r.dia_semana===S.dia&&r.tarefa_id
         );
-        /* Para cada tarefa, pega o registro mais recente */
         const byTarefa={};
         regsColab.forEach(r=>{
           const ts=r.updated_at||r.created_at||0;
@@ -1058,7 +957,7 @@ async function selectColaborador(nome) {
             produzida:r.quantidade_produzida!==undefined?r.quantidade_produzida:0,
             status:r.status||'total',
             motivo:r.motivo||'',
-            reg_id:r.id, /* guarda id para PATCH em vez de novo POST */
+            reg_id:r.id,
           };
         });
         const jaFinal=Object.keys(S.s2).length;
@@ -1069,7 +968,6 @@ async function selectColaborador(nome) {
       renderStep2();
       showScreen('screen-step1');
     } else {
-      /* Primeira entrada — Etapa 1 */
       S.sessaoId='sess_'+Date.now();
       _setNavChips(nome);
       renderStep1();
@@ -1106,7 +1004,6 @@ async function _carregarRegistrosAtendimento(nome) {
 function _prepararModoAtendimento() {
   S.producaoIniciada=true;
   S.tarefas.forEach(t=>{ if (!S.s1[t.id]) S.s1[t.id]={estoque:0,programada:1,confirmed:true}; });
-  /* Banner de fase oculto */
   const banner=document.getElementById('prod-banner');
   if (banner) banner.classList.add('hidden');
 }
@@ -1135,7 +1032,6 @@ function renderStep1() {
   if (fill) fill.style.width=(total?Math.round(confirmed/total*100):0)+'%';
   if (txt)  txt.textContent=`${confirmed} / ${total} programados`;
 
-  /* Banner de fase oculto — não exibir faixa amarela */
   const banner=document.getElementById('prod-banner');
   if (banner) banner.classList.add('hidden');
 
@@ -1145,12 +1041,6 @@ function renderStep1() {
     const ck=isChecklist(t);
     const conf=S.s1[t.id];
     const isConf=conf&&conf.confirmed;
-    /* Linha de info do card:
-       - Checklist Não confirmado: "Toque para confirmar"
-       - Checklist Confirmado: "✓ Confirmada"
-       - Qty Não confirmado: "Padrão: X un" (só quantidade, sem msg execução)
-       - Qty Confirmado: valor programado
-    */
     const qtdPadrao = Number(t.quantidade_padrao)||0;
     const isExcCard = !ck && qtdPadrao === 0;
     let infoLine;
@@ -1183,18 +1073,16 @@ function renderStep1() {
   const startBtn   =document.getElementById('btn-sm-start-footer');
   const concludeBtn=document.getElementById('btn-conclude');
   if (!S.producaoIniciada) {
-    /* Fase 1: mostra botão Iniciar Turno, oculta Finalizar */
     if (pInfo) pInfo.style.display='flex';
     if (pTxt)  pTxt.textContent=allConfirmed?'Todos programados — clique em Iniciar Turno!':`${total-confirmed} item(s) ainda não confirmado(s)`;
     if (startBtn) {
       startBtn.classList.remove('hidden');
       startBtn.style.display='';
-      startBtn.disabled=false;      /* garante que nunca fica travado */
-      startBtn.style.opacity='';    /* restaura opacidade normal */
+      startBtn.disabled=false;
+      startBtn.style.opacity='';
     }
     if (concludeBtn) concludeBtn.classList.add('hidden');
   } else {
-    /* Fase 2 em andamento: oculta Iniciar, oculta Finalizar (só aparece quando tudo feito) */
     if (pInfo) pInfo.style.display='none';
     if (startBtn)   startBtn.classList.add('hidden');
     if (concludeBtn) concludeBtn.classList.add('hidden');
@@ -1209,10 +1097,8 @@ function openS1Modal(id) {
 
   const padrao = Number(t.quantidade_padrao)||0;
   const ck     = isChecklist(t);
-  /* temQtd = true → abre modal de quantidade; false → abre modal de execução */
   const temQtd = !ck && padrao > 0;
 
-  /* Garante que AMBOS os modais estejam fechados antes de abrir o correto */
   document.getElementById('modal-s1-qty').classList.add('hidden');
   document.getElementById('modal-s1-exec').classList.add('hidden');
 
@@ -1220,7 +1106,6 @@ function openS1Modal(id) {
   const cat = t.categoria||'';
 
   if (temQtd) {
-    /* ── MODAL A: tem quantidade padrão ── */
     document.getElementById('modal-s1-qty-header').style.background = cor;
     document.getElementById('modal-s1-qty-cat').textContent = cat;
     document.getElementById('modal-s1-qty-title').textContent = t.item;
@@ -1239,7 +1124,6 @@ function openS1Modal(id) {
 
     document.getElementById('modal-s1-qty').classList.remove('hidden');
   } else {
-    /* ── MODAL B: checklist ou sem quantidade ── */
     document.getElementById('modal-s1-exec-header').style.background = cor;
     document.getElementById('modal-s1-exec-cat').textContent = cat;
     document.getElementById('modal-s1-exec-title').textContent = t.item;
@@ -1288,21 +1172,17 @@ function confirmS1() {
     prog=Number(document.getElementById('modal-s1-prog').textContent)||0;
   }
   S.s1[_s1Id]={estoque:est,programada:prog,confirmed:true};
-  /* Fecha o modal correto */
   document.getElementById('modal-s1-qty').classList.add('hidden');
   document.getElementById('modal-s1-exec').classList.add('hidden');
   renderStep1();
 }
 
 async function iniciarProducao() {
-  /* Desabilita temporariamente para evitar cliques duplos, mas não oculta */
   const iniBtn = document.getElementById('btn-sm-start-footer');
   if (iniBtn) { iniBtn.disabled = true; iniBtn.style.opacity='0.5'; }
 
   S.producaoIniciada=true;
-  /* Garante que todos os cards sem s1 usem o padrão */
   S.tarefas.forEach(t=>{ if (!S.s1[t.id]) S.s1[t.id]={estoque:0,programada:t.quantidade_padrao||0,confirmed:true}; });
-  /* Salva no Firebase que a Etapa 1 foi concluída, guardando s1_data */
   const dt=S.dataTrabalho||today();
   try {
     const s1Json=JSON.stringify(S.s1);
@@ -1314,21 +1194,18 @@ async function iniciarProducao() {
       hora_inicio:new Date().toLocaleTimeString('pt-BR'),
       total_tarefas:S.tarefas.length,
     });
-    _cache.sessoes=null; /* invalida cache de sessões */
+    _cache.sessoes=null;
   } catch(e) { console.error('Erro ao salvar etapa1:', e); }
 
-  /* Abre o preview de impressão inline (compatível com tablets) */
   printColaborador();
-  /* Volta para a tela de cards */
   showToast('✅ Etapa 1 salva! Toque em Imprimir para confirmar.');
   _mostrarTelaSetor(_deptAtual);
 }
 
 function doPrintDirect() {
-  /* Garante que todas tarefas sem s1 usem o padrão */
   S.tarefas.forEach(t=>{ if (!S.s1[t.id]) S.s1[t.id]={estoque:0,programada:t.quantidade_padrao||0,confirmed:true}; });
   printColaborador();
-  return false; /* evita qualquer comportamento padrão */
+  return false;
 }
 
 /* ══ ETAPA 2 — PRODUÇÃO / FINALIZAÇÃO ═══════════════════ */
@@ -1354,10 +1231,6 @@ function renderStep2() {
     const stBadge=status==='total'?'✅':status==='parcial'?'⚠️':status==='nao_finalizado'?'❌':'';
     const prog=d1.programada!==undefined?d1.programada:(t.quantidade_padrao||0);
     const isConf=!!status;
-    /* Linha de info do card na Etapa 2:
-       - Checklist: só status textual, sem quantidade
-       - Qty: quantidade produzida/programada (sem msg de execução)
-    */
     let infoLine2;
     if (ck) {
       infoLine2=isConf
@@ -1386,16 +1259,12 @@ function renderStep2() {
   const pTxt2      =document.getElementById('pending-count-text');
   const startBtn2  =document.getElementById('btn-sm-start-footer');
   const concludeBtn=document.getElementById('btn-conclude');
-  /* Sempre oculta Iniciar Turno na fase 2 */
   if (startBtn2) startBtn2.classList.add('hidden');
-  /* Botão Finalizar Turno: só aparece quando TODAS as tarefas tiverem status */
   if (concludeBtn) concludeBtn.classList.toggle('hidden', !allDone);
-  /* Info */
   if (pInfo) pInfo.style.display='flex';
   if (pTxt2) pTxt2.textContent = allDone
     ? 'Tudo finalizado! Clique em Finalizar Turno.'
     : `${done2}/${S.tarefas.length} finalizadas — pode sair e voltar!`;
-  /* Auto-save 100% — sem toast, botão Concluir aparece automaticamente */
 }
 
 let _s2Id=null,_s2Status=null,_s2Motivo=null;
@@ -1421,13 +1290,11 @@ function openS2Modal(id) {
   if (d2.status) { const ab=document.querySelector(`.sbtn[data-status="${d2.status}"]`); if (ab) ab.classList.add('active'); }
   _s2Status=d2.status||null; _s2Motivo=d2.motivo||'';
 
-  /* Reset de UI */
   const qpw=document.getElementById('qty-prod-wrap'); if (qpw) qpw.classList.add('hidden');
   const mw =document.getElementById('motivos-wrap');
   const mc =document.getElementById('motivo-custom'); if (mc) { mc.value=''; mc.classList.add('hidden'); }
   document.querySelectorAll('.motivo-btn').forEach(b=>b.classList.remove('active'));
 
-  /* Restaura estado anterior se houver */
   if (_s2Status === 'nao_finalizado') {
     if (mw) mw.classList.remove('hidden');
     if (_s2Motivo) {
@@ -1453,20 +1320,16 @@ function selectStatus(status) {
   const qpw = document.getElementById('qty-prod-wrap');
   const mw  = document.getElementById('motivos-wrap');
 
-  /* Quantidade produzida — aparece somente no Parcial */
   if (qpw) qpw.classList.toggle('hidden', status !== 'parcial');
 
-  /* Motivo — aparece para "Parcial" e "Não Executado" (obrigatório) */
   const precisaMotivo = (status === 'nao_finalizado' || status === 'parcial');
   if (mw) mw.classList.toggle('hidden', !precisaMotivo);
 
-  /* Limpa motivo ao trocar status */
   _s2Motivo = null;
   document.querySelectorAll('.motivo-btn').forEach(b=>b.classList.remove('active'));
   const mc = document.getElementById('motivo-custom');
   if (mc) { mc.classList.add('hidden'); mc.value=''; }
 
-  /* Se 100%: fecha e salva automaticamente */
   if (status === 'total') {
     setTimeout(() => confirmS2(), 150);
   }
@@ -1478,7 +1341,6 @@ function selectMotivo(motivo) {
     const oc=b.getAttribute('onclick')||'';
     b.classList.toggle('active', oc.includes("'"+motivo+"'") || oc.includes('"'+motivo+'"'));
   });
-  // Campo personalizado só aparece se escolher Outros
   const mc=document.getElementById('motivo-custom');
   if (mc) {
     const isOthers=(motivo==='Outros');
@@ -1494,7 +1356,6 @@ async function confirmS2() {
   const ck=isChecklist(t);
   let prod=1;
 
-  /* Validação: Parcial e Não Executado exigem motivo */
   if ((_s2Status === 'nao_finalizado' || _s2Status === 'parcial') && !_s2Motivo) {
     shakeEl('motivos-wrap'); showToast('⚠️ Selecione um motivo!'); return;
   }
@@ -1508,7 +1369,6 @@ async function confirmS2() {
   if (_s2Status==='total')          prod=ck?1:(S.s1[_s2Id]||{}).programada||t.quantidade_padrao||0;
   if (_s2Status==='nao_finalizado') prod=0;
   if (_s2Status==='parcial') {
-    /* Lê quantidade produzida do campo; se não preenchida usa 0 */
     const qv=document.getElementById('modal-s2-prod');
     prod=qv?Math.max(0,parseInt(qv.textContent)||0):0;
   }
@@ -1518,7 +1378,6 @@ async function confirmS2() {
   closeModal('modal-s2');
   renderStep2();
 
-  /* Salvar no Firebase em background */
   const dt=S.dataTrabalho||today();
   const d1=S.s1[_s2Id]||{};
   const payload={
@@ -1536,13 +1395,11 @@ async function confirmS2() {
   const isAtend=ATEND_COLABS.includes(S.colaborador.toUpperCase());
   const regExist=isAtend?_atendRegIds[_s2Id]:(existingRegId||null);
   if (regExist) {
-    /* Atualiza registro existente (progresso parcial ou atendimento) */
     _fbPatch('registros',regExist,{
       quantidade_produzida:prod,status:_s2Status,motivo:_s2Motivo,
       hora_registro:new Date().toLocaleTimeString('pt-BR'),
     }).catch(console.error);
   } else {
-    /* Cria novo registro e guarda o id para futuros PATCHs */
     _fbPost('registros',payload).then(res=>{
       if (res?.id&&_s2Id) {
         S.s2[_s2Id].reg_id=res.id;
@@ -1554,7 +1411,6 @@ async function confirmS2() {
 
 /* ══ FINALIZAR TURNO ══════════════════════════════════════ */
 function openFinishModal() {
-  /* Oculta o botão Finalizar para evitar cliques duplos */
   const concludeBtn = document.getElementById('btn-conclude');
   if (concludeBtn) concludeBtn.classList.add('hidden');
 
@@ -1576,7 +1432,6 @@ async function finalizarTurno() {
   const dt=S.dataTrabalho||today();
   showLoading(true);
   try {
-    /* Remove sessão etapa1_ok antiga deste colaborador */
     const todasSessoes=await _fbGetAll('sessoes');
     const sessE1=todasSessoes.filter(s=>
       s.colaborador_card===S.colaborador&&s.data===dt&&s.turno===S.turno&&
@@ -1584,7 +1439,6 @@ async function finalizarTurno() {
     );
     await Promise.all(sessE1.map(s=>_fbDelete('sessoes',s.id)));
 
-    /* Salva sessão final */
     await _fbPost('sessoes',{
       data:dt, turno:S.turno, dia_semana:S.dia,
       colaborador_card:S.colaborador, colaborador_nome:S.colaborador,
@@ -1608,13 +1462,11 @@ async function finalizarTurno() {
   finally { showLoading(false); }
 
   closeModal('modal-finish');
-  /* Toca alerta sonoro se houver pendências */
   if (!completo) _tocarAlertaPendencias();
 
   S.s1={}; S.s2={}; S.producaoIniciada=false;
   _cache.sessoes=null; _cache._registros=null;
   _checkPendenciasNotif();
-  // sem toast de turno encerrado
   _irParaDept();
 }
 
@@ -1661,16 +1513,14 @@ function _autoPrintPendencias(tarefas,s1,s2,col,turno,dia) {
 
 function printColaborador() {
   const dObj=DIAS_LIST.find(d=>d.key===S.dia);
-  /* Célula padrão: borda mais escura para separação visual clara */
   const TD='border:1.5px solid #aaa;padding:7px 8px;vertical-align:middle;';
-  /* Célula de quantidade: valor centralizado */
   const TDC=TD+'text-align:center;';
   const linhas=S.tarefas.map((t,i)=>{
     const d1=S.s1[t.id]||{}; const ck=isChecklist(t);
     const media=fmt(t.quantidade_padrao||0)+' '+(t.unidade||'');
     const estoque=ck?'—':fmt(d1.estoque!==undefined?d1.estoque:0)+' '+(t.unidade||'');
     const prog=ck?'Checklist':fmt(d1.programada!==undefined?d1.programada:(t.quantidade_padrao||0))+' '+(t.unidade||'');
-    const bg=i%2===0?'#ffffff':'#f0f4ff'; /* zebra: branco / azul-claro suave */
+    const bg=i%2===0?'#ffffff':'#f0f4ff';
     return `<tr style="background:${bg}">
       <td style="${TD}font-size:11px;color:#555">${t.categoria||''}</td>
       <td style="${TD}"><strong style="font-size:12px">${t.item}</strong></td>
@@ -1712,13 +1562,11 @@ function abrirResultados() {
   const rdBtn=document.getElementById('resbtn-dia'); if (rdBtn) rdBtn.classList.toggle('active',turnoAtual==='dia');
   const rnBtn=document.getElementById('resbtn-noite'); if (rnBtn) rnBtn.classList.toggle('active',turnoAtual==='noite');
   const diaEl=document.getElementById('res-dia'); if (diaEl) diaEl.value=diaAtual;
-  // Atualiza display do campo de data
   _resAtualizaDisplayData(dataRef, diaAtual);
   showScreen('screen-resultados');
   loadResultados();
 }
 
-/* Atualiza display visual do campo de data na tela de resultados embutida */
 function _resAtualizaDisplayData(dataVal, diaKey) {
   const el = document.getElementById('res-data-texto');
   if (!el) return;
@@ -1733,7 +1581,6 @@ function _resAtualizaDisplayData(dataVal, diaKey) {
   }
 }
 
-/* Chamada quando o usuário muda a data no calendário da tela embutida */
 function onResDataChange() {
   const dataVal = (document.getElementById('res-data')||{}).value;
   if (!dataVal) return;
@@ -1767,15 +1614,12 @@ async function loadResultados() {
   if (summBar) summBar.innerHTML='';
   const turno=(document.getElementById('res-turno')||{}).value||'dia';
   const data =((document.getElementById('res-data')||{}).value)||today();
-  // dia_semana derivado da data (local, sem UTC)
   const [_ry,_rm,_rd]=data.split('-').map(Number);
   const dia=DIA_JS_MAP[new Date(_ry,_rm-1,_rd).getDay()];
   const diaEl=document.getElementById('res-dia'); if(diaEl) diaEl.value=dia;
   try {
     const [pendencias,sessoes]=await Promise.all([_fbGetAll('pendencias'),_fbGetAll('sessoes')]);
-    // Filtra por data e turno — apenas pendências ativas (não vistoriadas)
     let pends=pendencias.filter(p=>p.data===data&&p.turno===turno&&!(p.vistoriado==1));
-    // Se não achar nada no turno selecionado, mostra todos os turnos do dia
     if(pends.length===0){
       pends=pendencias.filter(p=>p.data===data&&!(p.vistoriado==1));
     }
@@ -1870,12 +1714,11 @@ function _resRenderTasks(itens,slug) {
   }).join('');
 }
 
-/* ══ TRANSFERIR TAREFA — modal único com calendário livre ══════════════════ */
+/* ══ TRANSFERIR TAREFA ═══════════════════════════════════ */
 let _trCtx={};
 
 function _resAbrirTransferir(pendId,itemNome,origem,cat,motivo,qProg,qFeit,tarefaId) {
   const qRest=Math.max(0,(qProg||0)-(qFeit||0));
-  // Data/turno/dia padrão = filtros da tela de resultados (editáveis no modal)
   const dataAtual  = (document.getElementById('res-data')||{}).value || today();
   const turnoAtual = (document.getElementById('res-turno')||{}).value || S.turno || 'dia';
   const [_y,_m,_d] = dataAtual.split('-').map(Number);
@@ -1895,7 +1738,6 @@ function _resAbrirTransferir(pendId,itemNome,origem,cat,motivo,qProg,qFeit,taref
   ov.style.display='flex';
 }
 
-/* Atualiza turno no contexto e re-renderiza só o info de data */
 function _trSetTurno(t) {
   _trCtx.turnoEscolhido=t;
   const rb=document.querySelectorAll('._tr_turno_btn');
@@ -1904,14 +1746,12 @@ function _trSetTurno(t) {
     b.style.borderColor=b.dataset.t===t?(t==='dia'?'#EAB308':'#4f46e5'):'#e2e6f0'; });
 }
 
-/* Atualiza data/dia no ctx quando o input de data muda no modal */
 function _trOnDataChange() {
   const inp=document.getElementById('_tr_data_input');
   if (!inp||!inp.value) return;
   const [y,m,d]=inp.value.split('-').map(Number);
   _trCtx.dataEscolhida=inp.value;
   _trCtx.diaEscolhido=DIA_JS_MAP[new Date(y,m-1,d).getDay()];
-  // Atualiza label do dia no modal
   const lbl=document.getElementById('_tr_dia_label');
   if (lbl) {
     const dObj=DIAS_LIST.find(x=>x.key===_trCtx.diaEscolhido)||{short:_trCtx.diaEscolhido};
@@ -1923,7 +1763,6 @@ function _trRenderModal(ov) {
   const {itemNome,origem,cat,qProg,qFeit,qRest,turnoEscolhido,diaEscolhido,dataEscolhida}=_trCtx;
   const diaObj=DIAS_LIST.find(d=>d.key===diaEscolhido)||{short:diaEscolhido};
 
-  // Lista de colaboradores exceto origem
   const todosColabs=Object.keys(COLLAB_EMOJI).filter(n=>n&&n!==origem).sort();
   const btns=todosColabs.map(n=>`
     <button class="_tr_dest_btn" data-nome="${n.replace(/"/g,'&quot;')}"
@@ -1939,8 +1778,6 @@ function _trRenderModal(ov) {
 
   ov.innerHTML=`<div style="background:#fff;border-radius:20px;padding:20px;width:100%;max-width:400px;
     box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:'Nunito','Segoe UI',sans-serif;max-height:92vh;overflow-y:auto">
-
-    <!-- Cabeçalho -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
       <div style="font-size:26px">🔄</div>
       <div>
@@ -1950,8 +1787,6 @@ function _trRenderModal(ov) {
       <button onclick="document.getElementById('_modal_transferir_embutido').style.display='none'"
         style="margin-left:auto;background:none;border:none;font-size:22px;cursor:pointer;color:#aaa;line-height:1">✕</button>
     </div>
-
-    <!-- Info da tarefa -->
     <div style="background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:10px;margin-bottom:14px;font-size:13px">
       <strong style="font-size:14px">${itemNome}</strong>
       ${cat?`<div style="color:#888;font-size:11px;margin-top:3px">🏷️ ${cat}</div>`:''}
@@ -1961,8 +1796,6 @@ function _trRenderModal(ov) {
         ${qRest>0?`<span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">⬇️ falta ${qRest}</span>`:''}
       </div>`:''}
     </div>
-
-    <!-- Data escolhida (editável) -->
     <div style="margin-bottom:14px">
       <label style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">📅 Data para o destino</label>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -1975,8 +1808,6 @@ function _trRenderModal(ov) {
               padding:7px 12px;border-radius:10px;white-space:nowrap">📆 ${diaObj.short}</span>
       </div>
     </div>
-
-    <!-- Turno -->
     <div style="margin-bottom:14px">
       <label style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">⏰ Turno</label>
       <div style="display:flex;gap:8px">
@@ -1990,14 +1821,10 @@ function _trRenderModal(ov) {
                  font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">🌙 Noite</button>
       </div>
     </div>
-
-    <!-- Observação -->
     <label style="font-size:11px;font-weight:800;color:#374151;display:block;margin-bottom:4px">📝 Observação (opcional)</label>
     <input type="text" id="_tr_obs" placeholder="Motivo da transferência..."
       style="width:100%;padding:9px 12px;border:2px solid #e2e6f0;border-radius:10px;
              font-family:inherit;font-size:13px;margin-bottom:16px;outline:none;box-sizing:border-box"/>
-
-    <!-- Lista de colaboradores destino -->
     <div style="font-size:11px;font-weight:900;color:#6b7280;text-transform:uppercase;margin-bottom:8px;letter-spacing:.5px">
       👤 Transferir para</div>
     <div style="display:flex;flex-direction:column;gap:6px">
@@ -2009,7 +1836,6 @@ function _trRenderModal(ov) {
 function _trSelecionarDestino(btn) {
   const destino=btn.dataset.nome||btn.textContent.trim();
   _trCtx.destinoEscolhido=destino;
-  // Lê data/turno do modal (podem ter sido alterados pelo usuário)
   const inpData=document.getElementById('_tr_data_input');
   if (inpData&&inpData.value) {
     _trCtx.dataEscolhida=inpData.value;
@@ -2031,12 +1857,10 @@ async function _resConfirmarTransferir(pendId,itemNome,origem,tarefaId,qProg,qFe
   const qRest=Math.max(0,(qProg||0)-(qFeit||0));
   const qtdFinal=qRest>0?qRest:(qProg||0);
 
-  // Mostra spinner no botão clicado
   const btns=[...document.querySelectorAll('#_modal_transferir_embutido button')];
   btns.forEach(b=>{b.disabled=true;});
 
   try {
-    /* 1. Marca pendência original como transferida/vistoriada → some do card */
     await _fbPatch('pendencias',pendId,{
       vistoriado:1,
       transferido_para:destino,
@@ -2044,9 +1868,6 @@ async function _resConfirmarTransferir(pendId,itemNome,origem,tarefaId,qProg,qFe
       transferido_em:data,
     });
 
-    /* 2. Cria tarefa no card de produção do DESTINO naquela data/turno/dia.
-       Usa data_especifica para aparecer SOMENTE nesta data, não toda semana.
-       Só não duplica se já existir tarefa com mesmo item+colab+data+turno. */
     const tarefasExist = await _fbGetAll('tarefas');
     const itemLower = (itemNome||'').toLowerCase().trim();
     const jaExiste = tarefasExist.some(t =>
@@ -2055,12 +1876,11 @@ async function _resConfirmarTransferir(pendId,itemNome,origem,tarefaId,qProg,qFe
       (t.data_especifica===data || (!t.data_especifica && t.dia_semana===dia)) &&
       (t.item||'').toLowerCase().trim()===itemLower
     );
-    console.log('[Transferir] destino=',destino,'turno=',turno,'dia=',dia,'data=',data,'item=',itemNome,'jaExiste=',jaExiste);
     if (!jaExiste) {
       const novaTarefa = await _fbPost('tarefas',{
         turno,
         dia_semana: dia,
-        data_especifica: data,   /* aparece SOMENTE nesta data */
+        data_especifica: data,
         colaborador: destino,
         item: itemNome,
         categoria: _trCtx.cat||'',
@@ -2072,18 +1892,13 @@ async function _resConfirmarTransferir(pendId,itemNome,origem,tarefaId,qProg,qFe
         transferida_em: data,
         obs: obs||'',
       });
-      console.log('[Transferir] tarefa criada:', novaTarefa);
-    } else {
-      console.log('[Transferir] tarefa já existe, não duplicada');
     }
 
-    /* Fecha o modal */
     const ov=document.getElementById('_modal_transferir_embutido');
     if (ov) ov.style.display='none';
 
     showToast(`✅ Transferido para ${destino}! Tarefa adicionada ao card de ${destino}.`);
 
-    /* Remove item do DOM com animação suave */
     const el=document.getElementById(`rti-${pendId}`);
     if (el) {
       el.style.transition='opacity 0.35s, transform 0.35s, max-height 0.4s, padding 0.4s';
@@ -2143,7 +1958,6 @@ function _resVerificaVazio(slug) {
   if (!tl||!cb) return;
   const restantes = tl.querySelectorAll('.res-task-item').length;
   if (restantes === 0) {
-    /* Anima e remove o card inteiro do DOM */
     cb.style.transition = 'opacity 0.4s, transform 0.4s, max-height 0.4s';
     cb.style.opacity    = '0';
     cb.style.transform  = 'scale(0.95)';
@@ -2191,7 +2005,6 @@ function setDefaultDates() {
   });
 }
 
-/* Sincroniza display legível dos campos de data do painel líder */
 function _syncDateDisplay(fieldId) {
   const inp = document.getElementById(fieldId);
   const disp = document.getElementById(fieldId+'-display');
@@ -2231,7 +2044,6 @@ async function loadLeaderData() {
 }
 
 function populateCollabFilter(all) {
-  /* Mostra apenas colaboradores que têm pelo menos 1 registro, sem os de teste — ordem alfabética */
   const nomes=[...new Set((all||[]).map(r=>r.colaborador_card).filter(n => n && !_isColabTeste(n)))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   const sel=document.getElementById('filter-colaborador'); if (!sel) return;
   const cur=sel.value;
@@ -2309,7 +2121,7 @@ async function checkPendente(id) {
   try {
     await _fbPatch('pendencias',id,{vistoriado:1});
     const el=document.getElementById(`pend-${id}`);
-    if (el) { el.style.transition='all .3s'; el.style.opacity='0'; el.style.maxHeight='0'; el.style.padding='0'; setTimeout(()=>el.remove(),300); }
+    if (el) { el.style.transition='all .3s'; el.style.opacity='0'; el.style.maxHeight='0'; el.style.overflow='hidden'; el.style.padding='0'; setTimeout(()=>el.remove(),300); }
     showToast('✅ Pendência vistoriada!');
   } catch(e) { showToast('❌ Erro ao marcar'); }
 }
@@ -2435,7 +2247,6 @@ async function loadTarefasGestao() {
   const colab=((document.getElementById('tar-filter-colab')||{}).value)||'';
   try {
     const all=await _fbGetAll('tarefas');
-    /* Colaboradores com tarefas nesse turno+dia — ordem alfabética, sem os de teste */
     const colabsNoDia=[...new Set(all.filter(t=>t.turno===turno&&t.dia_semana===dia).map(t=>t.colaborador).filter(n => n && !_isColabTeste(n)))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
     const selC=document.getElementById('tar-filter-colab');
     if (selC) { const cur=selC.value; selC.innerHTML='<option value="">Todos</option>'+colabsNoDia.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join(''); }
@@ -2522,7 +2333,6 @@ async function openModalEditTask(id) {
   } catch(e) { showToast('❌ Erro ao carregar tarefa'); }
 }
 
-/* Nomes proibidos — colaboradores de teste que não devem aparecer */
 const _COLABS_IGNORAR = new Set([
   'TESTE','MAIKON','JULIANA','MALU','MOTOCA','CCCCC','CCCC','CCC',
   'TEST','TESTANDO','TESTE1','TESTE2','AAAA','BBBB','AAA','BBB',
@@ -2532,19 +2342,12 @@ const _COLABS_IGNORAR = new Set([
 function _isColabTeste(nome) {
   const n = (nome || '').toUpperCase().trim();
   if (!n) return true;
-  /* Nome exato na blacklist */
   if (_COLABS_IGNORAR.has(n)) return true;
-  /* Nome que começa com "TESTE" */
   if (n.startsWith('TESTE')) return true;
-  /* Nome que começa com letras repetidas tipo AAAA, CCCC */
   if (/^([A-Z])\1{2,}$/.test(n)) return true;
   return false;
 }
 
-/* ══ POPULATE COLABORADOR — select padrão HTML ═══════════
-   Preenche o <select id="te-colab"> com colaboradores que
-   têm tarefas ativas, excluindo nomes de teste, A→Z.
-══════════════════════════════════════════════════════════ */
 async function _populateTeColab(selected) {
   const sel = document.getElementById('te-colab');
   if (!sel) return;
@@ -2577,7 +2380,6 @@ async function _populateTeColab(selected) {
 
 async function saveTaskEdit() {
   const id=document.getElementById('te-id').value;
-  /* te-colab é um <select> padrão — pega valor selecionado */
   let colab=(document.getElementById('te-colab').value||'').trim().toUpperCase();
   const body={
     colaborador:colab,
@@ -2654,13 +2456,11 @@ function _triggerPrint(titulo,sub,headerRow,linhas) {
   _abrirPreviewImpressao(conteudo);
 }
 
-/* ── Abre o modal de pré-visualização inline (sem window.open) ──
-   Compatível com tablets Android/Samsung que bloqueiam popups     */
+/* ── Abre o modal de pré-visualização inline ─────────────────── */
 function _abrirPreviewImpressao(htmlConteudo) {
   const overlay = document.getElementById('modal-print-preview');
   const body    = document.getElementById('print-preview-body');
   if (!overlay || !body) {
-    /* Fallback para ambientes sem o modal (ex: dashboard.html) */
     try {
       const w = window.open('','_blank');
       if (w) {
@@ -2674,29 +2474,86 @@ function _abrirPreviewImpressao(htmlConteudo) {
   }
   body.innerHTML = htmlConteudo;
   overlay.classList.remove('hidden');
-  /* Scrolla para o topo do preview */
   overlay.scrollTop = 0;
 }
 
-/* ── Alerta sonoro quando finaliza turno com pendências ── */
-/* Compatível com Chrome Android / Samsung tablets                  */
-/* Usa UM único AudioContext criado no mesmo gesto do usuário       */
+/* ══════════════════════════════════════════════════════════════
+   _doPrintPreview — CORREÇÃO DEFINITIVA DE IMPRESSÃO
+   ══════════════════════════════════════════════════════════════
+   Problema anterior:
+     1. Copiava conteúdo para #print-zone mas o CSS do index.html
+        controlava #print-area → elemento errado ficava visível.
+     2. Usava requestAnimationFrame — no mobile o print() é
+        assíncrono e o elemento já voltava a display:none antes
+        da impressão ser capturada (folha em branco).
+     3. Sem evento afterprint → limpeza ocorria antes do print.
+
+   Solução aplicada:
+     1. Copia o conteúdo para #print-area (alinhado com o CSS).
+     2. style.display='block' SEM style inline no HTML
+        (o CSS #print-area{display:none} é sobrescrito pelo JS).
+     3. setTimeout(150ms) garante que o browser renderiza antes
+        de abrir o diálogo de impressão.
+     4. afterprint fecha o modal e limpa a área APÓS a impressão.
+     5. Fallback setTimeout(3000ms) para iOS Safari sem afterprint.
+   ══════════════════════════════════════════════════════════════ */
+function _doPrintPreview() {
+  const src  = document.getElementById('print-preview-body');
+  const area = document.getElementById('print-area');
+
+  if (!src || !area) {
+    /* Fallback: se não encontrar os elementos, tenta imprimir direto */
+    window.print();
+    return;
+  }
+
+  /* 1. Copia o conteúdo do preview para a zona de impressão */
+  area.innerHTML = src.innerHTML;
+
+  /* 2. Exibe a área (sobrescreve o CSS #print-area{display:none}) */
+  area.style.display = 'block';
+
+  /* 3. Aguarda o browser renderizar (essencial no mobile/Android/iOS) */
+  setTimeout(function () {
+
+    /* 4. Abre o diálogo de impressão */
+    window.print();
+
+    /* 5. Função de limpeza: oculta a área e fecha o modal APÓS a impressão */
+    var cleanup = function () {
+      area.style.display = 'none';
+      area.innerHTML = '';
+      window.removeEventListener('afterprint', cleanup);
+      /* Fecha o modal de preview */
+      var overlay = document.getElementById('modal-print-preview');
+      if (overlay) overlay.classList.add('hidden');
+    };
+
+    /* afterprint: suportado no Chrome, Firefox, Edge, Safari 13+ */
+    if ('onafterprint' in window) {
+      window.addEventListener('afterprint', cleanup);
+    } else {
+      /* Fallback para iOS Safari antigo e WebViews sem afterprint */
+      setTimeout(cleanup, 3000);
+    }
+
+  }, 150);
+}
+
+/* ══ ALERTA SONORO ═══════════════════════════════════════ */
 function _tocarAlertaPendencias() {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
 
-    /* Cria o contexto imediatamente dentro do gesto (necessário no Android) */
     const ctx = new AudioCtx();
 
-    /* Resume caso o contexto esteja suspenso (política autoplay Android) */
     const _play = function() {
-      /* Sequência: bip grave → bip médio → bip agudo, repetida 2× */
-      const notas  = [440, 660, 880, 440, 660, 880]; /* 6 notas = 2 grupos */
-      const t0     = ctx.currentTime + 0.05;          /* pequeno offset de segurança */
-      const durBip = 0.22;  /* duração de cada bip em segundos */
-      const gap    = 0.30;  /* espaço entre bips */
-      const pausa  = 0.55;  /* pausa entre os dois grupos */
+      const notas  = [440, 660, 880, 440, 660, 880];
+      const t0     = ctx.currentTime + 0.05;
+      const durBip = 0.22;
+      const gap    = 0.30;
+      const pausa  = 0.55;
 
       notas.forEach(function(freq, i) {
         const inicio = t0 + i * gap + (i >= 3 ? pausa : 0);
@@ -2706,10 +2563,9 @@ function _tocarAlertaPendencias() {
         osc.connect(gain);
         gain.connect(ctx.destination);
 
-        osc.type = 'sine';        /* sine soa melhor no alto-falante do tablet */
+        osc.type = 'sine';
         osc.frequency.value = freq;
 
-        /* Envelope: sobe rápido, sustenta, cai */
         gain.gain.setValueAtTime(0,   inicio);
         gain.gain.linearRampToValueAtTime(0.9, inicio + 0.02);
         gain.gain.setValueAtTime(0.9,          inicio + durBip - 0.04);
@@ -2731,34 +2587,6 @@ function _tocarAlertaPendencias() {
   }
 }
 
-/* ── Botão Imprimir do preview ──────────────────────────────────────
-   Estratégia: copia o conteúdo para #print-zone (div simples, filho
-   direto do body, sem position:fixed/overlay) antes de window.print().
-   Isso evita o problema do Chrome Android que gera páginas em branco
-   quando o conteúdo está dentro de um elemento position:fixed.       */
-function _doPrintPreview() {
-  const src  = document.getElementById('print-preview-body');
-  const zone = document.getElementById('print-zone');
-  if (!src || !zone) { window.print(); return; }
-
-  /* 1. Copia o conteúdo para a zona limpa (fora de qualquer fixed/overlay) */
-  zone.innerHTML = src.innerHTML;
-
-  /* 2. Aguarda 2 frames para o browser renderizar o conteúdo no DOM
-        antes de capturar o print — essencial no Chrome Android/Samsung */
-  requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-      window.print();
-      /* 3. Após o diálogo fechar: limpa zona e fecha modal */
-      setTimeout(function() {
-        zone.innerHTML = '';
-        const overlay = document.getElementById('modal-print-preview');
-        if (overlay) overlay.classList.add('hidden');
-      }, 1000);
-    });
-  });
-}
-
 /* ══ UTILITÁRIOS ═════════════════════════════════════════ */
 function showLoading(on) { const el=document.getElementById('loading-overlay'); if (el) el.classList.toggle('hidden',!on); }
 
@@ -2773,10 +2601,8 @@ function showToast(msg) {
 function closeModal(id) {
   const el=document.getElementById(id);
   if (el) el.classList.add('hidden');
-  /* Se fechou o modal de finalizar (botão Voltar), restaura o botão Finalizar Turno */
   if (id === 'modal-finish') {
     const concludeBtn = document.getElementById('btn-conclude');
-    /* Só mostra se todas as tarefas ainda estiverem com status */
     const allDone = S.tarefas.length > 0 && S.tarefas.every(t=>S.s2[t.id]&&S.s2[t.id].status);
     if (concludeBtn && allDone) concludeBtn.classList.remove('hidden');
   }
@@ -2784,7 +2610,6 @@ function closeModal(id) {
 function shakeEl(id)    { const el=document.getElementById(id); if (!el) return; el.classList.add('shake'); setTimeout(()=>el.classList.remove('shake'),500); }
 function fmt(n)  { if (n===null||n===undefined||n==='') return '—'; return Number(n).toLocaleString('pt-BR'); }
 function today() {
-  // Usa data LOCAL do dispositivo (não UTC) para evitar erro de fuso horário no Brasil
   const d = new Date();
   const y = d.getFullYear();
   const m = String(d.getMonth()+1).padStart(2,'0');
@@ -2829,19 +2654,13 @@ function getCatEmoji(cat) {
 
 function backToCollabScreen() { showScreen('screen-setor'); }
 
-/* ══════════════════════════════════════════════════════════════════
-   NOVO COLABORADOR — Modal completo com departamento + dias
-══════════════════════════════════════════════════════════════════ */
-
-/** Abre o modal de cadastro de novo colaborador */
+/* ══ NOVO COLABORADOR ════════════════════════════════════ */
 async function abrirModalNovoColab() {
-  // Limpa campos
   const nome = document.getElementById('nc-nome');
   const depto = document.getElementById('nc-depto');
   if (nome) nome.value = '';
   if (depto) depto.value = '';
 
-  // Turno padrão = turno atual do filtro ou 'dia'
   const turnoAtual = (document.getElementById('tar-filter-turno')||{}).value || 'dia';
   const rdDia = document.getElementById('nc-turno-dia');
   const rdNoite = document.getElementById('nc-turno-noite');
@@ -2849,23 +2668,18 @@ async function abrirModalNovoColab() {
   if (rdNoite) rdNoite.checked = (turnoAtual === 'noite');
   _ncTurnoChange();
 
-  // Desmarca todos os dias
   document.querySelectorAll('.nc-dia-cb').forEach(cb => cb.checked = false);
 
-  // Carrega departamentos extras do Firebase no select
   await _carregarOpcoesDepto();
 
-  // Mostra modal
   document.getElementById('modal-novo-colab').classList.remove('hidden');
   setTimeout(() => { if (nome) nome.focus(); }, 80);
 }
 
-/** Fecha o modal */
 function fecharModalNovoColab() {
   document.getElementById('modal-novo-colab').classList.add('hidden');
 }
 
-/** Callback de mudança de turno — destaca label selecionado */
 function _ncTurnoChange() {
   const diaLbl = document.getElementById('nc-turno-dia-lbl');
   const noiteLbl = document.getElementById('nc-turno-noite-lbl');
@@ -2882,27 +2696,22 @@ function _ncTurnoChange() {
   }
 }
 
-/** Seleciona todos os dias */
 function _ncSelecionarTodos() {
   document.querySelectorAll('.nc-dia-cb').forEach(cb => cb.checked = true);
 }
-/** Desmarca todos os dias */
 function _ncDeselecionarTodos() {
   document.querySelectorAll('.nc-dia-cb').forEach(cb => cb.checked = false);
 }
-/** Marca apenas Segunda a Sexta */
 function _ncSemana() {
   document.querySelectorAll('.nc-dia-cb').forEach(cb => {
     cb.checked = ['segunda','terca','quarta','quinta','sexta'].includes(cb.value);
   });
 }
 
-/** Carrega opções de departamento no select do modal */
 async function _carregarOpcoesDepto() {
   const sel = document.getElementById('nc-depto');
   if (!sel) return;
 
-  // Base fixa
   const fixos = [
     { valor:'PRODUCAO',    label:'🏭 Produção' },
     { valor:'OPERACAO',    label:'⚙️ Operação' },
@@ -2919,10 +2728,8 @@ async function _carregarOpcoesDepto() {
         const key = (a.chave || (a.nome||'').toUpperCase()
           .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
           .replace(/\s+/g,'_').replace(/[^A-Z0-9_]/g,''));
-        /* Exclui fixos e itens da blacklist de departamentos */
         return !_AREAS_FIXAS_KEYS.includes(key) && !_DEPTS_IGNORAR.has(key);
       })
-      /* Exclui nomes claramente de teste (contém "teste", "test", "area nova" etc) */
       .filter(a => {
         const n = (a.nome || a.chave || '').toLowerCase().trim();
         return !n.includes('teste') && !n.includes('test ') && n !== 'area nova' && n !== 'area_nova';
@@ -2933,7 +2740,6 @@ async function _carregarOpcoesDepto() {
           .replace(/\s+/g,'_').replace(/[^A-Z0-9_]/g,'')),
         label: (a.emoji ? a.emoji+' ' : '🏷️ ') + (a.nome || a.chave || '?')
       }))
-      /* Ordena A→Z */
       .sort((a,b) => a.label.localeCompare(b.label, 'pt-BR'));
   } catch(e) { console.warn('[JB] _carregarOpcoesDepto erro extras:', e); }
 
@@ -2941,24 +2747,20 @@ async function _carregarOpcoesDepto() {
     [...fixos, ...extras].map(o => `<option value="${o.valor}">${o.label}</option>`).join('');
 }
 
-/** Salva o novo colaborador — cria uma tarefa-placeholder por dia selecionado */
 async function salvarNovoColab() {
   const nome  = (document.getElementById('nc-nome').value || '').trim().toUpperCase();
   const depto = document.getElementById('nc-depto').value;
   const turno = document.querySelector('input[name="nc-turno"]:checked')?.value || 'dia';
   const dias  = [...document.querySelectorAll('.nc-dia-cb:checked')].map(cb => cb.value);
 
-  // Validações
   if (!nome)  { showToast('⚠️ Informe o nome do colaborador!'); document.getElementById('nc-nome').focus(); return; }
   if (!depto) { showToast('⚠️ Selecione o departamento!'); document.getElementById('nc-depto').focus(); return; }
   if (!dias.length) { showToast('⚠️ Marque pelo menos 1 dia de trabalho!'); return; }
 
-  // Bloqueia botão
   const btn = document.getElementById('btn-salvar-novo-colab');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...'; }
 
   try {
-    // Verifica duplicata (mesma combinação nome+turno+dia)
     const existentes = await _fbGetAll('tarefas');
     const jaExiste = existentes.some(t =>
       (t.colaborador||'').toUpperCase() === nome &&
@@ -2970,7 +2772,6 @@ async function salvarNovoColab() {
       return;
     }
 
-    // Cria uma tarefa-placeholder por dia selecionado
     const deptoLabel = {
       PRODUCAO:'Produção', OPERACAO:'Operação', ATENDIMENTO:'Atendimento'
     }[depto] || depto;
@@ -2995,7 +2796,6 @@ async function salvarNovoColab() {
     fecharModalNovoColab();
     showToast(`✅ Colaborador "${nome}" cadastrado em ${criados} dia(s)!`);
 
-    // Atualiza filtro para o turno/dia do colaborador criado
     const ftTurno = document.getElementById('tar-filter-turno');
     if (ftTurno) ftTurno.value = turno;
     loadTarefasGestao();
@@ -3008,4 +2808,4 @@ async function salvarNovoColab() {
   }
 }
 
-console.log('🍔 Just Burger — app_v3.js carregado!');
+console.log('🍔 Just Burger — app_v3.js carregado (impressão corrigida)!');
