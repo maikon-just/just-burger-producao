@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
+  <title>Just Burger 🍔 Produção</title>
+  <!-- Firebase SDK v9 compat -->
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
+  <!-- Fontes e ícones -->
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
+  <!-- CSS principal -->
+  <link rel="stylesheet" href="css/style.css?v=20260331-33"/>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CORREÇÃO DE IMPRESSÃO — adicionado aqui dentro do <head>
+       para garantir que estas regras sejam carregadas ANTES de
+       qualquer script e com prioridade adequada no @media print
+  ═══════════════════════════════════════════════════════════ -->
+  <style>
+    /* Zona de impressão: oculta por CSS (não por style inline),
+       permitindo que @media print consiga sobrescrever */
+    #print-zone {
+      display: none;
+    }
+
+    @media print {
+      /* Oculta TUDO na página */
+      body > *:not(#print-zone) {
+        display: none !important;
+        visibility: hidden !important;
+      }
+
+      /* Oculta também overlays e modais que possam estar abertos */
+      .modal-overlay,
+      #loading-overlay,
+      #toast,
+      .global-bottom-nav,
+      .no-print {
+        display: none !important;
+      }
+
+      /* Mostra APENAS a zona de impressão */
+      #print-zone {
+        display: block !important;
+        visibility: visible !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        min-height: 100vh !important;
+        background: #fff !important;
+        color: #000 !important;
+        z-index: 99999 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        font-family: Arial, sans-serif !important;
+      }
+
+      /* Garante que o conteúdo interno também seja visível */
+      #print-zone * {
+        visibility: visible !important;
+      }
+
+      /* Remove quebras de página indesejadas */
+      #print-zone table { page-break-inside: auto; }
+      #print-zone tr    { page-break-inside: avoid; page-break-after: auto; }
+      #print-zone thead { display: table-header-group; }
+      #print-zone tfoot { display: table-footer-group; }
+    }
+  </style>
+
+  <!-- Auth Guard: redireciona para portal se não houver sessão -->
+  <script>
+    (function _authGuard() {
+      try {
+        const raw = sessionStorage.getItem('jb_user');
+        if (!raw) {
+          /* Em desenvolvimento (localhost/preview) não redireciona */
+          const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+                       || location.hostname.includes('gitpod') || location.hostname.includes('preview')
+                       || location.protocol === 'blob:';
+          if (!isLocal) window.location.replace('portal.html');
+        }
+      } catch(e) { /* silencioso */ }
+    })();
+  </script>
+</head>
+<body class="has-bottom-nav">
+
+<!-- LOADING -->
+<div id="loading-overlay" class="loading-overlay hidden">
+  <div class="loading-spinner">🍔</div>
+  <p>Carregando...</p>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast hidden"></div>
+
+<!-- ══════════════════════════════════════════
+     TELA 0 — LOGIN LÍDER
+══════════════════════════════════════════ -->
+<div id="screen-leader-login" class="screen hidden">
+  <div class="login-wrap">
+    <div class="login-brand">
+      <div class="login-logo">🍔</div>
+      <h1>Just Burger</h1>
+      <p>Área Restrita do Líder</p>
+    </div>
+    <div class="login-card">
+      <div class="login-icon">🔐</div>
+      <h2>Acesso do Líder</h2>
+      <p class="login-sub">Digite a senha para continuar</p>
+      <form onsubmit="event.preventDefault(); doLeaderLogin();" autocomplete="off">
+        <input type="text" name="username" value="lider" autocomplete="username" style="display:none" aria-hidden="true"/>
+        <div class="pass-input-wrap">
+          <input type="password" id="leader-password" placeholder="Senha..." autocomplete="current-password"/>
+          <button type="button" class="pass-toggle" onclick="togglePassVisibility()"><i class="fas fa-eye"></i></button>
+        </div>
+        <p class="login-error hidden" id="login-error">❌ Senha incorreta!</p>
+        <button type="submit" class="btn-enter">🚀 Entrar</button>
+      </form>
+      <button class="btn-back-ghost" onclick="goToWelcome()">← Voltar ao Início</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     TELA 1 — BOAS-VINDAS / TURNO
+══════════════════════════════════════════ -->
+<div id="screen-welcome" class="screen">
+  <!-- Botão Sair (volta ao portal) — aparece só quando há sessão ativa -->
+  <div id="welcome-user-bar" style="display:none;
+    position:fixed;left:0;right:0;top:0;z-index:190;
+    background:rgba(26,26,46,.96);backdrop-filter:blur(10px);
+    padding:8px 16px;display:none;align-items:center;justify-content:space-between;gap:10px;
+    border-bottom:1px solid rgba(255,255,255,.1);">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:18px" id="welcome-user-emoji">👤</span>
+      <div>
+        <div style="font-size:12px;font-weight:900;color:#fff;line-height:1.2" id="welcome-user-nome">—</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.45);font-weight:700" id="welcome-user-papel">—</div>
+      </div>
+    </div>
+    <button onclick="_sairDoPortal()" style="
+      background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.4);
+      color:#fca5a5;padding:7px 14px;border-radius:20px;cursor:pointer;
+      font-family:inherit;font-size:12px;font-weight:800;
+      display:flex;align-items:center;gap:6px;transition:all .2s;"
+      onmouseenter="this.style.background='rgba(220,38,38,.35)'"
+      onmouseleave="this.style.background='rgba(220,38,38,.2)'">
+      <i class="fas fa-sign-out-alt"></i> Sair
+    </button>
+  </div>
+
+  <main class="welcome-body" id="welcome-body-main" style="justify-content:center;padding-top:24px">
+
+    <!-- LOGO -->
+    <div style="text-align:center;margin-bottom:28px">
+      <img src="images/logo-justburger.png"
+           id="main-logo"
+           alt="Just Burger Hamburgueria"
+           onerror="this.onerror=null;this.style.display='none';document.getElementById('logo-text-fallback').style.display='flex';"
+           style="height:110px;width:auto;object-fit:contain;display:block;margin:0 auto"/>
+      <div id="logo-text-fallback"
+           style="display:none;flex-direction:column;align-items:center;gap:4px;margin:0 auto">
+        <span style="font-size:44px">🍔</span>
+        <span style="font-size:22px;font-weight:900;color:#111;letter-spacing:2px">JUST BURGER</span>
+        <span style="font-size:11px;font-weight:700;color:#888;letter-spacing:4px">HAMBURGUERIA</span>
+      </div>
+    </div>
+
+    <!-- SELETOR DE DATA — caixa compacta e centralizada -->
+    <div class="home-date-wrap">
+      <div class="home-date-box" onclick="var i=document.getElementById('work-date-input');if(i.showPicker)i.showPicker();else i.click();">
+        <i class="fas fa-calendar-alt home-date-icon"></i>
+        <span class="home-date-val" id="work-date-val">Carregando...</span>
+        <input type="date" id="work-date-input"
+               onchange="onWorkDateChange()"
+               style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2"/>
+      </div>
+      <div class="home-date-weekday" id="work-date-display">—</div>
+    </div>
+
+    <!-- PROMPT TURNO -->
+    <p style="text-align:center;font-size:13px;color:#6b7280;font-weight:700;margin:0 0 16px;">Selecione o turno para iniciar</p>
+
+    <!-- TURNO -->
+    <div class="shift-grid">
+      <button class="shift-btn shift-day" onclick="selectTurno('dia')">
+        <div class="shift-badge">☀️</div>
+        <span class="shift-name">Turno Dia</span>
+        <span class="shift-sub">Manhã / Tarde</span>
+        <span class="shift-arrow">→</span>
+      </button>
+      <button class="shift-btn shift-night" onclick="selectTurno('noite')">
+        <div class="shift-badge">🌙</div>
+        <span class="shift-name">Turno Noite</span>
+        <span class="shift-sub">Tarde / Noite</span>
+        <span class="shift-arrow">→</span>
+      </button>
+    </div>
+  </main>
+  <footer class="welcome-footer" style="display:none"></footer>
+</div>
+
+<!-- ══════════════════════════════════════════
+     TELA — RESULTADOS / PENDÊNCIAS (embutida)
+══════════════════════════════════════════ -->
+<div id="screen-resultados" class="screen hidden">
+  <header class="nav-header">
+    <button class="btn-back-circle" onclick="goBack('screen-welcome')"><i class="fas fa-arrow-left"></i></button>
+    <div class="nav-chips">
+      <span class="nav-chip">📋 Pendências do Dia</span>
+    </div>
+  </header>
+
+  <!-- Filtros -->
+  <div class="res-filter-bar" style="display:flex;flex-direction:column;gap:10px;padding:12px 16px">
+
+    <!-- Campo de data clicável em toda a área -->
+    <div>
+      <label style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">📅 Data — clique para selecionar</label>
+      <div style="position:relative;cursor:pointer"
+           onclick="var inp=document.getElementById('res-data');if(inp.showPicker)inp.showPicker();else inp.click();">
+        <div id="res-data-display"
+             style="background:#f9fafb;border:2px solid #e2e6f0;border-radius:10px;padding:11px 16px;
+                    font-family:inherit;font-size:15px;font-weight:900;color:#1a1a2e;
+                    display:flex;align-items:center;gap:10px;user-select:none;transition:border-color .2s">
+          <i class="fas fa-calendar-alt" style="color:#e8590c;font-size:16px"></i>
+          <span id="res-data-texto">Carregando...</span>
+          <i class="fas fa-chevron-down" style="font-size:11px;color:#aaa;margin-left:auto"></i>
+        </div>
+        <input type="date" id="res-data" onchange="onResDataChange()"
+               style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2"/>
+      </div>
+    </div>
+
+    <!-- Turno -->
+    <div>
+      <label style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">⏰ Turno</label>
+      <div class="tar-toggle-group">
+        <button class="tar-toggle active" id="resbtn-dia"   onclick="setResTurno('dia')">☀️ Dia</button>
+        <button class="tar-toggle"        id="resbtn-noite" onclick="setResTurno('noite')">🌙 Noite</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Resumo -->
+  <div class="res-summary-bar" id="res-summary-bar"></div>
+
+  <!-- Lista centralizada -->
+  <main id="res-lista" style="flex:1;overflow-y:auto;padding:14px 16px 80px;max-width:700px;margin:0 auto;width:100%"></main>
+
+  <!-- Hidden state inputs -->
+  <input type="hidden" id="res-turno" value="dia"/>
+  <input type="hidden" id="res-dia"   value="segunda"/>
+  <div class="screen-bottom-back" style="padding:16px">
+    <button class="btn-bottom-back" onclick="goBack('screen-welcome')">← Voltar</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     TELA 2 — DIA DA SEMANA
+══════════════════════════════════════════ -->
+<div id="screen-day" class="screen hidden">
+  <header class="nav-header">
+    <button class="btn-back-circle" onclick="goBack('screen-welcome')"><i class="fas fa-arrow-left"></i></button>
+    <div class="nav-chips">
+      <span class="nav-chip" id="day-turno-chip">☀️ Turno Dia</span>
+    </div>
+  </header>
+  <main class="screen-body">
+    <div class="screen-intro">
+      <div class="screen-intro-emoji">📅</div>
+      <h2>Qual é o dia hoje?</h2>
+      <p>Selecione o dia da semana</p>
+    </div>
+    <div class="day-grid" id="day-grid"></div>
+    <div class="screen-bottom-back"><button class="btn-bottom-back" onclick="goBack('screen-welcome')">← Voltar</button></div>
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════
+     TELA 2.5 — ESCOLHA DE DEPARTAMENTO
+══════════════════════════════════════════ -->
+<div id="screen-dept" class="screen hidden">
+  <header class="nav-header">
+    <button class="btn-back-circle" onclick="goToWelcome()"><i class="fas fa-arrow-left"></i></button>
+    <div class="nav-chips">
+      <span class="nav-chip" id="dept-turno-chip">☀️ Dia</span>
+      <span class="nav-chip chip-day" id="dept-day-chip">Segunda</span>
+    </div>
+  </header>
+  <main class="screen-body">
+    <div class="screen-intro">
+      <div class="screen-intro-emoji">🏢</div>
+      <h2>Qual departamento?</h2>
+      <p>Selecione seu setor</p>
+    </div>
+    <div class="dept-btn-grid" id="dept-btn-grid">
+      <!-- Fixos em ordem alfabética: Atendimento → Operação → Produção -->
+      <button class="dept-btn dept-btn-atendimento" onclick="_abrirSetorCards('ATENDIMENTO')">
+        <span class="dept-btn-emoji">🎯</span>
+        <div style="flex:1;text-align:left">
+          <span class="dept-btn-nome">Atendimento</span>
+          <div class="dept-btn-sub">Caixa · Despacho · Delivery</div>
+        </div>
+        <span class="dept-btn-lock">🔒</span>
+      </button>
+      <button class="dept-btn dept-btn-operacao" onclick="_abrirSetorCards('OPERACAO')">
+        <span class="dept-btn-emoji">⚙️</span>
+        <div style="flex:1;text-align:left">
+          <span class="dept-btn-nome">Operação</span>
+          <div class="dept-btn-sub">Ilha · Fritadeira · Chapeiro</div>
+        </div>
+        <span style="font-size:22px;opacity:.45">›</span>
+      </button>
+      <button class="dept-btn dept-btn-producao" onclick="_abrirSetorCards('PRODUCAO')">
+        <span class="dept-btn-emoji">🏭</span>
+        <div style="flex:1;text-align:left">
+          <span class="dept-btn-nome">Produção</span>
+          <div class="dept-btn-sub">Cozinha · Preparo · Montagem</div>
+        </div>
+        <span style="font-size:22px;opacity:.45">›</span>
+      </button>
+      <!-- Departamentos extras injetados dinamicamente pelo JS abaixo dos fixos -->
+    </div>
+    <div class="screen-bottom-back"><button class="btn-bottom-back" onclick="goToWelcome()">← Voltar</button></div>
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════
+     TELA 2.8 — CARDS DO SETOR (DINÂMICOS)
+══════════════════════════════════════════ -->
+<div id="screen-setor" class="screen hidden">
+  <header class="nav-header">
+    <button class="btn-back-circle" onclick="goBack('screen-dept')"><i class="fas fa-arrow-left"></i></button>
+    <div class="nav-chips">
+      <span class="nav-chip" id="setor-turno-chip">☀️ Dia</span>
+      <span class="nav-chip chip-day" id="setor-day-chip">Segunda</span>
+      <span class="nav-chip" id="setor-dept-chip" style="background:#f97316;color:#fff">🏭 Produção</span>
+    </div>
+    <!-- Mini nav -->
+    <div class="header-mini-nav">
+      <button onclick="abrirResultados()" class="mini-nav-btn" title="Resultados"><i class="fas fa-chart-bar"></i></button>
+      <a href="medias.html" class="mini-nav-btn" title="Mídias"><i class="fas fa-photo-video"></i></a>
+      <a href="insumos.html" class="mini-nav-btn" title="Insumos"><i class="fas fa-boxes"></i></a>
+      <a href="dashboard.html" class="mini-nav-btn" title="Dashboard"><i class="fas fa-tachometer-alt"></i></a>
+    </div>
+  </header>
+  <main class="screen-body">
+    <div class="screen-intro">
+      <div class="screen-intro-emoji">👋</div>
+      <h2>Quem é você?</h2>
+      <p>Toque no seu card para ver suas tarefas</p>
+    </div>
+    <!-- Grid de cards — preenchido dinamicamente pelo JS -->
+    <div class="collab-grid" id="setor-collab-grid"></div>
+    <div style="text-align:center;margin-top:20px;padding-bottom:4px">
+      <button onclick="goBack('screen-dept')"
+        style="background:none;border:2px solid #6b7280;color:#6b7280;padding:10px 28px;
+               border-radius:12px;font-size:13px;font-weight:800;cursor:pointer;
+               font-family:inherit;display:inline-flex;align-items:center;gap:8px">
+        ← Voltar aos departamentos
+      </button>
+    </div>
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════
+     TELA 3 — TELA DE PRODUÇÃO
+     (Etapa 1 = programação + Etapa 2 = finalização)
+══════════════════════════════════════════ -->
+<div id="screen-step1" class="screen hidden">
+  <header class="nav-header">
+    <button class="btn-back-circle" onclick="backToCollabScreen()"><i class="fas fa-arrow-left"></i></button>
+    <div class="nav-chips">
+      <span class="nav-chip" id="s1-turno-chip">☀️ Dia</span>
+      <span class="nav-chip chip-day" id="s1-day-chip">Terça</span>
+      <span class="nav-chip chip-user" id="s1-user-chip">👤 Colaborador</span>
+    </div>
+    <!-- Mini nav -->
+    <div class="header-mini-nav">
+      <button onclick="abrirResultados()" class="mini-nav-btn" title="Resultados"><i class="fas fa-chart-bar"></i></button>
+      <a href="medias.html" class="mini-nav-btn" title="Mídias"><i class="fas fa-photo-video"></i></a>
+      <a href="insumos.html" class="mini-nav-btn" title="Insumos"><i class="fas fa-boxes"></i></a>
+    </div>
+    <button class="btn-print-header hidden" id="btn-print-header" onclick="printColaborador()" title="Imprimir">
+      <i class="fas fa-print"></i>
+    </button>
+  </header>
+
+  <!-- Barra de progresso -->
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill prog-yellow" id="s1-progress" style="width:0%"></div>
+    </div>
+    <span class="progress-bar-text" id="s1-progress-text">0 / 0 programados</span>
+  </div>
+
+  <!-- Banner de fase (oculto por padrão — sem faixa amarela) -->
+  <div class="step-banner hidden" id="prod-banner">
+    <span class="step-banner-icon" id="prod-banner-icon">📋</span>
+    <div>
+      <strong id="prod-banner-title">Etapa 1 — Programe as quantidades</strong>
+      <small id="prod-banner-sub">Toque em cada card para definir estoque e quantidade a produzir</small>
+    </div>
+  </div>
+
+  <!-- Lista de cards de tarefas -->
+  <main class="tasks-scroll" id="s1-list"></main>
+
+  <!-- Footer compacto -->
+  <footer class="tasks-footer" id="s1-footer">
+    <!-- Botões de ação da produção -->
+    <div class="s1-action-row" id="s1-action-row">
+
+      <!-- Linha 1: Iniciar Turno ou Finalizar Turno (centralizados) -->
+      <div style="display:flex;justify-content:center;width:100%">
+        <!-- FASE 1: Botão Iniciar -->
+        <button class="btn-turno-action btn-turno-iniciar" id="btn-sm-start-footer" onclick="iniciarProducao()">
+          🚀 Iniciar Turno
+        </button>
+        <!-- FASE 2: Botão Finalizar Turno — aparece quando tudo finalizado -->
+        <button class="btn-turno-action btn-turno-finalizar hidden" id="btn-conclude" onclick="openFinishModal()">
+          🏁 Finalizar Turno
+        </button>
+      </div>
+
+      <!-- Linha 2: Imprimir + Voltar (sempre visíveis) -->
+      <div class="s1-bottom-row">
+        <button class="btn-sm-imprimir" id="btn-imprimir-footer" onclick="doPrintDirect()">
+          <i class="fas fa-print"></i> Imprimir
+        </button>
+        <button class="btn-sm-voltar" onclick="backToCollabScreen()" id="btn-voltar">
+          ← Voltar
+        </button>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- ══════════════════════════════════════════
+     TELA 7 — PAINEL DO LÍDER
+══════════════════════════════════════════ -->
+<div id="screen-leader" class="screen hidden">
+  <header class="nav-header leader-nav">
+    <button class="btn-back-circle" onclick="goToWelcome()"><i class="fas fa-arrow-left"></i></button>
+    <div class="nav-chips">
+      <span class="nav-chip">📊 Painel do Líder</span>
+    </div>
+    <a href="resultados_v2.html"
+       style="background:rgba(59,130,246,0.2);border:1px solid #3b82f6;color:#93c5fd;padding:7px 12px;
+              border-radius:8px;text-decoration:none;font-size:12px;font-weight:700;
+              display:flex;align-items:center;gap:5px" title="Ver Resultados">
+      <i class="fas fa-chart-bar"></i> Resultados
+    </a>
+    <button class="btn-print-header" onclick="printLeaderReport()" title="Imprimir relatório">
+      <i class="fas fa-print"></i>
+    </button>
+  </header>
+
+  <!-- Abas -->
+  <div class="leader-tabs">
+    <button class="leader-tab active" id="tab-registros"  onclick="switchLeaderTab('registros')">📄 Registros</button>
+    <button class="leader-tab" id="tab-pendentes"         onclick="switchLeaderTab('pendentes')">⚠️ Cobranças</button>
+    <button class="leader-tab" id="tab-espelho"           onclick="switchLeaderTab('espelho')">🔎 Espelho</button>
+    <button class="leader-tab" id="tab-relatorio"         onclick="switchLeaderTab('relatorio')">📊 Relatório</button>
+    <button class="leader-tab" id="tab-tarefas"           onclick="switchLeaderTab('tarefas')">⚙️ Tarefas</button>
+    <button class="leader-tab" id="tab-seed"              onclick="switchLeaderTab('seed')">📤 Seed</button>
+  </div>
+
+  <main class="leader-body">
+
+    <!-- FILTROS COMPARTILHADOS -->
+    <div class="filter-card">
+      <div class="filter-row">
+        <!-- Data De — clicável em toda a área -->
+        <div class="filter-group">
+          <label>📅 De</label>
+          <div style="position:relative;cursor:pointer"
+               onclick="var i=document.getElementById('filter-start');if(i.showPicker)i.showPicker();else i.click()">
+            <div class="date-clickable-display" id="filter-start-display">Selecionar...</div>
+            <input type="date" id="filter-start" onchange="_syncDateDisplay('filter-start')"
+                   style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2"/>
+          </div>
+        </div>
+        <!-- Data Até — clicável em toda a área -->
+        <div class="filter-group">
+          <label>📅 Até</label>
+          <div style="position:relative;cursor:pointer"
+               onclick="var i=document.getElementById('filter-end');if(i.showPicker)i.showPicker();else i.click()">
+            <div class="date-clickable-display" id="filter-end-display">Selecionar...</div>
+            <input type="date" id="filter-end" onchange="_syncDateDisplay('filter-end')"
+                   style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2"/>
+          </div>
+        </div>
+        <div class="filter-group">
+          <label>⏰ Turno</label>
+          <select id="filter-turno">
+            <option value="">Todos</option>
+            <option value="dia">☀️ Dia</option>
+            <option value="noite">🌙 Noite</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>🔖 Status</label>
+          <select id="filter-status">
+            <option value="">Todos</option>
+            <option value="total">✅ Finalizada</option>
+            <option value="parcial">⚠️ Parcial</option>
+            <option value="nao_finalizado">❌ Não executada</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>👤 Colaborador</label>
+          <select id="filter-colaborador"><option value="">Todos</option></select>
+        </div>
+        <button class="btn-filter" onclick="loadLeaderData()">
+          <i class="fas fa-search"></i> Filtrar
+        </button>
+      </div>
+    </div>
+
+    <!-- Cards resumo -->
+    <div class="summary-row">
+      <div class="summ-card summ-total">
+        <span class="summ-emoji">📋</span>
+        <span class="summ-num" id="s-total">0</span>
+        <span class="summ-lbl">Total</span>
+      </div>
+      <div class="summ-card summ-ok">
+        <span class="summ-emoji">✅</span>
+        <span class="summ-num" id="s-ok">0</span>
+        <span class="summ-lbl">100%</span>
+      </div>
+      <div class="summ-card summ-warn">
+        <span class="summ-emoji">⚠️</span>
+        <span class="summ-num" id="s-parcial">0</span>
+        <span class="summ-lbl">Parcial</span>
+      </div>
+      <div class="summ-card summ-err">
+        <span class="summ-emoji">❌</span>
+        <span class="summ-num" id="s-nao">0</span>
+        <span class="summ-lbl">Não feito</span>
+      </div>
+      <div class="summ-card summ-taxa">
+        <span class="summ-emoji">📈</span>
+        <span class="summ-num" id="s-taxa">0%</span>
+        <span class="summ-lbl">Conclusão</span>
+      </div>
+    </div>
+
+    <!-- ABA: REGISTROS -->
+    <div id="leader-panel-registros" class="leader-panel">
+      <div class="leader-actions">
+        <button class="btn-print-pending" onclick="printPendentes()">
+          <i class="fas fa-exclamation-triangle"></i> Imprimir Pendências
+        </button>
+        <button class="btn-print-all-collab" onclick="printAllCollabs()">
+          <i class="fas fa-users"></i> Imprimir por Colaborador
+        </button>
+      </div>
+      <div class="table-card">
+        <div class="table-header-row"><h3>📄 Todos os Registros</h3></div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Data</th><th>Turno</th><th>Dia</th><th>Colaborador</th>
+                <th>Item</th><th>Programado</th><th>Produzido</th><th>Status</th><th>Motivo</th>
+              </tr>
+            </thead>
+            <tbody id="leader-tbody">
+              <tr><td colspan="9" class="empty-row">Clique em Filtrar para carregar</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA: COBRANÇAS (pendentes) -->
+    <div id="leader-panel-pendentes" class="leader-panel hidden">
+      <div class="leader-actions" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-print-pending" onclick="printPendentes()">
+            <i class="fas fa-print"></i> Imprimir
+          </button>
+          <button class="btn-danger-sm" onclick="zerarCobrancas()">
+            <i class="fas fa-trash"></i> Zerar Lista
+          </button>
+        </div>
+        <p class="pendentes-hint" style="margin:0">✅ Check = vistoriado · some da lista</p>
+      </div>
+      <div id="pendentes-list" class="pendentes-list">
+        <div class="empty-row" style="padding:32px;text-align:center">Clique em Filtrar para carregar</div>
+      </div>
+    </div>
+
+    <!-- ABA: ESPELHO -->
+    <div id="leader-panel-espelho" class="leader-panel hidden">
+      <div class="leader-actions">
+        <button class="btn-print-all-collab" onclick="printEspelho()">
+          <i class="fas fa-print"></i> Imprimir Espelho
+        </button>
+      </div>
+      <div id="espelho-list" class="espelho-list">
+        <div class="empty-row" style="padding:32px;text-align:center">Clique em Filtrar para carregar</div>
+      </div>
+    </div>
+
+    <!-- ABA: RELATÓRIO ANALÍTICO -->
+    <div id="leader-panel-relatorio" class="leader-panel hidden">
+      <div class="rel-filters">
+        <div class="filter-row" style="flex-wrap:wrap;gap:8px">
+          <div class="filter-group">
+            <label>📅 De</label>
+            <input type="date" id="rel-start"/>
+          </div>
+          <div class="filter-group">
+            <label>📅 Até</label>
+            <input type="date" id="rel-end"/>
+          </div>
+          <div class="filter-group">
+            <label>⏰ Turno</label>
+            <select id="rel-turno">
+              <option value="">Todos</option>
+              <option value="dia">☀️ Dia</option>
+              <option value="noite">🌙 Noite</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>👤 Colaborador</label>
+            <select id="rel-colaborador"><option value="">Todos</option></select>
+          </div>
+          <div class="filter-group">
+            <label>⚠️ Motivo</label>
+            <select id="rel-motivo">
+              <option value="">Todos</option>
+              <option value="tempo">⏰ Tempo</option>
+              <option value="equipamento">🔧 Equipamento</option>
+              <option value="insumos">📦 Insumos</option>
+              <option value="estoque">✅ Estoque OK</option>
+              <option value="outros">🔄 Outros</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>📊 Status</label>
+            <select id="rel-status">
+              <option value="">Todos</option>
+              <option value="total">✅ 100%</option>
+              <option value="parcial">⚠️ Parcial</option>
+              <option value="nao_finalizado">❌ Não feito</option>
+            </select>
+          </div>
+          <button class="btn-filter" onclick="loadRelatorio()">
+            <i class="fas fa-search"></i> Filtrar
+          </button>
+        </div>
+      </div>
+      <div class="summary-row" id="rel-summary-row" style="display:none"></div>
+      <div id="relatorio-list"></div>
+    </div>
+
+    <!-- ABA: GESTÃO DE TAREFAS -->
+    <div id="leader-panel-tarefas" class="leader-panel hidden">
+
+      <div class="tar-filter-bar">
+        <div class="tar-filter-group">
+          <label>⏰ Turno</label>
+          <div class="tar-toggle-group">
+            <button class="tar-toggle active" id="tarbtn-dia"   onclick="setTarTurno('dia')">☀️ Dia</button>
+            <button class="tar-toggle"        id="tarbtn-noite" onclick="setTarTurno('noite')">🌙 Noite</button>
+          </div>
+        </div>
+        <div class="tar-filter-group">
+          <label>📅 Dia</label>
+          <div class="tar-dias-group" id="tar-dias-btns">
+            <button class="tar-dia-btn active" data-dia="segunda" onclick="setTarDia('segunda')">SEG</button>
+            <button class="tar-dia-btn" data-dia="terca"   onclick="setTarDia('terca')">TER</button>
+            <button class="tar-dia-btn" data-dia="quarta"  onclick="setTarDia('quarta')">QUI</button>
+            <button class="tar-dia-btn" data-dia="quinta"  onclick="setTarDia('quinta')">QUI</button>
+            <button class="tar-dia-btn" data-dia="sexta"   onclick="setTarDia('sexta')">SEX</button>
+            <button class="tar-dia-btn" data-dia="sabado"  onclick="setTarDia('sabado')">SAB</button>
+            <button class="tar-dia-btn" data-dia="domingo" onclick="setTarDia('domingo')">DOM</button>
+          </div>
+        </div>
+        <div class="tar-filter-group">
+          <label>👤 Colaborador</label>
+          <select id="tar-filter-colab" class="tar-select" onchange="loadTarefasGestao()">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <button class="btn-new-task" onclick="openModalNewTask()">
+          <i class="fas fa-plus"></i> Nova Tarefa
+        </button>
+        <button class="btn-new-colab" onclick="abrirModalNovoColab()">
+          <i class="fas fa-user-plus"></i> Novo Colaborador
+        </button>
+      </div>
+
+      <div id="tar-count-bar" class="tar-count-bar"></div>
+      <div id="tarefas-gestao-list"></div>
+
+      <input type="hidden" id="tar-filter-turno" value="dia"/>
+      <input type="hidden" id="tar-filter-dia"   value="segunda"/>
+    </div>
+
+    <!-- ABA: SEED DE TAREFAS -->
+    <div id="leader-panel-seed" class="leader-panel hidden">
+      <div style="max-width:700px;margin:0 auto;padding:8px 0 40px">
+        <!-- Cabeçalho -->
+        <div style="background:linear-gradient(135deg,#1a2a3a,#0d1117);border:1px solid #30363d;border-radius:14px;padding:20px 22px;margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+            <span style="font-size:30px">🍔</span>
+            <div>
+              <div style="font-size:17px;font-weight:900;color:#ffa657">Seed de Tarefas</div>
+              <div style="font-size:12px;color:#8b949e">Importar planilhas de tarefas para o Firebase</div>
+            </div>
+            <span style="margin-left:auto;background:#1a3a0a;color:#7ee787;font-size:10px;padding:3px 10px;border-radius:12px;font-weight:700;border:1px solid #2ea043">v3 FINAL</span>
+          </div>
+          <p style="font-size:12px;color:#6e7681;margin:0">
+            Faça upload das planilhas <strong style="color:#e6edf3">1-TAREFAS DIA DINÁ.xlsx</strong> e <strong style="color:#e6edf3">2-TAREFAS NOITE SANDRO.xlsx</strong>
+            para importar todas as tarefas dos colaboradores para o banco de dados.
+          </p>
+        </div>
+
+        <!-- Botão principal de abertura -->
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+          <a href="seed_tarefas_v3.html" target="_blank"
+            style="flex:1;min-width:200px;background:linear-gradient(135deg,#e8590c,#ff7b2f);color:#fff;border:none;
+                   padding:16px 22px;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;
+                   font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;
+                   box-shadow:0 4px 16px rgba(232,89,12,.35);transition:opacity .2s;text-decoration:none">
+            <i class="fas fa-external-link-alt"></i> 📤 Abrir Importador de Planilhas
+          </a>
+        </div>
+
+        <!-- Instruções rápidas -->
+        <div style="background:#161b22;border:1px solid #21262d;border-radius:12px;padding:16px 18px;margin-bottom:14px">
+          <div style="font-size:13px;font-weight:800;color:#79c0ff;margin-bottom:10px">📋 Como usar:</div>
+          <div style="font-size:12px;color:#c9d1d9;display:flex;flex-direction:column;gap:7px">
+            <div>1️⃣ Clique em <strong style="color:#ffa657">Abrir Importador</strong> (abre abaixo)</div>
+            <div>2️⃣ Arraste o arquivo <strong>1-TAREFAS DIA DINÁ.xlsx</strong> para a zona ☀️ Dia</div>
+            <div>3️⃣ Arraste o arquivo <strong>2-TAREFAS NOITE SANDRO.xlsx</strong> para a zona 🌙 Noite</div>
+            <div>4️⃣ Verifique o preview (~21 colaboradores · ~1617 tarefas)</div>
+            <div>5️⃣ Clique em <strong style="color:#da3633">Limpar e Reinserir Tarefas</strong></div>
+          </div>
+        </div>
+
+        <!-- Aviso de uso -->
+        <div style="background:#0d1117;border:2px solid #30363d;border-radius:12px;padding:16px 18px;margin-top:8px">
+          <div style="font-size:12px;color:#8b949e;text-align:center">
+            <i class="fas fa-info-circle" style="color:#ffa657"></i>
+            O importador abre em uma nova aba. Certifique-se de que os arquivos XLSX estão prontos antes de iniciar.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Botão Voltar centralizado no rodapé do painel líder -->
+    <div class="screen-bottom-back" style="padding:16px 0 44px">
+      <button class="btn-bottom-back" onclick="goToWelcome()">← Voltar ao Início</button>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL — NOVA / EDITAR TAREFA
+══════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-task-edit">
+  <div class="modal-box modal-compact">
+    <button class="modal-close" onclick="closeModal('modal-task-edit')">✕</button>
+    <div class="modal-header-plain">
+      <span class="modal-header-icon">⚙️</span>
+      <h3 id="modal-task-edit-title">Nova Tarefa</h3>
+    </div>
+    <div class="modal-body modal-body-compact" style="gap:10px">
+      <input type="hidden" id="te-id"/>
+      <div class="filter-group" style="width:100%">
+        <label>👤 Colaborador</label>
+        <select id="te-colab" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit">
+          <option value="">— Selecione —</option>
+        </select>
+      </div>
+      <div class="filter-group" style="width:100%">
+        <label>⏰ Turno</label>
+        <select id="te-turno" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit">
+          <option value="dia">☀️ Dia</option>
+          <option value="noite">🌙 Noite</option>
+        </select>
+      </div>
+      <div class="filter-group" style="width:100%">
+        <label>📅 Dia da Semana</label>
+        <select id="te-dia" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit">
+          <option value="segunda">Segunda</option><option value="terca">Terça</option>
+          <option value="quarta">Quarta</option><option value="quinta">Quinta</option>
+          <option value="sexta">Sexta</option><option value="sabado">Sábado</option>
+          <option value="domingo">Domingo</option>
+        </select>
+      </div>
+      <div class="filter-group" style="width:100%">
+        <label>🏷️ Categoria</label>
+        <input type="text" id="te-cat" placeholder="Ex: Pré-preparo"
+               style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
+      </div>
+      <div class="filter-group" style="width:100%">
+        <label>📝 Item</label>
+        <input type="text" id="te-item" placeholder="Nome da tarefa"
+               style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
+      </div>
+      <div style="display:flex;gap:8px">
+        <div class="filter-group" style="flex:1">
+          <label>🔢 Qtd Padrão</label>
+          <input type="number" id="te-qty" placeholder="0" min="0"
+                 style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
+        </div>
+        <div class="filter-group" style="flex:1">
+          <label>📏 Unidade</label>
+          <input type="text" id="te-unit" placeholder="kg, un, L..."
+                 style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
+        </div>
+      </div>
+      <div class="filter-group" style="width:100%">
+        <label>🔢 Ordem</label>
+        <input type="number" id="te-ordem" placeholder="1" min="1"
+               style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit;box-sizing:border-box"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="closeModal('modal-task-edit')">Cancelar</button>
+      <button class="btn-modal-confirm" onclick="saveTaskEdit()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL — NOVO COLABORADOR
+══════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-novo-colab">
+  <div class="modal-box modal-compact" style="max-width:480px">
+    <button class="modal-close" onclick="fecharModalNovoColab()">✕</button>
+    <div class="modal-header-plain">
+      <span class="modal-header-icon">👤</span>
+      <h3>Novo Colaborador</h3>
+    </div>
+    <div class="modal-body modal-body-compact" style="gap:12px">
+
+      <!-- Nome -->
+      <div class="filter-group" style="width:100%">
+        <label>👤 Nome do Colaborador</label>
+        <input type="text" id="nc-nome" placeholder="Nome em MAIÚSCULAS..."
+               style="width:100%;padding:10px 14px;border-radius:10px;border:2px solid #e2e6f0;
+                      font-family:inherit;font-size:15px;font-weight:700;outline:none;
+                      box-sizing:border-box;text-transform:uppercase"
+               oninput="this.value=this.value.toUpperCase()"/>
+      </div>
+
+      <!-- Departamento -->
+      <div class="filter-group" style="width:100%">
+        <label>🏭 Departamento</label>
+        <select id="nc-depto" style="width:100%;padding:10px 14px;border-radius:10px;
+                border:2px solid #e2e6f0;font-family:inherit;font-size:14px;outline:none">
+          <option value="">— Selecione —</option>
+          <option value="PRODUCAO">🏭 Produção</option>
+          <option value="OPERACAO">⚙️ Operação</option>
+          <option value="ATENDIMENTO">🎯 Atendimento</option>
+        </select>
+      </div>
+
+      <!-- Turno -->
+      <div class="filter-group" style="width:100%">
+        <label>⏰ Turno</label>
+        <div style="display:flex;gap:10px">
+          <label style="flex:1;display:flex;align-items:center;gap:8px;
+                        background:#f9fafb;border:2px solid #e2e6f0;border-radius:10px;
+                        padding:10px 14px;cursor:pointer;font-weight:700;font-size:14px"
+                 id="nc-turno-dia-lbl">
+            <input type="radio" name="nc-turno" id="nc-turno-dia" value="dia" checked
+                   onchange="_ncTurnoChange()" style="accent-color:#e8590c;width:16px;height:16px"/>
+            ☀️ Dia
+          </label>
+          <label style="flex:1;display:flex;align-items:center;gap:8px;
+                        background:#f9fafb;border:2px solid #e2e6f0;border-radius:10px;
+                        padding:10px 14px;cursor:pointer;font-weight:700;font-size:14px"
+                 id="nc-turno-noite-lbl">
+            <input type="radio" name="nc-turno" id="nc-turno-noite" value="noite"
+                   onchange="_ncTurnoChange()" style="accent-color:#6366f1;width:16px;height:16px"/>
+            🌙 Noite
+          </label>
+        </div>
+      </div>
+
+      <!-- Dias da Semana -->
+      <div class="filter-group" style="width:100%">
+        <label>📅 Dias de Trabalho</label>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px">
+          <label class="nc-dia-lbl" for="nc-dia-segunda">
+            <input type="checkbox" id="nc-dia-segunda" value="segunda" class="nc-dia-cb"/>
+            <span>SEG</span>
+          </label>
+          <label class="nc-dia-lbl" for="nc-dia-terca">
+            <input type="checkbox" id="nc-dia-terca" value="terca" class="nc-dia-cb"/>
+            <span>TER</span>
+          </label>
+          <label class="nc-dia-lbl" for="nc-dia-quarta">
+            <input type="checkbox" id="nc-dia-quarta" value="quarta" class="nc-dia-cb"/>
+            <span>QUA</span>
+          </label>
+          <label class="nc-dia-lbl" for="nc-dia-quinta">
+            <input type="checkbox" id="nc-dia-quinta" value="quinta" class="nc-dia-cb"/>
+            <span>QUI</span>
+          </label>
+          <label class="nc-dia-lbl" for="nc-dia-sexta">
+            <input type="checkbox" id="nc-dia-sexta" value="sexta" class="nc-dia-cb"/>
+            <span>SEX</span>
+          </label>
+          <label class="nc-dia-lbl" for="nc-dia-sabado">
+            <input type="checkbox" id="nc-dia-sabado" value="sabado" class="nc-dia-cb"/>
+            <span>SAB</span>
+          </label>
+          <label class="nc-dia-lbl" for="nc-dia-domingo">
+            <input type="checkbox" id="nc-dia-domingo" value="domingo" class="nc-dia-cb"/>
+            <span>DOM</span>
+          </label>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button type="button" onclick="_ncSelecionarTodos()"
+            style="flex:1;padding:7px;border-radius:8px;border:1px solid #6366f1;
+                   background:rgba(99,102,241,.08);color:#6366f1;font-family:inherit;
+                   font-size:12px;font-weight:800;cursor:pointer">✅ Todos</button>
+          <button type="button" onclick="_ncDeselecionarTodos()"
+            style="flex:1;padding:7px;border-radius:8px;border:1px solid #e2e6f0;
+                   background:#f9fafb;color:#6b7280;font-family:inherit;
+                   font-size:12px;font-weight:800;cursor:pointer">🗑️ Limpar</button>
+          <button type="button" onclick="_ncSemana()"
+            style="flex:1;padding:7px;border-radius:8px;border:1px solid #10b981;
+                   background:rgba(16,185,129,.08);color:#059669;font-family:inherit;
+                   font-size:12px;font-weight:800;cursor:pointer">📆 Seg–Sex</button>
+        </div>
+      </div>
+
+    </div><!-- /modal-body -->
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="fecharModalNovoColab()">Cancelar</button>
+      <button class="btn-modal-confirm" id="btn-salvar-novo-colab" onclick="salvarNovoColab()">
+        <i class="fas fa-user-plus"></i> Cadastrar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL A — PROGRAMAR: TAREFA COM QUANTIDADE
+     (quantidade_padrao > 0)
+══════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-s1-qty">
+  <div class="modal-box modal-compact">
+    <button class="modal-close" onclick="closeModal('modal-s1-qty')">✕</button>
+    <div class="modal-header-colored" id="modal-s1-qty-header">
+      <span class="modal-cat-badge" id="modal-s1-qty-cat">Categoria</span>
+      <h3 class="modal-title" id="modal-s1-qty-title">Item</h3>
+    </div>
+    <div class="modal-body modal-body-compact">
+
+      <!-- Quantidade a fazer (referência do BD) -->
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;
+                  padding:12px 16px;margin-bottom:10px">
+        <span style="font-size:13px;font-weight:800;color:#475569">📋 Quantidade a fazer</span>
+        <span style="font-size:15px;font-weight:900;color:#ea580c" id="calc-padrao-display">—</span>
+      </div>
+
+      <!-- Label + controles de estoque -->
+      <div style="font-size:12px;font-weight:800;color:#0369a1;margin-bottom:8px;text-align:center">
+        📦 Informe a quantidade em estoque abaixo
+      </div>
+      <div class="qty-row compact" style="justify-content:center;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+        <button class="qty-btn" onclick="adjField('estoque',-100)">-100</button>
+        <button class="qty-btn" onclick="adjField('estoque',-10)">-10</button>
+        <button class="qty-btn" onclick="adjField('estoque',-1)">-1</button>
+        <span class="qty-val" id="modal-s1-estoque">0</span>
+        <span class="qty-unit" id="modal-s1-unidade" style="margin:0 4px;font-size:12px;opacity:.7">un</span>
+        <button class="qty-btn plus" onclick="adjField('estoque',1)">+1</button>
+        <button class="qty-btn plus" onclick="adjField('estoque',10)">+10</button>
+        <button class="qty-btn plus" onclick="adjField('estoque',100)">+100</button>
+      </div>
+
+      <!-- A produzir hoje (calculado automaticamente) -->
+      <div class="calc-card" style="border:2px solid #fde68a;background:#fffbeb">
+        <div class="calc-row-item calc-highlight">
+          <span>⚡ A produzir hoje</span>
+          <strong class="calc-num" id="calc-necessario">—</strong>
+        </div>
+      </div>
+
+      <!-- Ocultos — usados pelo JS -->
+      <span id="calc-padrao"    style="display:none">—</span>
+      <span id="calc-estoque"   style="display:none">0</span>
+      <span id="modal-s1-prog"  style="display:none">0</span>
+      <span id="modal-s1-unit2" style="display:none"></span>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="closeModal('modal-s1-qty')">Cancelar</button>
+      <button class="btn-modal-confirm" id="btn-s1-confirm" onclick="confirmS1()">🟡 Programar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL B — PROGRAMAR: TAREFA SEM QUANTIDADE
+     (checklist ou quantidade_padrao = 0)
+══════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-s1-exec">
+  <div class="modal-box modal-compact">
+    <button class="modal-close" onclick="closeModal('modal-s1-exec')">✕</button>
+    <div class="modal-header-colored" id="modal-s1-exec-header">
+      <span class="modal-cat-badge" id="modal-s1-exec-cat">Categoria</span>
+      <h3 class="modal-title" id="modal-s1-exec-title">Item</h3>
+    </div>
+    <div class="modal-body modal-body-compact">
+      <!-- Bloco azul: tarefa de execução -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:14px;
+                  background:#f0f9ff;border:2px solid #bae6fd;border-radius:14px;
+                  padding:24px 22px;">
+        <span style="font-size:28px">🔧</span>
+        <span style="font-size:15px;color:#0369a1;font-weight:900">Inicie sua tarefa agora</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="closeModal('modal-s1-exec')">Cancelar</button>
+      <button class="btn-modal-confirm" onclick="confirmS1()">🟡 Programar</button>
+    </div>
+  </div>
+</div>
+
+<!-- alias para compatibilidade com closeModal('modal-s1') chamado em outros lugares -->
+<div id="modal-s1" style="display:none"></div>
+
+<!-- ══════════════════════════════════════════
+     MODAL — FINALIZAR ITEM (Etapa 2)
+══════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-s2">
+  <div class="modal-box modal-compact">
+    <button class="modal-close" onclick="closeModal('modal-s2')">✕</button>
+    <div class="modal-header-colored" id="modal-s2-header">
+      <span class="modal-cat-badge" id="modal-s2-cat">Categoria</span>
+      <h3 class="modal-title" id="modal-s2-title">Item</h3>
+    </div>
+    <div class="modal-body modal-body-compact" id="modal-s2-body">
+
+      <!-- Quantidade programada (referência) -->
+      <div class="info-boxes" id="s2-ref-box">
+        <div class="info-box" style="flex:1">
+          <span class="info-box-label">🎯 PROGRAMADO</span>
+          <div style="display:flex;align-items:baseline;gap:4px;justify-content:center">
+            <span class="info-box-val" id="modal-s2-prog">—</span>
+            <span class="info-box-unit" id="modal-s2-unit-lbl" style="font-size:14px;font-weight:900;color:var(--brand)">un</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botões de status: 100%, Parcial e Não Executado centralizados na mesma linha -->
+      <div class="field-label">📊 Como ficou?</div>
+      <div class="status-btns-row3">
+        <button class="sbtn sbtn-total"   data-status="total"          onclick="selectStatus('total')">✅ 100%</button>
+        <button class="sbtn sbtn-parcial" data-status="parcial"        onclick="selectStatus('parcial')">⚠️ Parcial</button>
+        <button class="sbtn sbtn-nao"     data-status="nao_finalizado" onclick="selectStatus('nao_finalizado')">❌ Não Exec.</button>
+      </div>
+
+      <!-- Campo ocultos de quantidade (mantido para compatibilidade de dados) -->
+      <div id="qty-prod-wrap" class="hidden">
+        <div class="field-label" id="qty-prod-label">📦 Quantidade Produzida</div>
+        <div class="qty-row big">
+          <button class="qty-btn minus" onclick="adjField('produzida',-10)">-10</button>
+          <button class="qty-btn minus" onclick="adjField('produzida',-1)">-1</button>
+          <span class="qty-val big-val" id="modal-s2-prod">0</span>
+          <span class="qty-unit" id="modal-s2-unit2">un</span>
+          <button class="qty-btn plus" onclick="adjField('produzida',1)">+1</button>
+          <button class="qty-btn plus" onclick="adjField('produzida',10)">+10</button>
+        </div>
+      </div>
+
+      <!-- Motivos — aparece para Parcial e Não Executado -->
+      <div id="motivos-wrap" class="hidden">
+        <div class="field-label">💬 Motivo <span class="required-mark">*obrigatório</span></div>
+        <div class="motivo-btns-grid">
+          <button class="motivo-btn" onclick="selectMotivo('⏰ Tempo insuficiente')">⏰ Tempo</button>
+          <button class="motivo-btn" onclick="selectMotivo('🔧 Equipamento')">🔧 Equipamento</button>
+          <button class="motivo-btn" onclick="selectMotivo('📦 Falta de insumos')">📦 Insumos</button>
+          <button class="motivo-btn" data-motivo-outros onclick="selectMotivo('Outros')">🔄 Outros</button>
+        </div>
+        <textarea id="motivo-custom" class="motivo-input hidden" placeholder="Descreva o motivo..." rows="2"></textarea>
+      </div>
+
+    </div>
+    <div class="modal-footer" id="s2-modal-footer">
+      <button class="btn-modal-cancel" onclick="closeModal('modal-s2')">Cancelar</button>
+      <button class="btn-modal-confirm" id="btn-s2-salvar" onclick="confirmS2()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL — CONCLUIR TURNO
+══════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-finish">
+  <div class="modal-box modal-compact">
+    <div class="modal-header-plain">
+      <span class="modal-header-icon">🏁</span>
+      <h3>Concluir Turno</h3>
+    </div>
+    <div class="modal-body modal-body-compact">
+      <div class="finish-summary" id="finish-summary"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="closeModal('modal-finish')">Voltar</button>
+      <button class="btn-modal-finish" onclick="finalizarTurno()">🏁 Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL — PRÉ-VISUALIZAÇÃO DE IMPRESSÃO
+     (substitui window.open — compatível com tablets)
+══════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-print-preview" style="z-index:10000;align-items:flex-start;padding:0;overflow-y:auto;">
+  <div style="background:#fff;width:100%;max-width:860px;
+              margin:0 auto;display:block;font-family:Arial,sans-serif">
+    <!-- Barra superior (oculta no print via classe no-print) -->
+    <div style="position:sticky;top:0;z-index:10;background:#1a1d2e;color:#fff;
+                display:flex;align-items:center;gap:10px;padding:12px 16px;
+                box-shadow:0 2px 8px rgba(0,0,0,.3)" class="no-print">
+      <button onclick="document.getElementById('modal-print-preview').classList.add('hidden')"
+              style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);
+                     color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;
+                     font-weight:800;cursor:pointer;font-family:inherit">
+        ✕ Fechar
+      </button>
+      <span style="flex:1;font-size:14px;font-weight:700;opacity:.8">Folha de Produção</span>
+      <button onclick="_doPrintPreview();"
+              style="background:#f97316;border:none;color:#fff;padding:10px 20px;
+                     border-radius:8px;font-size:14px;font-weight:900;cursor:pointer;
+                     font-family:inherit;display:flex;align-items:center;gap:8px">
+        <i class="fas fa-print"></i> Imprimir
+      </button>
+    </div>
+    <!-- Conteúdo dinâmico exibido na tela -->
+    <div id="print-preview-body" style="padding:24px;"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     ZONA DE IMPRESSÃO
+     ⚠️ CORREÇÃO APLICADA:
+     - Removido style="display:none" inline (causava folha em branco)
+     - Visibilidade agora controlada 100% via CSS (#print-zone { display:none })
+     - @media print consegue sobrescrever a regra CSS (não sobrescreveria o inline)
+══════════════════════════════════════════ -->
+<div id="print-zone"></div>
+
+<!-- ══ BOTTOM NAV GLOBAL ══ -->
+<div class="global-bottom-nav" id="global-bottom-nav">
+  <div class="footer-links-row">
+    <button onclick="typeof abrirResultados==='function'?abrirResultados():window.location.href='resultados_v2.html'" class="footer-link-btn footer-link-blue" id="btn-resultados">
+      <i class="fas fa-chart-bar"></i>
+      Resultados
+      <span class="notif-badge" id="badge-pendencias" style="display:none">!</span>
+    </button>
+    <a href="medias.html" class="footer-link-btn footer-link-media">
+      <i class="fas fa-photo-video"></i>
+      Mídias
+    </a>
+    <a href="insumos.html" class="footer-link-btn footer-link-insumos">
+      <i class="fas fa-boxes"></i>
+      Insumos
+    </a>
+    <a href="dashboard.html" class="footer-link-btn footer-link-dash">
+      <i class="fas fa-tachometer-alt"></i>
+      Dashboard
+    </a>
+    <button onclick="typeof goToLeaderLogin==='function'?goToLeaderLogin():null" class="footer-link-btn footer-link-export">
+      <i class="fas fa-user-shield"></i>
+      Líder
+    </button>
+  </div>
+</div>
+
+<!-- Scripts — ordem importa! -->
+<script src="js/versao.js?v=20260331-33"></script>
+<script src="js/data.js?v=20260331-33"></script>
+<script src="js/firebase_v2.js?v=20260331-33"></script>
+<script src="js/app_v3.js?v=20260331-33"></script>
+
+<!-- Service Worker: força atualização automática a cada deploy -->
+<script>
+if ('serviceWorker' in navigator) {
+  /* Caminho relativo — funciona tanto em raiz quanto em subpasta do GitHub Pages */
+  const swUrl = new URL('sw.js', window.location.href).href;
+  navigator.serviceWorker.register(swUrl)
+    .then(reg => {
+      reg.update(); /* verifica nova versão imediatamente */
+      console.log('[SW] Registrado:', reg.scope);
+    })
+    .catch(err => console.warn('[SW] Falha:', err));
+
+  /* Quando o SW trocar de versão, recarrega a página */
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
+}
+</script>
+
+</body>
+</html>
