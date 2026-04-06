@@ -2478,66 +2478,68 @@ function _abrirPreviewImpressao(htmlConteudo) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   _doPrintPreview — CORREÇÃO DEFINITIVA DE IMPRESSÃO
+   _doPrintPreview — v2026-04-06 TABLET FIX
    ══════════════════════════════════════════════════════════════
-   Problema anterior:
-     1. Copiava conteúdo para #print-zone mas o CSS do index.html
-        controlava #print-area → elemento errado ficava visível.
-     2. Usava requestAnimationFrame — no mobile o print() é
-        assíncrono e o elemento já voltava a display:none antes
-        da impressão ser capturada (folha em branco).
-     3. Sem evento afterprint → limpeza ocorria antes do print.
+   CAUSA RAIZ DA FOLHA EM BRANCO NO TABLET:
+     display:none faz o browser NÃO calcular o layout do elemento.
+     No tablet (iOS Safari / Chrome Android), mesmo com setTimeout
+     o reflow ainda não ocorreu quando window.print() é chamado.
 
-   Solução aplicada:
-     1. Copia o conteúdo para #print-area (alinhado com o CSS).
-     2. style.display='block' SEM style inline no HTML
-        (o CSS #print-area{display:none} é sobrescrito pelo JS).
-     3. setTimeout(150ms) garante que o browser renderiza antes
-        de abrir o diálogo de impressão.
-     4. afterprint fecha o modal e limpa a área APÓS a impressão.
-     5. Fallback setTimeout(3000ms) para iOS Safari sem afterprint.
+   SOLUÇÃO NOVA:
+     1. #print-area fica SEMPRE no DOM com visibility:hidden
+        (nunca display:none) → browser mantém layout calculado.
+     2. JS insere o conteúdo e adiciona classe .print-ready
+        (torna visível na tela).
+     3. forceReflow: lê offsetHeight para forçar o browser a
+        recalcular o layout ANTES de chamar window.print().
+     4. window.print() é chamado sem setTimeout — o layout já
+        está pronto.
+     5. afterprint remove .print-ready e limpa o conteúdo.
+     6. Fallback setTimeout(4000) para iOS Safari < 13.
    ══════════════════════════════════════════════════════════════ */
 function _doPrintPreview() {
-  const src  = document.getElementById('print-preview-body');
-  const area = document.getElementById('print-area');
+  var src  = document.getElementById('print-preview-body');
+  var area = document.getElementById('print-area');
 
+  /* Fallback extremo: se elementos não existirem */
   if (!src || !area) {
-    /* Fallback: se não encontrar os elementos, tenta imprimir direto */
     window.print();
     return;
   }
 
-  /* 1. Copia o conteúdo do preview para a zona de impressão */
+  /* 1. Injeta o conteúdo */
   area.innerHTML = src.innerHTML;
 
-  /* 2. Exibe a área (sobrescreve o CSS #print-area{display:none}) */
-  area.style.display = 'block';
+  /* 2. Torna visível adicionando classe (CSS já deixa o layout renderizado) */
+  area.classList.add('print-ready');
 
-  /* 3. Aguarda o browser renderizar (essencial no mobile/Android/iOS) */
+  /* 3. forceReflow: faz o browser recalcular o layout agora */
+  void area.offsetHeight;
+  void area.scrollHeight;
+
+  /* 4. Pequeno delay só para garantir que imagens inline sejam pintadas */
   setTimeout(function () {
 
-    /* 4. Abre o diálogo de impressão */
+    /* 5. Chama o print — layout já está calculado */
     window.print();
 
-    /* 5. Função de limpeza: oculta a área e fecha o modal APÓS a impressão */
+    /* 6. Limpeza após impressão */
     var cleanup = function () {
-      area.style.display = 'none';
+      area.classList.remove('print-ready');
       area.innerHTML = '';
       window.removeEventListener('afterprint', cleanup);
-      /* Fecha o modal de preview */
       var overlay = document.getElementById('modal-print-preview');
       if (overlay) overlay.classList.add('hidden');
     };
 
-    /* afterprint: suportado no Chrome, Firefox, Edge, Safari 13+ */
     if ('onafterprint' in window) {
       window.addEventListener('afterprint', cleanup);
     } else {
-      /* Fallback para iOS Safari antigo e WebViews sem afterprint */
-      setTimeout(cleanup, 3000);
+      /* iOS Safari antigo sem afterprint */
+      setTimeout(cleanup, 4000);
     }
 
-  }, 150);
+  }, 80);
 }
 
 /* ══ ALERTA SONORO ═══════════════════════════════════════ */
@@ -2808,4 +2810,4 @@ async function salvarNovoColab() {
   }
 }
 
-console.log('🍔 Just Burger — app_v3.js v2026-04-06 carregado (impressão corrigida)!');
+console.log('🍔 Just Burger — app_v3.js v2026-04-06-02 carregado (tablet print fix)!');
