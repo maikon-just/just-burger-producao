@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════
    JUST BURGER 🍔 — app_v3.js
    Controle de Produção — Firebase Realtime Database (compat)
-   Versão: 2026-03-27 — GitHub Edition
+   Versão: 2026-04-06 — Impressão Corrigida
 ═══════════════════════════════════════════════════════════ */
 'use strict';
 
@@ -2808,4 +2808,4 @@ async function salvarNovoColab() {
   }
 }
 
-console.log('🍔 Just Burger — app_v3.js carregado (impressão corrigida)!');
+console.log('🍔 Just Burger — app_v3.js v2026-04-06 carregado (impressão corrigida)!');
