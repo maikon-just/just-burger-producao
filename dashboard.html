@@ -442,10 +442,27 @@
 <!-- CONTEÚDO PRINCIPAL -->
 <div id="dash-content" style="display:none">
 
-  <!-- KPIs -->
+  <!-- 1. KPIs — Cards de números e porcentagem -->
   <div class="kpi-grid" id="kpi-grid"></div>
 
-  <!-- SEÇÃO: PRODUTIVIDADE -->
+  <!-- 2. RANKING & PREMIAÇÃO — logo após os KPIs -->
+  <div class="section">
+    <div class="section-hdr">
+      <h2>🏆 Ranking &amp; Premiação</h2>
+      <div class="line"></div>
+    </div>
+
+    <!-- Troféus automáticos -->
+    <div class="award-grid" id="award-grid" style="margin-bottom:20px"></div>
+
+    <!-- Ranking geral -->
+    <div class="chart-card">
+      <h3>🥇 Ranking Geral de Produtividade</h3>
+      <div class="ranking-list" id="ranking-list"></div>
+    </div>
+  </div>
+
+  <!-- 3. PRODUTIVIDADE POR COLABORADOR -->
   <div class="section">
     <div class="section-hdr">
       <h2>📈 Produtividade por Colaborador</h2>
@@ -476,24 +493,7 @@
     </div>
   </div>
 
-  <!-- SEÇÃO: RANKING & PREMIAÇÃO -->
-  <div class="section">
-    <div class="section-hdr">
-      <h2>🏆 Ranking & Premiação</h2>
-      <div class="line"></div>
-    </div>
-
-    <!-- Troféus automáticos -->
-    <div class="award-grid" id="award-grid" style="margin-bottom:20px"></div>
-
-    <!-- Ranking geral -->
-    <div class="chart-card">
-      <h3>🥇 Ranking Geral de Produtividade</h3>
-      <div class="ranking-list" id="ranking-list"></div>
-    </div>
-  </div>
-
-  <!-- SEÇÃO: PENDÊNCIAS & MOTIVOS -->
+  <!-- 4. TAREFAS NÃO CONCLUÍDAS — com campo de pesquisa por colaborador -->
   <div class="section">
     <div class="section-hdr">
       <h2>⚠️ Tarefas Não Concluídas — Análise de Motivos</h2>
@@ -517,19 +517,32 @@
 
     <div class="chart-card">
       <h3>📋 Detalhamento de tarefas não concluídas por motivo</h3>
-      <div class="motivo-filtros no-print" id="motivo-filtros">
+      <!-- Filtros por motivo + pesquisa por colaborador -->
+      <div class="motivo-filtros no-print" id="motivo-filtros" style="flex-wrap:wrap;gap:8px;align-items:center">
         <span>Filtrar:</span>
         <button class="btn-mf active" id="mf-todos" onclick="filtrarMotivo('todos')">Todos</button>
         <button class="btn-mf ft"    id="mf-ft"    onclick="filtrarMotivo('ft')">⏱️ Falta de Tempo</button>
         <button class="btn-mf eq"    id="mf-eq"    onclick="filtrarMotivo('eq')">🔧 Equipamento</button>
         <button class="btn-mf ins"   id="mf-ins"   onclick="filtrarMotivo('ins')">🥩 Insumo</button>
         <button class="btn-mf out"   id="mf-out"   onclick="filtrarMotivo('out')">📝 Outro</button>
+        <!-- Campo de pesquisa por colaborador -->
+        <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <i class="fas fa-search" style="color:#9ca3af;font-size:13px"></i>
+          <input type="text" id="search-colab-motivo"
+            placeholder="Buscar colaborador..."
+            oninput="filtrarMotivoColab(this.value)"
+            style="border:1.5px solid #e2e6f0;border-radius:8px;padding:7px 11px;
+                   font-size:13px;font-weight:700;font-family:inherit;color:#1a1a2e;
+                   outline:none;width:200px;transition:border-color .2s;"
+            onfocus="this.style.borderColor='#e8590c'"
+            onblur="this.style.borderColor='#e2e6f0'"/>
+        </div>
       </div>
       <div id="motivo-table-wrap"></div>
     </div>
   </div>
 
-  <!-- SEÇÃO: CONSISTÊNCIA -->
+  <!-- 5. CONSISTÊNCIA — DIAS TRABALHADOS -->
   <div class="section">
     <div class="section-hdr">
       <h2>📅 Consistência — Dias Trabalhados</h2>
@@ -541,19 +554,7 @@
     </div>
   </div>
 
-  <!-- SEÇÃO: EVOLUÇÃO TEMPORAL -->
-  <div class="section">
-    <div class="section-hdr">
-      <h2>📆 Evolução Diária da Produtividade</h2>
-      <div class="line"></div>
-    </div>
-    <div class="chart-card">
-      <h3>Taxa média de conclusão por dia no período</h3>
-      <div class="chart-wrap">
-        <canvas id="chart-evolucao"></canvas>
-      </div>
-    </div>
-  </div>
+  <!-- EVOLUÇÃO DIÁRIA — removida conforme solicitação -->
 
 </div><!-- /dash-content -->
 
@@ -863,9 +864,14 @@ function renderDash(sessoes, pendencias, faltas, de, ate){
   renderAwards(metricas, faltas);
   renderMotivos(pendencias);
   renderCatPend(pendencias);
+  /* Limpa pesquisa de colaborador ao recarregar */
+  _colabSearchTerm = '';
+  const searchInput = document.getElementById('search-colab-motivo');
+  if (searchInput) searchInput.value = '';
+
   renderMotivoTable(pendencias, 'todos');
   renderConsistencia(metricas);
-  renderEvolucao(sessoes, de, ate);
+  /* renderEvolucao — removida conforme solicitação */
 
   document.getElementById('pdf-bar').classList.add('show');
   setState('data');
@@ -1272,7 +1278,8 @@ function filtrarMotivo(f){
   ['todos','ft','eq','ins','out'].forEach(x=>{
     document.getElementById('mf-'+x)?.classList.toggle('active', x===f);
   });
-  renderMotivoTable(_allPendencias, f);
+  /* Usa _aplicarFiltrosCombinados para manter o filtro de colaborador ativo */
+  _aplicarFiltrosCombinados();
 }
 
 function renderMotivoTable(pendencias, filtro){
@@ -1332,6 +1339,96 @@ function renderMotivoTable(pendencias, filtro){
 
   html += '</tbody></table>';
   if(pends.length > 100) html += `<div class="empty-msg" style="font-size:11px;padding:12px">Exibindo 100 de ${pends.length} registros.</div>`;
+  wrap.innerHTML = html;
+}
+
+/* ══════════════════════════════════════════════════════════
+   PESQUISA POR COLABORADOR — filtro de texto em tempo real
+   Chama quando usuário digita no input #search-colab-motivo
+══════════════════════════════════════════════════════════ */
+let _colabSearchTerm = '';
+function filtrarMotivoColab(termo) {
+  _colabSearchTerm = (termo || '').trim().toLowerCase();
+  _aplicarFiltrosCombinados();
+}
+
+function _aplicarFiltrosCombinados() {
+  /* Aplica filtro de motivo E pesquisa de colaborador juntos */
+  let pends = _allPendencias || [];
+
+  /* Filtro por motivo (botões) */
+  const f = _motivoFiltro || 'todos';
+  if (f !== 'todos') {
+    pends = pends.filter(p => {
+      const m = normMotivo(p.motivo);
+      if (f === 'ft')  return m === 'Falta de Tempo';
+      if (f === 'eq')  return m === 'Equipamento';
+      if (f === 'ins') return m === 'Insumo/Ingrediente';
+      if (f === 'out') return m === 'Outro' || m === 'Não informado';
+      return true;
+    });
+  }
+
+  /* Filtro por colaborador (campo de texto) */
+  if (_colabSearchTerm) {
+    pends = pends.filter(p =>
+      (p.colaborador || '').toLowerCase().includes(_colabSearchTerm)
+    );
+  }
+
+  /* Renderiza o resultado filtrado */
+  const wrap = document.getElementById('motivo-table-wrap');
+  if (!wrap) return;
+
+  if (!pends.length) {
+    wrap.innerHTML = '<div class="empty-msg">' +
+      (_colabSearchTerm ? `Nenhuma pendência para "<strong>${_colabSearchTerm}</strong>". ✅` : 'Sem pendências no período. 🎉') +
+      '</div>';
+    return;
+  }
+
+  const ordemMotivo = {'Falta de Tempo':1,'Equipamento':2,'Insumo/Ingrediente':3,'Outro':4,'Não informado':5};
+  const pillClass = m => {
+    if (m === 'Falta de Tempo') return 'falta_tempo';
+    if (m === 'Equipamento')    return 'equipamento';
+    if (m.includes('Insumo'))   return 'insumo';
+    return 'outro';
+  };
+
+  const sorted = [...pends].sort((a,b) => {
+    const ma = ordemMotivo[normMotivo(a.motivo)] || 9;
+    const mb = ordemMotivo[normMotivo(b.motivo)] || 9;
+    return ma - mb || (a.data||'').localeCompare(b.data||'');
+  });
+
+  const exibidos = sorted.slice(0, 100);
+  let html = `<table class="motivo-table">
+    <thead><tr>
+      <th>Motivo</th><th>Colaborador</th><th>Item</th><th>Categoria</th><th>Data</th><th>Status</th>
+    </tr></thead><tbody>`;
+
+  exibidos.forEach(p => {
+    const m = normMotivo(p.motivo);
+    /* Destaca o texto pesquisado no nome do colaborador */
+    const cName = p.colaborador || '—';
+    const cDisplay = _colabSearchTerm
+      ? cName.replace(new RegExp('('+_colabSearchTerm.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')', 'gi'),
+          '<mark style="background:#fde68a;border-radius:3px;padding:0 2px">$1</mark>')
+      : cName;
+    html += `<tr>
+      <td><span class="motivo-pill ${pillClass(m)}">${m}</span></td>
+      <td style="font-weight:700">${emoji(p.colaborador)} ${cDisplay}</td>
+      <td>${p.item||'—'}</td>
+      <td>${(p.categoria||'—').replace(/^TRANSF:/,'')}</td>
+      <td>${fmtData(p.data)}</td>
+      <td style="font-size:11px;color:${p.status==='nao_finalizado'?'#dc2626':'#ea580c'}">
+        ${p.status==='nao_finalizado'?'❌ Não feita':'⚠️ Parcial'}
+      </td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  if (pends.length > 100) html += `<div class="empty-msg" style="font-size:11px;padding:12px">Exibindo 100 de ${pends.length} registros.</div>`;
   wrap.innerHTML = html;
 }
 
@@ -1470,6 +1567,7 @@ body{padding-bottom:72px}
     <a href="resultados_v2.html" class="gbn-btn gbn-blue"><i class="fas fa-chart-bar"></i>Resultados</a>
     <a href="medias.html" class="gbn-btn gbn-pink"><i class="fas fa-photo-video"></i>Mídias</a>
     <a href="insumos.html" class="gbn-btn gbn-green"><i class="fas fa-boxes"></i>Insumos</a>
+    <a href="faltas.html" class="gbn-btn" style="background:#fce7f3;color:#be185d;flex:1;min-width:0;max-width:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 4px;border-radius:12px;font-size:9px;font-weight:800;font-family:inherit;text-decoration:none;"><i class="fas fa-user-clock" style="font-size:17px"></i>Faltas</a>
   </div>
 </div>
 </body>
