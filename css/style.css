@@ -1,7 +1,52 @@
 /* ═══════════════════════════════════════════════════════════
    JUST BURGER 🍔 — style.css
    Design System completo do app de controle de produção
+   Atualizado: 2026-04-13 — Botão Sair Global
 ═══════════════════════════════════════════════════════════ */
+
+/* ══ BOTÃO SAIR GLOBAL ══════════════════════════════════════
+   Fixo: canto inferior esquerdo, acima do bottom-nav.
+   Aparece em TODAS as telas quando há sessão ativa.
+   JS (_renderUserBar) controla display:flex / none.
+   Nunca aparece na impressão.
+══════════════════════════════════════════════════════════ */
+#btn-sair-global {
+  position: fixed;
+  left: 12px;
+  bottom: 82px; /* acima do bottom-nav (~72px) */
+  z-index: 210;
+  background: rgba(26, 26, 46, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+  font-weight: 800;
+  font-family: 'Nunito', 'Segoe UI', sans-serif;
+  padding: 8px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: none; /* começa oculto — JS exibe quando há sessão */
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s, color 0.2s, transform 0.15s;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.40);
+  -webkit-tap-highlight-color: transparent;
+}
+#btn-sair-global:hover,
+#btn-sair-global:active {
+  background: rgba(220, 38, 38, 0.82);
+  color: #fff;
+  transform: translateY(-2px);
+}
+/* Quando bottom-nav está oculto (colaborador restrito) */
+body:not(.has-bottom-nav) #btn-sair-global {
+  bottom: 16px;
+}
+/* Nunca aparece na impressão */
+@media print {
+  #btn-sair-global { display: none !important; }
+}
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
