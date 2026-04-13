@@ -105,9 +105,10 @@
       display:inline-block; padding:3px 10px; border-radius:20px;
       font-size:11px; font-weight:800;
     }
-    .bp-admin  { background:#fef3c7; color:#d97706; }
-    .bp-lider  { background:#dbeafe; color:#1d4ed8; }
-    .bp-colab  { background:#f0fdf4; color:#16a34a; }
+    .bp-admin    { background:#fef3c7; color:#d97706; }
+    .bp-lider    { background:#dbeafe; color:#1d4ed8; }
+    .bp-colab    { background:#f0fdf4; color:#16a34a; }
+    .bp-uploader { background:#ede9fe; color:#6d28d9; }
     .badge-status-on  { background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:800; }
     .badge-status-off { background:#fee2e2; color:#dc2626; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:800; }
     .action-btns { display:flex; gap:5px; }
@@ -292,6 +293,7 @@
         <select class="form-inp" id="f-papel" onchange="_onPapelChange()">
           <option value="colaborador">👷 Colaborador</option>
           <option value="lider">🎖️ Líder</option>
+          <option value="uploader">📂 Uploader</option>
           <option value="admin">👑 Admin</option>
         </select>
       </div>
@@ -328,6 +330,9 @@
           </label>
           <label style="display:flex;align-items:center;gap:6px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:700">
             <input type="checkbox" id="fs-financeiro" value="financeiro" style="accent-color:#15803d"/> 💰 Financeiro
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;background:#ede9fe;border:1.5px solid #c4b5fd;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:700">
+            <input type="checkbox" id="fs-uploads" value="uploads" style="accent-color:#6d28d9"/> 📂 Upload Relatórios
           </label>
         </div>
         <p style="font-size:11px;color:#6b7280;margin-top:6px" id="f-sistemas-hint"></p>
@@ -470,8 +475,8 @@ function _renderUsuarios(lista) {
     tbody.innerHTML = '<tr><td colspan="6" class="loading-row">📭 Nenhum usuário cadastrado ainda.</td></tr>';
     return;
   }
-  const papelCls = { admin:'bp-admin', lider:'bp-lider', colaborador:'bp-colab' };
-  const papelLabel = { admin:'👑 Admin', lider:'🎖️ Líder', colaborador:'👷 Colaborador' };
+  const papelCls = { admin:'bp-admin', lider:'bp-lider', colaborador:'bp-colab', uploader:'bp-uploader' };
+  const papelLabel = { admin:'👑 Admin', lider:'🎖️ Líder', colaborador:'👷 Colaborador', uploader:'📂 Uploader' };
   tbody.innerHTML = lista.map(u => `
     <tr>
       <td><strong>${u.username||'—'}</strong>
@@ -524,7 +529,7 @@ function _abrirModalNovoUser() {
   document.getElementById('f-primeiro-acesso').checked = true;
   document.getElementById('modal-user-err').textContent = '';
   // Reset permissões de sistemas
-  ['fs-producao','fs-motoboys','fs-dashboard','fs-financeiro'].forEach(id => {
+  ['fs-producao','fs-motoboys','fs-dashboard','fs-financeiro','fs-uploads'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.checked = id === 'fs-producao'; // Produção marcado por padrão
   });
@@ -548,7 +553,7 @@ function _editarUser(id) {
   document.getElementById('modal-user-err').textContent = '';
   // Restaura permissões de sistemas
   const sistUser = Array.isArray(u.sistemas) ? u.sistemas : (u.papel==='colaborador' ? ['producao'] : []);
-  ['fs-producao','fs-motoboys','fs-dashboard','fs-financeiro'].forEach(id => {
+  ['fs-producao','fs-motoboys','fs-dashboard','fs-financeiro','fs-uploads'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.checked = sistUser.includes(el.value);
   });
@@ -591,6 +596,20 @@ function _onPapelChange() {
     if (hint) hint.textContent = '⚠️ Se nenhum sistema for marcado, o líder terá acesso a todos.';
     document.getElementById('f-card').value  = '';
     document.getElementById('f-dept').value  = 'TODOS';
+  } else if (p === 'uploader') {
+    // uploader — acesso restrito: só escolhe sistemas
+    cardG.style.display = 'none';
+    deptG.style.display = 'none';
+    sistG.style.display = '';
+    turnG.style.display = 'none';
+    if (hint) hint.textContent = '📂 Uploader acessa apenas os sistemas marcados (geralmente Upload Relatórios).';
+    // Marca apenas "uploads" por padrão ao selecionar o papel
+    ['fs-producao','fs-motoboys','fs-dashboard','fs-financeiro','fs-uploads'].forEach(fid => {
+      const el = document.getElementById(fid);
+      if (el) el.checked = fid === 'fs-uploads';
+    });
+    document.getElementById('f-card').value  = '';
+    document.getElementById('f-dept').value  = 'TODOS';
   } else {
     // admin — acesso total, sem restrições
     cardG.style.display = 'none';
@@ -623,7 +642,7 @@ async function _salvarUser() {
   if (dup){ err.textContent='Este nome de usuário já existe'; return; }
 
   // Coleta sistemas permitidos (só relevante para colaborador)
-  const sistSelecionados = ['producao','motoboys','dashboard','financeiro']
+  const sistSelecionados = ['producao','motoboys','dashboard','financeiro','uploads']
     .filter(id => {
       const el = document.getElementById('fs-'+id);
       return el && el.checked;
