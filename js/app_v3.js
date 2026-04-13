@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════════
    JUST BURGER 🍔 — app_v3.js
    Controle de Produção — Firebase Realtime Database (compat)
-   Versão: 2026-04-06-v3 — Impressão via iframe (TABLET FIX)
+   Versão: 2026-04-13 — Botão Sair Global + iframe print
 ═══════════════════════════════════════════════════════════ */
 'use strict';
 
@@ -204,22 +204,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function _renderUserBar() {
   if (!JB_SESSION) return;
-  const bar   = document.getElementById('welcome-user-bar');
-  const nEl   = document.getElementById('welcome-user-nome');
-  const pEl   = document.getElementById('welcome-user-papel');
-  const eEl   = document.getElementById('welcome-user-emoji');
-  const main  = document.getElementById('welcome-body-main');
-  if (!bar) return;
+
+  /* =======================================================
+     Botão SAIR GLOBAL — aparece em TODAS as telas.
+     Posicionado no canto inferior esquerdo via CSS (#btn-sair-global).
+     Não conflita com o botão Líder (canto superior direito).
+  ======================================================= */
+  const btnSairGlobal = document.getElementById('btn-sair-global');
+  if (btnSairGlobal) btnSairGlobal.style.display = 'flex';
+
+  /* welcome-user-bar: mantida por compat., botão interno ocultado */
+  const bar  = document.getElementById('welcome-user-bar');
+  const nEl  = document.getElementById('welcome-user-nome');
+  const pEl  = document.getElementById('welcome-user-papel');
+  const eEl  = document.getElementById('welcome-user-emoji');
+  const main = document.getElementById('welcome-body-main');
 
   const papelLabel = { admin:'👑 Administrador', lider:'🎖️ Líder', colaborador:'👷 Colaborador' };
   const papelEmoji = { admin:'👑', lider:'🎖️', colaborador:'👷' };
 
-  if (nEl) nEl.textContent = JB_SESSION.nome || JB_SESSION.username || '—';
-  if (pEl) pEl.textContent = papelLabel[JB_SESSION.papel] || JB_SESSION.papel;
-  if (eEl) eEl.textContent = papelEmoji[JB_SESSION.papel] || '👤';
+  if (bar) {
+    /* Esconde o botão Sair interno da user-bar (o global já cobre) */
+    const sairInterno = bar.querySelector('button[onclick*="_sairDoPortal"]');
+    if (sairInterno) sairInterno.style.display = 'none';
 
-  bar.style.display = 'flex';
-  if (main) main.style.paddingTop = '72px';
+    if (nEl) nEl.textContent = JB_SESSION.nome || JB_SESSION.username || '—';
+    if (pEl) pEl.textContent = papelLabel[JB_SESSION.papel] || JB_SESSION.papel;
+    if (eEl) eEl.textContent = papelEmoji[JB_SESSION.papel] || '👤';
+
+    bar.style.display = 'flex';
+    if (main) main.style.paddingTop = '64px';
+  }
 }
 
 function _sairDoPortal() {
@@ -238,30 +253,15 @@ function _aplicarRestricoesDom() {
   const btnLider = document.querySelector('.btn-leader-access');
   if (btnLider) btnLider.style.display = 'none';
 
-  if (_isColaboradorRestrito()) {
-    _injetarBotaoPortal();
-  }
+  /* Botão Sair global (HTML fixo) já trata a saída em todas as telas.
+     _injetarBotaoPortal() deprecado — não injeta mais duplicata. */
 }
 
 function _injetarBotaoPortal() {
-  if (document.getElementById('btn-voltar-portal')) return;
-  const btn = document.createElement('button');
-  btn.id = 'btn-voltar-portal';
-  btn.innerHTML = '<i class="fas fa-sign-out-alt"></i>';
-  btn.title = 'Sair';
-  btn.style.cssText = [
-    'position:fixed;left:14px;top:14px;z-index:300',
-    'background:rgba(0,0,0,.45);backdrop-filter:blur(8px)',
-    'border:1px solid rgba(255,255,255,.15)',
-    'color:rgba(255,255,255,.6);font-size:16px',
-    'width:38px;height:38px;border-radius:50%',
-    'cursor:pointer;display:flex;align-items:center;justify-content:center',
-    'transition:all .2s',
-  ].join(';');
-  btn.onmouseenter = () => btn.style.color = '#fff';
-  btn.onmouseleave = () => btn.style.color = 'rgba(255,255,255,.6)';
-  btn.onclick = () => { window.location.href = 'portal.html'; };
-  document.body.appendChild(btn);
+  /* Deprecado: btn-sair-global (HTML fixo no index.html) cobre todas as telas.
+     Mantido apenas para não quebrar chamadas legadas no código. */
+  const btnGlobal = document.getElementById('btn-sair-global');
+  if (btnGlobal) btnGlobal.style.display = 'flex';
 }
 
 function _iniciarFluxoColaborador() {
@@ -294,7 +294,8 @@ function _injetarBotaoLiderNaHome() {
   btn.id = 'btn-lider-direto';
   btn.className = 'btn-leader-access';
   btn.title = 'Painel do Líder';
-  btn.style.cssText = 'position:fixed;right:16px;top:16px;z-index:200;background:#1a1a2e;color:#EAB308;';
+  /* Botão Líder: canto superior DIREITO — botão Sair fica inferior ESQUERDO */
+  btn.style.cssText = 'position:fixed;right:12px;top:12px;z-index:499;background:#1a1a2e;color:#EAB308;';
   btn.innerHTML = '<i class="fas fa-user-shield"></i>';
   btn.onclick = () => openLeaderPanel();
   document.body.appendChild(btn);
@@ -2880,4 +2881,4 @@ async function salvarNovoColab() {
   }
 }
 
-console.log('🍔 Just Burger — app_v3.js v2026-04-06-v3 carregado (iframe print method)!');
+console.log('🍔 Just Burger — app_v3.js v2026-04-13 carregado (botão Sair global + iframe print)!');
