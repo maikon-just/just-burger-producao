@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache"/>
   <meta http-equiv="Expires" content="0"/>
   <title>Just Burger 🍔 Produção</title>
-  <!-- Versão: 2026-04-06-v3 — Impressão via iframe (TABLET FIX) -->
+  <!-- Versão: 2026-04-13 — Impressão via iframe + Botão Sair Global -->
   <!-- Firebase SDK v9 compat -->
   <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
@@ -15,7 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
   <!-- CSS principal -->
-  <link rel="stylesheet" href="css/style.css?v=20260406-03"/>
+  <link rel="stylesheet" href="css/style.css?v=20260413-01"/>
 
   <!--
     ══════════════════════════════════════════════════════
@@ -1176,6 +1176,13 @@
 <!-- Iframe dedicado à impressão (sempre presente no DOM) -->
 <iframe id="jb-print-frame" title="Print Frame"></iframe>
 
+<!-- ══ BOTÃO SAIR GLOBAL — aparece em TODAS as telas quando há sessão ══ -->
+<!-- CSS em style.css controla posição: inferior esquerdo, acima do bottom-nav -->
+<!-- JS (_renderUserBar) exibe quando há sessão ativa -->
+<button id="btn-sair-global" onclick="_sairDoPortal()" title="Sair">
+  <i class="fas fa-sign-out-alt"></i> Sair
+</button>
+
 <!-- ══ BOTTOM NAV GLOBAL ══ -->
 <div class="global-bottom-nav" id="global-bottom-nav">
   <div class="footer-links-row">
@@ -1196,6 +1203,10 @@
       <i class="fas fa-tachometer-alt"></i>
       Dashboard
     </a>
+    <a href="faltas.html" class="footer-link-btn" style="background:#fce7f3;color:#be185d;">
+      <i class="fas fa-user-clock"></i>
+      Faltas
+    </a>
     <button onclick="typeof goToLeaderLogin==='function'?goToLeaderLogin():null" class="footer-link-btn footer-link-export">
       <i class="fas fa-user-shield"></i>
       Líder
@@ -1204,10 +1215,10 @@
 </div>
 
 <!-- Scripts — ordem importa! -->
-<script src="js/versao.js?v=20260406-03"></script>
-<script src="js/data.js?v=20260406-03"></script>
-<script src="js/firebase_v2.js?v=20260406-03"></script>
-<script src="js/app_v3.js?v=20260406-03"></script>
+<script src="js/versao.js?v=20260413-01"></script>
+<script src="js/data.js?v=20260413-01"></script>
+<script src="js/firebase_v2.js?v=20260413-01"></script>
+<script src="js/app_v3.js?v=20260413-01"></script>
 
 <!-- Service Worker: força atualização automática a cada deploy -->
 <script>
