@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Just Burger 🍔 — Faltas & Atrasos</title>
+  <!-- Firebase SDK v9 compat -->
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
+  <script src="js/firebase_v2.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --brand: #e8590c; --brand2: #ff7b2f;
+      --dark: #1a1a2e; --dark2: #16213e;
+      --bg: #f4f6fb; --card: #fff;
+      --border: #e2e6f0; --text: #1a1a2e; --text2: #6b7280;
+      --green: #16a34a; --red: #dc2626; --yellow: #d97706;
+      --blue: #2563eb; --purple: #7c3aed;
+      --radius: 16px; --shadow: 0 4px 24px rgba(0,0,0,.10);
+    }
+    :root { color-scheme: light only; }
+    body {
+      font-family: 'Nunito','Segoe UI',sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; padding-bottom: 32px;
+    }
+    /* ── HEADER ── */
+    .page-header {
+      background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%);
+      padding: 16px 20px;
+      display: flex; align-items: center; gap: 14px;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 16px rgba(0,0,0,.3);
+    }
+    .page-header a {
+      background: rgba(255,255,255,.15); border: none; color: #fff;
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      text-decoration: none; font-size: 16px; transition: background .2s;
+      flex-shrink: 0;
+    }
+    .page-header a:hover { background: rgba(255,255,255,.28); }
+    .page-header h1 { font-size: 18px; font-weight: 900; color: #fff; flex: 1; }
+    .page-header p { font-size: 11px; color: rgba(255,255,255,.6); font-weight: 600; margin-top: 1px; }
+    /* ── LAYOUT ── */
+    .container { max-width: 860px; margin: 0 auto; padding: 20px 16px; }
+    /* ── CARDS DE REGRAS (pontos) ── */
+    .rules-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px; margin-bottom: 28px;
+    }
+    .rule-card {
+      background: #fff; border-radius: 14px; padding: 14px 16px;
+      box-shadow: var(--shadow); border-left: 4px solid var(--brand);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .rule-card.green  { border-color: var(--green); }
+    .rule-card.red    { border-color: var(--red); }
+    .rule-card.yellow { border-color: var(--yellow); }
+    .rule-card.blue   { border-color: var(--blue); }
+    .rule-card.purple { border-color: var(--purple); }
+    .rule-pts { font-size: 22px; font-weight: 900; }
+    .rule-pts.neg { color: var(--red); }
+    .rule-pts.pos { color: var(--green); }
+    .rule-desc { font-size: 11px; color: var(--text2); font-weight: 700; line-height: 1.4; }
+    /* ── TABS ── */
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .tab-btn {
+      padding: 9px 18px; border-radius: 20px; font-size: 13px; font-weight: 800;
+      cursor: pointer; border: 2px solid var(--border);
+      background: #fff; color: var(--text2); font-family: inherit;
+      transition: all .2s; display: flex; align-items: center; gap: 6px;
+    }
+    .tab-btn.active { background: var(--dark); color: #fff; border-color: var(--dark); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    /* ── FORM CARD ── */
+    .form-card {
+      background: #fff; border-radius: var(--radius); padding: 22px;
+      box-shadow: var(--shadow); margin-bottom: 20px;
+    }
+    .form-card h3 {
+      font-size: 15px; font-weight: 900; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px; color: var(--dark);
+    }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .form-row.triple { grid-template-columns: 1fr 1fr 1fr; }
+    .form-row.full { grid-template-columns: 1fr; }
+    @media (max-width: 520px) {
+      .form-row, .form-row.triple { grid-template-columns: 1fr; }
+    }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label {
+      font-size: 11px; font-weight: 900; color: var(--text2);
+      text-transform: uppercase; letter-spacing: .4px;
+    }
+    .form-group select,
+    .form-group input {
+      border: 2px solid var(--border); border-radius: 10px;
+      padding: 10px 12px; font-size: 14px; font-weight: 700;
+      font-family: inherit; color: var(--text);
+      background: #fff; outline: none; transition: border-color .2s;
+      width: 100%;
+    }
+    .form-group select:focus,
+    .form-group input:focus { border-color: var(--brand); }
+    .tipo-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tipo-btn {
+      padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 800;
+      cursor: pointer; border: 2px solid var(--border);
+      background: #fff; color: var(--text2); font-family: inherit;
+      transition: all .2s;
+    }
+    .tipo-btn.selected-just { background: #dcfce7; color: var(--green); border-color: var(--green); }
+    .tipo-btn.selected-injust { background: #fee2e2; color: var(--red); border-color: var(--red); }
+    .tipo-btn.selected-atras { background: #fef3c7; color: var(--yellow); border-color: var(--yellow); }
+    .btn-submit {
+      width: 100%; padding: 14px; border-radius: 12px;
+      background: var(--dark); color: #fff;
+      font-size: 15px; font-weight: 900; font-family: inherit;
+      border: none; cursor: pointer; transition: background .2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin-top: 6px;
+    }
+    .btn-submit:hover { background: var(--brand); }
+    /* ── UPLOAD XLSX ── */
+    .upload-zone {
+      border: 2px dashed var(--border); border-radius: 14px;
+      padding: 32px 20px; text-align: center; cursor: pointer;
+      transition: border-color .2s, background .2s;
+      background: #fafbfc; margin-bottom: 16px;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--brand); background: #fff7ed;
+    }
+    .upload-zone i { font-size: 36px; color: var(--brand); margin-bottom: 10px; display: block; }
+    .upload-zone p { font-size: 13px; font-weight: 700; color: var(--text2); }
+    .upload-zone small { font-size: 11px; color: var(--text2); }
+    #xlsx-file-input { display: none; }
+    #preview-table-wrap {
+      overflow-x: auto; margin-top: 16px;
+      border-radius: 10px; border: 1px solid var(--border);
+    }
+    #preview-table-wrap table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    #preview-table-wrap th {
+      background: var(--dark); color: #fff; padding: 8px 10px;
+      font-size: 11px; text-transform: uppercase; letter-spacing: .4px;
+    }
+    #preview-table-wrap td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    #preview-table-wrap tr:last-child td { border-bottom: none; }
+    #preview-table-wrap tr:nth-child(even) td { background: #f8f9fc; }
+    .preview-controls {
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .btn-import {
+      padding: 11px 22px; border-radius: 10px;
+      background: var(--green); color: #fff;
+      font-size: 13px; font-weight: 900; font-family: inherit;
+      border: none; cursor: pointer; display: flex; align-items: center; gap: 7px;
+    }
+    .btn-import:hover { background: #15803d; }
+    .btn-cancel-upload {
+      padding: 11px 18px; border-radius: 10px;
+      background: #fff; color: var(--text2);
+      font-size: 13px; font-weight: 800; font-family: inherit;
+      border: 2px solid var(--border); cursor: pointer;
+    }
+    /* ── LISTA DE REGISTROS ── */
+    .registros-filtro {
+      display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: flex-end;
+    }
+    .registros-filtro select,
+    .registros-filtro input {
+      border: 2px solid var(--border); border-radius: 10px;
+      padding: 8px 12px; font-size: 13px; font-weight: 700;
+      font-family: inherit; color: var(--text); background: #fff;
+      outline: none;
+    }
+    .registros-filtro button {
+      padding: 10px 16px; border-radius: 10px; background: var(--dark);
+      color: #fff; font-size: 13px; font-weight: 800;
+      font-family: inherit; border: none; cursor: pointer;
+    }
+    .reg-list { display: flex; flex-direction: column; gap: 10px; }
+    .reg-item {
+      background: #fff; border-radius: 12px; padding: 14px 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.07);
+      display: flex; align-items: center; gap: 12px;
+      border-left: 4px solid var(--border);
+    }
+    .reg-item.tipo-falta-justificada { border-color: var(--yellow); }
+    .reg-item.tipo-falta-injustificada { border-color: var(--red); }
+    .reg-item.tipo-atraso { border-color: var(--blue); }
+    .reg-badge {
+      font-size: 20px; width: 36px; text-align: center; flex-shrink: 0;
+    }
+    .reg-info { flex: 1; }
+    .reg-info strong { font-size: 14px; font-weight: 900; display: block; }
+    .reg-info span { font-size: 11px; color: var(--text2); font-weight: 700; }
+    .reg-pts {
+      font-size: 16px; font-weight: 900; color: var(--red);
+      white-space: nowrap;
+    }
+    .reg-pts.zero { color: var(--text2); }
+    .reg-del {
+      background: none; border: none; color: #ddd; font-size: 16px;
+      cursor: pointer; padding: 4px; border-radius: 6px; transition: color .2s;
+    }
+    .reg-del:hover { color: var(--red); }
+    /* ── RESUMO POR COLABORADOR ── */
+    .resumo-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;
+    }
+    .resumo-card {
+      background: #fff; border-radius: 14px; padding: 16px;
+      box-shadow: var(--shadow); position: relative;
+    }
+    .resumo-card h4 { font-size: 14px; font-weight: 900; margin-bottom: 8px; }
+    .resumo-row {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; color: var(--text2); padding: 4px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .resumo-row:last-child { border: none; font-weight: 900; font-size: 14px; color: var(--dark); }
+    .pts-neg { color: var(--red); font-weight: 900; }
+    /* ── TOAST / LOADING ── */
+    .toast-fa {
+      position: fixed; bottom: 24px; right: 16px; z-index: 9999;
+      background: var(--dark); color: #fff;
+      padding: 12px 20px; border-radius: 12px;
+      font-size: 14px; font-weight: 800; font-family: inherit;
+      box-shadow: 0 4px 20px rgba(0,0,0,.3);
+      display: none; align-items: center; gap: 8px;
+      animation: slideUp .3s ease;
+    }
+    .toast-fa.show { display: flex; }
+    @keyframes slideUp { from { transform:translateY(20px); opacity:.5; } to { transform:translateY(0); opacity:1; } }
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text2); }
+    .empty-state i { font-size: 40px; margin-bottom: 12px; display: block; opacity: .4; }
+    .section-title {
+      font-size: 14px; font-weight: 900; color: var(--dark);
+      margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+    }
+    .badge-count {
+      background: var(--brand); color: #fff;
+      font-size: 11px; padding: 2px 8px; border-radius: 20px;
+    }
+    .instrucoes {
+      background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px;
+      padding: 14px 16px; margin-bottom: 16px; font-size: 12px; color: #92400e;
+    }
+    .instrucoes strong { display: block; margin-bottom: 6px; font-size: 13px; }
+    .instrucoes ul { margin-left: 16px; }
+    .instrucoes li { margin-bottom: 3px; }
+    @media print { body { display: none; } }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="page-header">
+  <a href="index.html" title="Voltar"><i class="fas fa-arrow-left"></i></a>
+  <div>
+    <h1>📋 Faltas &amp; Atrasos</h1>
+    <p>Gestão de ocorrências · Just Burger</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- CARDS DE REGRAS -->
+  <div class="rules-grid">
+    <div class="rule-card green">
+      <span class="rule-pts pos">+20 pts</span>
+      <span class="rule-desc">Fez todas as tarefas do dia sem pendências</span>
+    </div>
+    <div class="rule-card red">
+      <span class="rule-pts neg">−5 pts</span>
+      <span class="rule-desc">Falta <strong>justificada</strong></span>
+    </div>
+    <div class="rule-card red">
+      <span class="rule-pts neg">−20 pts</span>
+      <span class="rule-desc">Falta <strong>injustificada</strong></span>
+    </div>
+    <div class="rule-card yellow">
+      <span class="rule-pts neg">−5 pts</span>
+      <span class="rule-desc">Atraso até <strong>20 min</strong> na semana</span>
+    </div>
+    <div class="rule-card yellow">
+      <span class="rule-pts neg">−10 pts</span>
+      <span class="rule-desc">Atraso <strong>21–31 min</strong> na semana</span>
+    </div>
+    <div class="rule-card yellow">
+      <span class="rule-pts neg">−20 pts</span>
+      <span class="rule-desc">Atraso <strong>&gt;31 min</strong> na semana (acumula)</span>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="setTab('manual')" id="tab-manual">
+      <i class="fas fa-plus-circle"></i> Lançamento Manual
+    </button>
+    <button class="tab-btn" onclick="setTab('upload')" id="tab-upload">
+      <i class="fas fa-file-excel"></i> Upload Planilha
+    </button>
+    <button class="tab-btn" onclick="setTab('lista')" id="tab-lista">
+      <i class="fas fa-list"></i> Registros
+    </button>
+    <button class="tab-btn" onclick="setTab('resumo')" id="tab-resumo">
+      <i class="fas fa-user-chart"></i> Resumo por Colaborador
+    </button>
+  </div>
+
+  <!-- ══ TAB MANUAL ══ -->
+  <div class="tab-panel active" id="panel-manual">
+    <div class="form-card">
+      <h3><i class="fas fa-user-clock"></i> Registrar Ocorrência</h3>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Colaborador</label>
+          <select id="m-colab">
+            <option value="">— Selecione —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Data da Ocorrência</label>
+          <input type="date" id="m-data"/>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:14px">
+        <label>Tipo de Ocorrência</label>
+        <div class="tipo-grid" id="tipo-grid">
+          <button class="tipo-btn" onclick="selectTipo('falta-justificada')" id="tipo-fj">
+            📋 Falta Justificada (−5 pts)
+          </button>
+          <button class="tipo-btn" onclick="selectTipo('falta-injustificada')" id="tipo-fi">
+            🚫 Falta Injustificada (−20 pts)
+          </button>
+          <button class="tipo-btn" onclick="selectTipo('atraso')" id="tipo-at">
+            ⏰ Atraso
+          </button>
+        </div>
+      </div>
+
+      <!-- Campo de atraso (só aparece quando tipo = atraso) -->
+      <div id="atraso-wrap" style="display:none; margin-bottom:14px">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Minutos de Atraso</label>
+            <input type="number" id="m-minutos" min="1" max="480" placeholder="Ex: 25"
+                   oninput="calcPontosAtraso()"/>
+          </div>
+          <div class="form-group">
+            <label>Semana de Referência</label>
+            <input type="week" id="m-semana"/>
+          </div>
+        </div>
+        <div id="atraso-preview" style="
+          background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;
+          padding:10px 14px;font-size:13px;font-weight:800;color:#c2410c;
+          display:none;margin-top:4px;">
+        </div>
+      </div>
+
+      <div class="form-row full">
+        <div class="form-group">
+          <label>Observação (opcional)</label>
+          <input type="text" id="m-obs" placeholder="Ex: Atestado médico, trânsito..."/>
+        </div>
+      </div>
+
+      <div id="pts-preview" style="
+        background:#fef2f2;border:1px solid #fecaca;border-radius:10px;
+        padding:12px 16px;font-size:14px;font-weight:900;color:#dc2626;
+        text-align:center;margin-bottom:14px;display:none;">
+      </div>
+
+      <button class="btn-submit" onclick="salvarOcorrencia()">
+        <i class="fas fa-save"></i> Salvar Ocorrência
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ TAB UPLOAD ══ -->
+  <div class="tab-panel" id="panel-upload">
+    <div class="form-card">
+      <h3><i class="fas fa-file-upload"></i> Importar Planilha de Ponto</h3>
+
+      <div class="instrucoes">
+        <strong>📌 Formato esperado da planilha (.xlsx ou .csv):</strong>
+        <ul>
+          <li><strong>Coluna A:</strong> Nome do colaborador (exato como no sistema)</li>
+          <li><strong>Coluna B:</strong> Data (DD/MM/AAAA ou AAAA-MM-DD)</li>
+          <li><strong>Coluna C:</strong> Tipo: <code>falta-justificada</code>, <code>falta-injustificada</code> ou <code>atraso</code></li>
+          <li><strong>Coluna D:</strong> Minutos de atraso (só para tipo atraso; deixar vazio para faltas)</li>
+          <li><strong>Coluna E:</strong> Semana (AAAA-Www, ex: 2026-W15 — só para atraso)</li>
+          <li><strong>Coluna F:</strong> Observação (opcional)</li>
+        </ul>
+        <div style="margin-top:8px;padding:8px 10px;background:#fde68a;border-radius:8px;">
+          ⚠️ A primeira linha deve ser o cabeçalho. Os dados começam na linha 2.
+        </div>
+      </div>
+
+      <!-- Zona de upload -->
+      <div class="upload-zone" id="upload-zone"
+           onclick="document.getElementById('xlsx-file-input').click()"
+           ondragover="event.preventDefault();this.classList.add('dragover')"
+           ondragleave="this.classList.remove('dragover')"
+           ondrop="handleDrop(event)">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <p>Clique aqui ou arraste o arquivo</p>
+        <small>Suporta .xlsx, .xls e .csv</small>
+      </div>
+      <input type="file" id="xlsx-file-input" accept=".xlsx,.xls,.csv"
+             onchange="handleFileSelect(this.files[0])"/>
+
+      <!-- Preview da tabela -->
+      <div id="preview-table-wrap" style="display:none"></div>
+
+      <!-- Controles de importação -->
+      <div class="preview-controls" id="preview-controls" style="display:none">
+        <button class="btn-import" onclick="importarPlanilha()">
+          <i class="fas fa-database"></i> Importar para o Sistema
+        </button>
+        <button class="btn-cancel-upload" onclick="cancelarUpload()">
+          <i class="fas fa-times"></i> Cancelar
+        </button>
+        <span id="preview-count" style="font-size:12px;color:var(--text2);font-weight:700"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB LISTA ══ -->
+  <div class="tab-panel" id="panel-lista">
+    <!-- Filtros -->
+    <div class="registros-filtro">
+      <select id="f-colab">
+        <option value="">Todos os colaboradores</option>
+      </select>
+      <select id="f-tipo">
+        <option value="">Todos os tipos</option>
+        <option value="falta-justificada">Falta Justificada</option>
+        <option value="falta-injustificada">Falta Injustificada</option>
+        <option value="atraso">Atraso</option>
+      </select>
+      <input type="month" id="f-mes" title="Filtrar por mês"/>
+      <button onclick="loadRegistros()"><i class="fas fa-search"></i> Filtrar</button>
+    </div>
+    <div class="section-title">
+      <i class="fas fa-list"></i> Ocorrências Registradas
+      <span class="badge-count" id="total-registros">0</span>
+    </div>
+    <div class="reg-list" id="reg-list">
+      <div class="empty-state">
+        <i class="fas fa-clipboard-list"></i>
+        <p>Carregando registros...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB RESUMO ══ -->
+  <div class="tab-panel" id="panel-resumo">
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+      <input type="month" id="r-mes" style="border:2px solid var(--border);border-radius:10px;padding:8px 12px;font-size:13px;font-family:inherit;font-weight:700"/>
+      <button onclick="loadResumo()" style="padding:10px 18px;border-radius:10px;background:var(--dark);color:#fff;font-size:13px;font-weight:800;font-family:inherit;border:none;cursor:pointer">
+        <i class="fas fa-sync-alt"></i> Atualizar
+      </button>
+    </div>
+    <div class="section-title">
+      <i class="fas fa-users"></i> Pontuação por Colaborador
+    </div>
+    <div class="resumo-grid" id="resumo-grid">
+      <div class="empty-state" style="grid-column:1/-1">
+        <i class="fas fa-chart-pie"></i>
+        <p>Selecione um mês e clique em Atualizar</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- TOAST -->
+<div class="toast-fa" id="toast-fa"></div>
+
+<!-- SheetJS para leitura de Excel -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<script>
+'use strict';
+
+/* ══ LISTAS DE COLABORADORES ══════════════════════════════ */
+const COLABS_LISTA = [
+  'ALAN RICARDO','ATENDIMENTO / DESPACHO','SAMUEL','DINA','LOHAINE',
+  'GABRIEL KHALYL','JOÃO','PABLO','MATEUS','GABRIEL LEITE','RHUAN',
+  'SANDRO','MATEUS PRODUÇÃO','JOSÉ BRUNO','FABIO','SERGIO CAMARAS',
+  'WESLEY MOTORISTA','FAXINA','HENRIQUE','PEDRO','DAVI',
+  'ANTONIEL','MARCUS','ALINE','NOITE - CHAPEIRO','NOITE - MONTADOR',
+  'NOITE - FRITADEIRA'
+].sort();
+
+/* ══ REGRAS DE PONTOS ══════════════════════════════════════ */
+const PONTOS_FALTA_JUST   = -5;
+const PONTOS_FALTA_INJUST = -20;
+
+function calcPontosAtraso(minutos) {
+  if (minutos === undefined) {
+    const v = parseInt(document.getElementById('m-minutos').value) || 0;
+    const el = document.getElementById('atraso-preview');
+    if (!v) { el.style.display='none'; return 0; }
+    const pts = _ptsPorMinutos(v);
+    el.style.display = 'block';
+    el.textContent = `⏱ ${v} min → ${pts} pontos`;
+    document.getElementById('pts-preview').style.display = 'none';
+    return pts;
+  }
+  return _ptsPorMinutos(minutos);
+}
+
+function _ptsPorMinutos(m) {
+  if (m <= 20) return -5;
+  if (m <= 31) return -10;
+  return -20;
+}
+
+function getPontosTipo(tipo, minutos) {
+  if (tipo === 'falta-justificada')   return PONTOS_FALTA_JUST;
+  if (tipo === 'falta-injustificada') return PONTOS_FALTA_INJUST;
+  if (tipo === 'atraso') return _ptsPorMinutos(minutos || 0);
+  return 0;
+}
+
+/* ══ ESTADO ═══════════════════════════════════════════════ */
+let _tipoSelecionado = '';
+let _previewData     = [];
+
+/* ══ INIT ═════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  // Data padrão = hoje
+  document.getElementById('m-data').value = today();
+  // Semana padrão = semana atual
+  document.getElementById('m-semana').value = currentWeek();
+  // Mês padrão = mês atual
+  const mm = today().slice(0,7);
+  document.getElementById('f-mes').value  = mm;
+  document.getElementById('r-mes').value  = mm;
+
+  // Preenche selects de colaborador
+  populateColabs('m-colab');
+  populateColabs('f-colab');
+  loadRegistros();
+});
+
+function today() {
+  return new Date().toISOString().slice(0,10);
+}
+function currentWeek() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const jan1 = new Date(y,0,1);
+  const week = Math.ceil(((d-jan1)/86400000 + jan1.getDay()+1)/7);
+  return `${y}-W${String(week).padStart(2,'0')}`;
+}
+
+function populateColabs(selId) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const current = sel.value;
+  const opts = selId === 'f-colab' ? '<option value="">Todos os colaboradores</option>' : '<option value="">— Selecione —</option>';
+  sel.innerHTML = opts + COLABS_LISTA.map(c=>`<option value="${c}"${c===current?' selected':''}>${c}</option>`).join('');
+}
+
+/* ══ TABS ═════════════════════════════════════════════════ */
+function setTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+  if (tab === 'lista')  { populateColabs('f-colab'); loadRegistros(); }
+  if (tab === 'resumo') { loadResumo(); }
+}
+
+/* ══ SELEÇÃO DE TIPO ══════════════════════════════════════ */
+function selectTipo(tipo) {
+  _tipoSelecionado = tipo;
+  // Reset visual
+  ['tipo-fj','tipo-fi','tipo-at'].forEach(id => {
+    const b = document.getElementById(id);
+    b.className = 'tipo-btn';
+  });
+  const map = { 'falta-justificada':'tipo-fj', 'falta-injustificada':'tipo-fi', 'atraso':'tipo-at' };
+  const cls = { 'falta-justificada':'selected-just', 'falta-injustificada':'selected-injust', 'atraso':'selected-atras' };
+  const btn = document.getElementById(map[tipo]);
+  if (btn) btn.classList.add(cls[tipo]);
+
+  // Mostrar/ocultar campo atraso
+  document.getElementById('atraso-wrap').style.display = tipo === 'atraso' ? 'block' : 'none';
+
+  // Preview de pontos (para não-atraso)
+  if (tipo !== 'atraso') {
+    const pts = getPontosTipo(tipo, 0);
+    const prev = document.getElementById('pts-preview');
+    prev.textContent = `Perda de pontos: ${pts} pts`;
+    prev.style.display = 'block';
+  } else {
+    document.getElementById('pts-preview').style.display = 'none';
+  }
+}
+
+/* ══ SALVAR OCORRÊNCIA MANUAL ════════════════════════════ */
+async function salvarOcorrencia() {
+  const colab = document.getElementById('m-colab').value.trim();
+  const data  = document.getElementById('m-data').value;
+  const obs   = document.getElementById('m-obs').value.trim();
+
+  if (!colab) { showToastFa('⚠️ Selecione um colaborador'); return; }
+  if (!data)  { showToastFa('⚠️ Informe a data'); return; }
+  if (!_tipoSelecionado) { showToastFa('⚠️ Selecione o tipo de ocorrência'); return; }
+
+  let minutos = 0;
+  let semana  = '';
+
+  if (_tipoSelecionado === 'atraso') {
+    minutos = parseInt(document.getElementById('m-minutos').value) || 0;
+    semana  = document.getElementById('m-semana').value;
+    if (!minutos) { showToastFa('⚠️ Informe os minutos de atraso'); return; }
+  }
+
+  const pontos = getPontosTipo(_tipoSelecionado, minutos);
+  const payload = {
+    colaborador: colab,
+    data,
+    tipo: _tipoSelecionado,
+    minutos: minutos || null,
+    semana: semana || null,
+    pontos,
+    obs: obs || null,
+    fonte: 'manual',
+    criado_em: Date.now()
+  };
+
+  try {
+    await fbv2_post('faltas_atrasos', payload);
+    showToastFa('✅ Ocorrência registrada com sucesso!');
+    // Reset
+    document.getElementById('m-obs').value = '';
+    document.getElementById('m-minutos').value = '';
+    _tipoSelecionado = '';
+    ['tipo-fj','tipo-fi','tipo-at'].forEach(id => { document.getElementById(id).className = 'tipo-btn'; });
+    document.getElementById('atraso-wrap').style.display = 'none';
+    document.getElementById('pts-preview').style.display = 'none';
+    document.getElementById('atraso-preview').style.display = 'none';
+  } catch(e) {
+    showToastFa('❌ Erro ao salvar: ' + e.message);
+  }
+}
+
+/* ══ UPLOAD / PLANILHA ════════════════════════════════════ */
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFileSelect(file);
+}
+
+function handleFileSelect(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+
+  if (ext === 'csv') {
+    const reader = new FileReader();
+    reader.onload = e => parseCSV(e.target.result);
+    reader.readAsText(file, 'UTF-8');
+  } else if (ext === 'xlsx' || ext === 'xls') {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      processRows(rows);
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    showToastFa('❌ Formato não suportado. Use .xlsx, .xls ou .csv');
+  }
+}
+
+function parseCSV(text) {
+  const lines = text.split('\n').map(l => l.split(/[,;]/).map(c => c.trim().replace(/^"|"$/g,'')));
+  processRows(lines);
+}
+
+function processRows(rows) {
+  if (!rows || rows.length < 2) { showToastFa('⚠️ Planilha vazia ou sem dados'); return; }
+  const header = rows[0];
+  const data = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || !r[0]) continue; // linha vazia
+    const colab  = String(r[0] || '').trim().toUpperCase();
+    const rawDt  = String(r[1] || '').trim();
+    const tipo   = String(r[2] || '').trim().toLowerCase();
+    const min    = parseInt(r[3]) || 0;
+    const semana = String(r[4] || '').trim();
+    const obs    = String(r[5] || '').trim();
+
+    if (!colab || !rawDt || !tipo) continue;
+
+    // Normalizar data
+    let dataFmt = rawDt;
+    if (rawDt.includes('/')) {
+      const [d,m,y] = rawDt.split('/');
+      dataFmt = `${y.trim()}-${m.trim().padStart(2,'0')}-${d.trim().padStart(2,'0')}`;
+    }
+
+    const tipoNorm = tipo.replace('_','-');
+    if (!['falta-justificada','falta-injustificada','atraso'].includes(tipoNorm)) continue;
+
+    const pontos = getPontosTipo(tipoNorm, min);
+    data.push({ colaborador: colab, data: dataFmt, tipo: tipoNorm, minutos: min || null, semana: semana || null, pontos, obs: obs || null, fonte: 'planilha' });
+  }
+
+  if (!data.length) { showToastFa('⚠️ Nenhum dado válido encontrado na planilha'); return; }
+  _previewData = data;
+  renderPreview(data);
+}
+
+function renderPreview(data) {
+  const wrap = document.getElementById('preview-table-wrap');
+  const tipoLabel = { 'falta-justificada':'📋 Falta Just.', 'falta-injustificada':'🚫 Falta Injust.', 'atraso':'⏰ Atraso' };
+  wrap.style.display = 'block';
+  wrap.innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Colaborador</th><th>Data</th><th>Tipo</th>
+        <th>Minutos</th><th>Semana</th><th>Pontos</th><th>Obs</th>
+      </tr></thead>
+      <tbody>
+        ${data.map(d=>`<tr>
+          <td><strong>${d.colaborador}</strong></td>
+          <td>${d.data}</td>
+          <td>${tipoLabel[d.tipo]||d.tipo}</td>
+          <td>${d.minutos||'—'}</td>
+          <td>${d.semana||'—'}</td>
+          <td style="color:var(--red);font-weight:900">${d.pontos}</td>
+          <td>${d.obs||''}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  const ctrl = document.getElementById('preview-controls');
+  ctrl.style.display = 'flex';
+  document.getElementById('preview-count').textContent = `${data.length} registros encontrados`;
+}
+
+async function importarPlanilha() {
+  if (!_previewData.length) return;
+  showToastFa('⏳ Importando...');
+  let ok = 0, err = 0;
+  for (const row of _previewData) {
+    try {
+      await fbv2_post('faltas_atrasos', { ...row, criado_em: Date.now() });
+      ok++;
+    } catch(e) { err++; }
+  }
+  showToastFa(`✅ ${ok} registros importados${err?' | ❌ '+err+' erros':''}`);
+  cancelarUpload();
+  setTab('lista');
+}
+
+function cancelarUpload() {
+  _previewData = [];
+  document.getElementById('preview-table-wrap').style.display = 'none';
+  document.getElementById('preview-controls').style.display = 'none';
+  document.getElementById('xlsx-file-input').value = '';
+}
+
+/* ══ LISTA DE REGISTROS ════════════════════════════════════ */
+async function loadRegistros() {
+  const list   = document.getElementById('reg-list');
+  const fColab = document.getElementById('f-colab').value;
+  const fTipo  = document.getElementById('f-tipo').value;
+  const fMes   = document.getElementById('f-mes').value; // YYYY-MM
+
+  list.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Carregando...</p></div>';
+
+  try {
+    let dados = await fbv2_getAll('faltas_atrasos');
+
+    // Filtros
+    if (fColab) dados = dados.filter(d => d.colaborador === fColab);
+    if (fTipo)  dados = dados.filter(d => d.tipo === fTipo);
+    if (fMes)   dados = dados.filter(d => (d.data||'').slice(0,7) === fMes);
+
+    // Ordenar por data desc
+    dados.sort((a,b) => (b.data||'').localeCompare(a.data||''));
+
+    document.getElementById('total-registros').textContent = dados.length;
+
+    if (!dados.length) {
+      list.innerHTML = '<div class="empty-state"><i class="fas fa-clipboard-check"></i><p>Nenhuma ocorrência encontrada</p></div>';
+      return;
+    }
+
+    const tipoEmoji = { 'falta-justificada':'📋', 'falta-injustificada':'🚫', 'atraso':'⏰' };
+    const tipoLabel = { 'falta-justificada':'Falta Justificada', 'falta-injustificada':'Falta Injustificada', 'atraso':'Atraso' };
+
+    list.innerHTML = dados.map(d => `
+      <div class="reg-item tipo-${d.tipo}" data-id="${d.id}">
+        <span class="reg-badge">${tipoEmoji[d.tipo]||'📌'}</span>
+        <div class="reg-info">
+          <strong>${d.colaborador||'—'}</strong>
+          <span>${tipoLabel[d.tipo]||d.tipo}
+            ${d.tipo==='atraso'&&d.minutos?` · ${d.minutos} min`:''}
+            ${d.semana?' · Sem. '+d.semana:''}
+            · ${fmtData(d.data)}
+            ${d.obs?'<br>💬 '+d.obs:''}
+          </span>
+        </div>
+        <span class="reg-pts">${d.pontos||0} pts</span>
+        <button class="reg-del" onclick="deletarReg('${d.id}')" title="Remover">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+      </div>`).join('');
+  } catch(e) {
+    list.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Erro ao carregar: '+e.message+'</p></div>';
+  }
+}
+
+async function deletarReg(id) {
+  if (!confirm('Remover este registro?')) return;
+  try {
+    await fbv2_delete('faltas_atrasos', id);
+    showToastFa('🗑️ Registro removido');
+    loadRegistros();
+  } catch(e) {
+    showToastFa('❌ Erro ao remover: ' + e.message);
+  }
+}
+
+/* ══ RESUMO POR COLABORADOR ════════════════════════════════ */
+async function loadResumo() {
+  const mes   = document.getElementById('r-mes').value; // YYYY-MM
+  const grid  = document.getElementById('resumo-grid');
+  grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><i class="fas fa-spinner fa-spin"></i><p>Calculando...</p></div>';
+
+  try {
+    let dados = await fbv2_getAll('faltas_atrasos');
+    if (mes) dados = dados.filter(d => (d.data||'').slice(0,7) === mes);
+
+    if (!dados.length) {
+      grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><i class="fas fa-chart-pie"></i><p>Nenhum registro no período</p></div>';
+      return;
+    }
+
+    // Agrupar por colaborador
+    const por_colab = {};
+    dados.forEach(d => {
+      const c = d.colaborador || 'Desconhecido';
+      if (!por_colab[c]) por_colab[c] = { fj:0, fi:0, at:0, pts:0, items:[] };
+      if (d.tipo === 'falta-justificada')   por_colab[c].fj++;
+      if (d.tipo === 'falta-injustificada') por_colab[c].fi++;
+      if (d.tipo === 'atraso')              por_colab[c].at++;
+      por_colab[c].pts += (d.pontos || 0);
+      por_colab[c].items.push(d);
+    });
+
+    // Ordenar por pontos (pior primeiro)
+    const sorted = Object.entries(por_colab).sort((a,b) => a[1].pts - b[1].pts);
+
+    grid.innerHTML = sorted.map(([colab, info]) => `
+      <div class="resumo-card">
+        <h4>👤 ${colab}</h4>
+        ${info.fj ? `<div class="resumo-row"><span>📋 Faltas Justificadas</span><span class="pts-neg">${info.fj}x (${info.fj*PONTOS_FALTA_JUST} pts)</span></div>`:''}
+        ${info.fi ? `<div class="resumo-row"><span>🚫 Faltas Injustificadas</span><span class="pts-neg">${info.fi}x (${info.fi*PONTOS_FALTA_INJUST} pts)</span></div>`:''}
+        ${info.at ? `<div class="resumo-row"><span>⏰ Atrasos</span><span class="pts-neg">${info.at}x</span></div>`:''}
+        <div class="resumo-row">
+          <span>Total de penalidades</span>
+          <span class="pts-neg">${info.pts} pts</span>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><i class="fas fa-exclamation-triangle"></i><p>Erro: '+e.message+'</p></div>';
+  }
+}
+
+/* ══ UTILS ════════════════════════════════════════════════ */
+function fmtData(d) {
+  if (!d) return '—';
+  try {
+    const [y,m,dd] = d.split('-');
+    return `${dd}/${m}/${y}`;
+  } catch { return d; }
+}
+
+function showToastFa(msg) {
+  const el = document.getElementById('toast-fa');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
