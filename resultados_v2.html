@@ -870,6 +870,22 @@ async function loadResultados() {
     ])];
     const collabSemPend = collabNomes.filter(n => !pends.find(p => p.colaborador === n)).length;
 
+    /* ── Token para URL de conferência ── */
+    const _rawToken = localStorage.getItem('jb_user') || sessionStorage.getItem('jb_user') || '';
+    const _confToken = _rawToken ? encodeURIComponent(btoa(unescape(encodeURIComponent(_rawToken)))) : '';
+
+    /* Função geradora de URL de conferência */
+    function _urlConf(s) {
+      const params = new URLSearchParams({
+        _conf_colab:  s.colaborador_card || s.colaborador_nome || '',
+        _conf_sessid: s.id || '',
+        _conf_turno:  s.turno || turno,
+        _conf_dia:    s.dia_semana || dia,
+        _conf_data:   s.data || data,
+      });
+      return `${APP_PRODUCAO_URL}${_confToken ? '?_jbs='+_confToken+'&' : '?'}${params.toString()}`;
+    }
+
     /* ── Sessões aguardando conferência do líder (sem lider_autorizado) ── */
     const sessAguardConf = sessoes.filter(s =>
       s.data === data && s.turno === turno &&
@@ -886,75 +902,52 @@ async function loadResultados() {
         <div class="sum-card sc-red"><span class="sum-val">${pendAtivos.length}</span><span class="sum-lbl">Aguard. Ciência</span></div>`;
     }
 
-    /* ── Bloco de atalhos de conferência do líder ── */
-    let blocoBtnsConf = '';
-    if (sessAguardConf.length > 0) {
-      const raw = localStorage.getItem('jb_user') || sessionStorage.getItem('jb_user') || '';
-      const token = raw ? encodeURIComponent(btoa(unescape(encodeURIComponent(raw)))) : '';
+    /* ── Monta cards de conferência (mesmo estilo de collab-card) ── */
+    function _renderCardConferencia(s) {
+      const nome       = s.colaborador_card || s.colaborador_nome || '?';
+      const em         = COLLAB_EMOJI_MAP[nome] || _emojiFor(nome);
+      const isCompleto = s.status_geral === 'completo';
+      const jaConf     = !!s.lider_conferiu;
+      const url        = _urlConf(s);
 
-      const cardsConf = sessAguardConf
-        .sort((a,b) => (a.colaborador_card||'').localeCompare(b.colaborador_card||''))
-        .map(s => {
-          const nome = s.colaborador_card || s.colaborador_nome || '?';
-          const em   = COLLAB_EMOJI_MAP[nome] || _emojiFor(nome);
-          const isCompleto = s.status_geral === 'completo';
-          const statusTxt  = isCompleto ? '✅ 100% Concluído' : '⚠️ Parcial';
-          const statusClr  = isCompleto ? '#16a34a' : '#d97706';
-          const jaConf     = !!s.lider_conferiu;
-          const params = new URLSearchParams({
-            _conf_colab:  nome,
-            _conf_sessid: s.id || '',
-            _conf_turno:  s.turno || turno,
-            _conf_dia:    s.dia_semana || dia,
-            _conf_data:   s.data || data,
-          });
-          const url = `${APP_PRODUCAO_URL}${token ? '?_jbs='+token+'&' : '?'}${params.toString()}`;
-          const badgeTxt = jaConf
-            ? `<span style="background:#ede9fe;color:#6d28d9;border:1.5px solid #c4b5fd;border-radius:20px;padding:2px 9px;font-size:10px;font-weight:800">👁️ Conferindo</span>`
-            : `<span style="background:#fef3c7;color:#92400e;border:1.5px solid #fcd34d;border-radius:20px;padding:2px 9px;font-size:10px;font-weight:800">⏳ Aguardando</span>`;
+      const statusBadge = isCompleto
+        ? `<span class="pill" style="background:#dcfce7;color:#15803d;border:1.5px solid #86efac;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px">✅ 100% Concluído</span>`
+        : `<span class="pill" style="background:#fef3c7;color:#92400e;border:1.5px solid #fcd34d;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px">⚠️ Parcial</span>`;
 
-          return `
-          <div onclick="window.location.href='${url}'"
-               style="display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #e8590c;border-radius:14px;
-                      padding:10px 14px;cursor:pointer;transition:box-shadow .2s;box-shadow:0 2px 8px rgba(232,89,12,.12)"
-               onmouseover="this.style.boxShadow='0 4px 16px rgba(232,89,12,.25)'"
-               onmouseout="this.style.boxShadow='0 2px 8px rgba(232,89,12,.12)'">
-            <div style="font-size:26px;width:36px;text-align:center">${em}</div>
-            <div style="flex:1;min-width:0">
-              <div style="font-weight:800;font-size:14px;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nome}</div>
-              <div style="font-size:11px;color:${statusClr};font-weight:700;margin-top:1px">${statusTxt}</div>
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-              ${badgeTxt}
-            </div>
-            <div style="background:#e8590c;color:#fff;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:800;white-space:nowrap;flex-shrink:0">
-              🎖️ Conferir
-            </div>
-          </div>`;
-        }).join('');
+      const confBadge = jaConf
+        ? `<span class="pill" style="background:#ede9fe;color:#6d28d9;border:1.5px solid #c4b5fd;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px">👁️ Em conferência</span>`
+        : `<span class="pill" style="background:#fff7ed;color:#c2410c;border:1.5px solid #fdba74;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px">⏳ Ag. Conferência</span>`;
 
-      blocoBtnsConf = `
-      <div id="bloco-atalhos-conf" style="margin-bottom:16px">
-        <div style="font-size:11px;font-weight:800;color:#e8590c;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;gap:6px">
-          <i class="fas fa-clipboard-check"></i>
-          Conferência do Líder — ${sessAguardConf.length} turno(s) aguardando
+      return `
+      <div class="collab-card" id="rcc-conf-${_slug(nome)}"
+           style="border:2px solid #2563eb;cursor:pointer"
+           onclick="window.location.href='${url}'">
+        <div class="collab-card-header" style="background:linear-gradient(135deg,#eff6ff,#dbeafe)">
+          <div class="collab-avatar">${em}</div>
+          <div class="collab-info">
+            <div class="collab-name" style="color:#1d4ed8">${nome}</div>
+            <div class="collab-meta" style="color:#3b82f6;font-weight:700">🎖️ Conferência do Líder</div>
+          </div>
+          <div class="pills-row" style="margin-right:8px;flex-direction:column;align-items:flex-end;gap:4px">
+            ${statusBadge}
+            ${confBadge}
+          </div>
+          <i class="fas fa-chevron-right" style="color:#2563eb;font-size:15px;flex-shrink:0"></i>
         </div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          ${cardsConf}
+        <div style="padding:10px 16px 12px;border-top:1px solid #bfdbfe;background:#f0f7ff">
+          <span style="font-size:12px;color:#2563eb;font-weight:700">
+            👆 Toque para abrir e conferir as tarefas deste turno
+          </span>
         </div>
-        <div style="border-top:2px dashed #e2e8f0;margin-top:14px;padding-top:4px"></div>
       </div>`;
     }
 
-    /* Sem pendências */
-    if (!pends.length) {
-      container.innerHTML = blocoBtnsConf + (sess.length
-        ? `<div class="empty-state"><div class="es-icon">✅</div><strong>Tudo finalizado 100%!</strong><small>Nenhuma pendência para este turno/dia.</small></div>`
-        : `<div class="empty-state"><div class="es-icon">📭</div><strong>Nenhum dado encontrado</strong><small>Aguarde os colaboradores finalizarem o turno ou selecione outro filtro.</small></div>`);
-      return;
-    }
+    const htmlCardsConf = sessAguardConf
+      .sort((a,b) => (a.colaborador_card||'').localeCompare(b.colaborador_card||''))
+      .map(_renderCardConferencia)
+      .join('');
 
-    /* Agrupa por colaborador */
+    /* ── Monta cards de pendência ── */
     const porColab = {};
     pends.forEach(p => {
       const nome = p.colaborador || '?';
@@ -962,7 +955,7 @@ async function loadResultados() {
       porColab[nome].push(p);
     });
 
-    container.innerHTML = blocoBtnsConf + `<div style="padding:8px 0">` + Object.keys(porColab).sort().map(nome => {
+    const htmlCardsPend = Object.keys(porColab).sort().map(nome => {
       const itens     = porColab[nome];
       const nParcial  = itens.filter(i => i.status === 'parcial').length;
       const nNao      = itens.filter(i => i.status === 'nao_finalizado').length;
@@ -990,7 +983,56 @@ async function loadResultados() {
           ${_renderTasks(itens, slug, nome)}
         </div>
       </div>`;
-    }).join('') + `</div>`;
+    }).join('');
+
+    /* ── Decide o que mostrar ── */
+    const temConf = htmlCardsConf.length > 0;
+    const temPend = htmlCardsPend.length > 0;
+
+    if (!temConf && !temPend) {
+      // Nada a mostrar
+      container.innerHTML = sess.length
+        ? `<div class="empty-state"><div class="es-icon">✅</div><strong>Tudo finalizado e conferido!</strong><small>Nenhuma pendência e nenhuma conferência pendente.</small></div>`
+        : `<div class="empty-state"><div class="es-icon">📭</div><strong>Nenhum dado encontrado</strong><small>Aguarde os colaboradores finalizarem o turno ou selecione outro filtro.</small></div>`;
+      return;
+    }
+
+    let html = '<div style="padding:8px 0">';
+
+    if (temConf) {
+      html += `
+        <div style="font-size:11px;font-weight:800;color:#2563eb;text-transform:uppercase;
+                    letter-spacing:.06em;margin-bottom:8px;padding:0 2px;
+                    display:flex;align-items:center;gap:6px">
+          <i class="fas fa-clipboard-check"></i>
+          Conferência do Líder — ${sessAguardConf.length} turno(s) aguardando
+        </div>
+        ${htmlCardsConf}`;
+    }
+
+    if (temConf && temPend) {
+      html += `<div style="border-top:2px dashed #e2e8f0;margin:14px 0 10px"></div>
+               <div style="font-size:11px;font-weight:800;color:#e8590c;text-transform:uppercase;
+                           letter-spacing:.06em;margin-bottom:8px;padding:0 2px;
+                           display:flex;align-items:center;gap:6px">
+                 <i class="fas fa-exclamation-triangle"></i>
+                 Pendências — ${pends.length} item(s)
+               </div>`;
+    } else if (!temConf && temPend) {
+      html += `<div style="font-size:11px;font-weight:800;color:#e8590c;text-transform:uppercase;
+                           letter-spacing:.06em;margin-bottom:8px;padding:0 2px;
+                           display:flex;align-items:center;gap:6px">
+                 <i class="fas fa-exclamation-triangle"></i>
+                 Pendências — ${pends.length} item(s)
+               </div>`;
+    }
+
+    if (temPend) {
+      html += htmlCardsPend;
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
 
   } catch(e) {
     console.error(e);
