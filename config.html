@@ -844,12 +844,15 @@ async function _salvarUser() {
     return;
   }
 
+  const _papelComCard = ['colaborador','atendente'];
+  const _papelComDept = ['colaborador','atendente'];
+  const _papelComTurno= ['colaborador','atendente'];
   const dados = {
     username, nome_display:nome, papel,
-    nome_card:       papel==='colaborador' ? card : '',
-    departamento:    papel==='colaborador' ? dept : 'TODOS',
+    nome_card:       _papelComCard.includes(papel) ? card : '',
+    departamento:    _papelComDept.includes(papel) ? dept : 'TODOS',
     sistemas:        papel !== 'admin' ? sistSelecionados : [],
-    turno_preferido: papel==='colaborador' ? turnoP : '',
+    turno_preferido: _papelComTurno.includes(papel) ? turnoP : '',
     email:           emailV || '',
     primeiro_acesso: prim,
     ativo: true,
