@@ -564,8 +564,9 @@
   if (raw) {
     try {
       const u = JSON.parse(raw);
-      /* Apenas admin, lider e uploader têm acesso */
-      if (!['admin','lider','uploader'].includes(u.papel)) {
+      /* Apenas papéis com acesso ao módulo de uploads */
+      const papeisUpload = ['admin','lider','uploader','financeiro','aux_financeiro'];
+      if (!papeisUpload.includes(u.papel)) {
         location.href = 'portal.html';
       }
     } catch(e) { location.href = 'portal.html'; }
