@@ -8,7 +8,24 @@
   <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
-  <script src="js/firebase_v2.js"></script>
+  <script src="js/firebase_v2.js?v=20260414"></script>
+  <!-- Auth Guard central -->
+  <script src="js/auth-guard.js?v=20260414"></script>
+  <!-- Guard imediato: config.html exige sessão ativa (admin ou rh) -->
+  <script>
+  (function(){
+    // Apenas verifica se há sessão; login próprio feito no overlay da página
+    // Guard completo é tratado no overlay de login abaixo
+    // Instala listener de logout de outras abas
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'jb_out' && e.newValue === '1') {
+        sessionStorage.removeItem('cfg_ok');
+        sessionStorage.removeItem('cfg_papel');
+        location.reload();
+      }
+    });
+  })();
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -360,6 +377,22 @@
           <option value="noite">🌙 Noite</option>
         </select>
       </div>
+
+      <!-- E-MAIL PARA 2FA (visível para papéis com autenticação em 2 fatores) -->
+      <div class="form-group form-full" id="f-email-group" style="display:none">
+        <label>
+          📧 E-mail para verificação em 2 fatores
+          <span style="font-size:11px;color:#6b7280;font-weight:600;margin-left:6px">
+            (obrigatório para este papel)
+          </span>
+        </label>
+        <input class="form-inp" type="email" id="f-email"
+               placeholder="ex: joao@justburger.com.br"
+               autocomplete="email"/>
+        <p style="font-size:11px;color:#0369a1;background:#e0f2fe;border-radius:8px;padding:6px 10px;margin-top:6px">
+          🔐 Ao fazer login, um código de 6 dígitos será enviado para este e-mail para confirmar a identidade.
+        </p>
+      </div>
     </div>
     <p class="err-msg" id="modal-user-err"></p>
     <div class="modal-footer">
@@ -477,7 +510,16 @@ function _cfgEntrar(papel = 'admin') {
 
 function _cfgLogout() {
   sessionStorage.removeItem('cfg_ok');
-  location.reload();
+  sessionStorage.removeItem('cfg_papel');
+  // Logout total: invalida todas as sessões
+  if (typeof JbAuth !== 'undefined') {
+    JbAuth.logout(location.origin + location.pathname);
+  } else {
+    try { localStorage.setItem('jb_out','1'); } catch(e){}
+    history.pushState(null, '', location.href);
+    window.addEventListener('popstate', () => history.pushState(null, '', location.href));
+    location.reload();
+  }
 }
 
 function _cfgTogglePass() {
@@ -542,7 +584,12 @@ function _renderUsuarios(lista) {
     <tr>
       <td><strong>${u.username||'—'}</strong>
         ${u.primeiro_acesso?'<br><span class="badge-first">1º acesso</span>':''}</td>
-      <td>${u.nome_display||'—'}</td>
+      <td>
+        ${u.nome_display||'—'}<br>
+        ${u.email
+          ? `<small style="color:#0369a1;font-size:10px">📧 ${u.email}</small>`
+          : `<small style="color:#d1d5db;font-size:10px">sem 2FA</small>`}
+      </td>
       <td><span class="badge-papel ${papelCls[u.papel]||'bp-colab'}">${papelLabel[u.papel]||u.papel}</span></td>
       <td>
         <small style="color:#6b7280">${u.nome_card||'—'}</small><br>
@@ -588,6 +635,7 @@ function _abrirModalNovoUser() {
   document.getElementById('f-username').value = '';
   document.getElementById('f-nome').value = '';
   document.getElementById('f-senha').value = '';
+  const _emailClr = document.getElementById('f-email'); if(_emailClr) _emailClr.value = '';
   document.getElementById('f-papel').value = 'colaborador';
   document.getElementById('f-dept').value = 'PRODUCAO';
   document.getElementById('f-primeiro-acesso').checked = true;
@@ -642,6 +690,7 @@ function _editarUser(id) {
     if (el) el.checked = sistUser.includes(el.value);
   });
   document.getElementById('f-turno').value = u.turno_preferido || '';
+  const _eE = document.getElementById('f-email'); if(_eE) _eE.value = u.email || '';
   _popularSelectCards(u.nome_card||'');
   _onPapelChange();
   document.getElementById('modal-user').classList.remove('hidden');
@@ -657,13 +706,19 @@ function _popularSelectCards(selecionado) {
     TODOS_CARDS.map(c=>`<option value="${c}" ${c===selecionado?'selected':''}>${c}</option>`).join('');
 }
 
+/* Papéis que exigem e-mail para 2FA */
+const _PAPEIS_2FA = ['admin','lider','rh','atendente','financeiro','aux_financeiro'];
+
 function _onPapelChange() {
-  const p     = document.getElementById('f-papel').value;
-  const cardG = document.getElementById('f-card-group');
-  const deptG = document.getElementById('f-dept-group');
-  const sistG = document.getElementById('f-sistemas-group');
-  const turnG = document.getElementById('f-turno-group');
-  const hint  = document.getElementById('f-sistemas-hint');
+  const p      = document.getElementById('f-papel').value;
+  const cardG  = document.getElementById('f-card-group');
+  const deptG  = document.getElementById('f-dept-group');
+  const sistG  = document.getElementById('f-sistemas-group');
+  const turnG  = document.getElementById('f-turno-group');
+  const emailG = document.getElementById('f-email-group');
+  const hint   = document.getElementById('f-sistemas-hint');
+  // Campo e-mail: apenas para papéis com 2FA
+  if (emailG) emailG.style.display = _PAPEIS_2FA.includes(p) ? '' : 'none';
 
   if (p === 'colaborador') {
     cardG.style.display = '';
@@ -786,6 +841,17 @@ async function _salvarUser() {
     });
 
   const turnoP = document.getElementById('f-turno').value || '';
+  const emailV  = ((document.getElementById('f-email')||{}).value||'').trim().toLowerCase();
+
+  // E-mail obrigatório para papéis com 2FA
+  if (_PAPEIS_2FA.includes(papel) && !emailV) {
+    err.textContent = '📧 E-mail obrigatório para este papel (autenticação em 2 fatores)';
+    return;
+  }
+  if (emailV && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailV)) {
+    err.textContent = '📧 Formato de e-mail inválido';
+    return;
+  }
 
   const dados = {
     username, nome_display:nome, papel,
@@ -793,6 +859,7 @@ async function _salvarUser() {
     departamento:    papel==='colaborador' ? dept : 'TODOS',
     sistemas:        papel !== 'admin' ? sistSelecionados : [],
     turno_preferido: papel==='colaborador' ? turnoP : '',
+    email:           emailV || '',
     primeiro_acesso: prim,
     ativo: true,
   };
