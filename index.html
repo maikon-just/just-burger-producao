@@ -86,9 +86,27 @@
   <script>
     (function _authGuard() {
       try {
+        /* 1. Tenta restaurar sessão passada pelo hub via ?_jbs= */
+        const params = new URLSearchParams(location.search);
+        const token  = params.get('_jbs');
+        if (token) {
+          try {
+            const json = decodeURIComponent(escape(atob(decodeURIComponent(token))));
+            const sess = JSON.parse(json);
+            if (sess && sess.username) {
+              sessionStorage.setItem('jb_user', JSON.stringify(sess));
+            }
+          } catch(e) { /* token inválido, ignora */ }
+          /* Limpa o token da URL sem recarregar */
+          params.delete('_jbs');
+          params.delete('_cb');
+          const novaUrl = location.pathname + (params.toString() ? '?' + params.toString() : '');
+          history.replaceState(null, '', novaUrl);
+        }
+
+        /* 2. Checa se há sessão válida */
         const raw = sessionStorage.getItem('jb_user');
         if (!raw) {
-          /* Em desenvolvimento (localhost/preview) não redireciona */
           const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
                        || location.hostname.includes('gitpod') || location.hostname.includes('preview')
                        || location.protocol === 'blob:';
