@@ -105,10 +105,14 @@
       display:inline-block; padding:3px 10px; border-radius:20px;
       font-size:11px; font-weight:800;
     }
-    .bp-admin    { background:#fef3c7; color:#d97706; }
-    .bp-lider    { background:#dbeafe; color:#1d4ed8; }
-    .bp-colab    { background:#f0fdf4; color:#16a34a; }
-    .bp-uploader { background:#ede9fe; color:#6d28d9; }
+    .bp-admin        { background:#fef3c7; color:#d97706; }
+    .bp-lider        { background:#dbeafe; color:#1d4ed8; }
+    .bp-colab        { background:#f0fdf4; color:#16a34a; }
+    .bp-uploader     { background:#ede9fe; color:#6d28d9; }
+    .bp-financeiro   { background:#d1fae5; color:#065f46; }
+    .bp-rh           { background:#fce7f3; color:#be185d; }
+    .bp-atendente    { background:#e0f2fe; color:#0369a1; }
+    .bp-aux-fin      { background:#fff7ed; color:#b45309; }
     .badge-status-on  { background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:800; }
     .badge-status-off { background:#fee2e2; color:#dc2626; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:800; }
     .action-btns { display:flex; gap:5px; }
@@ -292,7 +296,11 @@
         <label>Papel</label>
         <select class="form-inp" id="f-papel" onchange="_onPapelChange()">
           <option value="colaborador">👷 Colaborador</option>
+          <option value="atendente">🎯 Atendente</option>
           <option value="lider">🎖️ Líder</option>
+          <option value="rh">🧑‍💼 RH</option>
+          <option value="financeiro">💰 Financeiro</option>
+          <option value="aux_financeiro">💳 Aux. Financeiro</option>
           <option value="uploader">📂 Uploader</option>
           <option value="admin">👑 Admin</option>
         </select>
@@ -323,16 +331,22 @@
             <input type="checkbox" id="fs-producao" value="producao" style="accent-color:#16a34a"/> 🍔 Produção
           </label>
           <label style="display:flex;align-items:center;gap:6px;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:700">
-            <input type="checkbox" id="fs-motoboys" value="motoboys" style="accent-color:#d97706"/> 🛵 Motoboys
+            <input type="checkbox" id="fs-escala_motoboys" value="escala_motoboys" style="accent-color:#d97706"/> 🛵 Escala Motoboys
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;background:#fff7ed;border:1.5px solid #fdba74;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:700">
+            <input type="checkbox" id="fs-pgto_motoboys" value="pgto_motoboys" style="accent-color:#f59e0b"/> 💸 Pgto Motoboys
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;background:#ecfdf5;border:1.5px solid #6ee7b7;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:700">
+            <input type="checkbox" id="fs-pgto_diario" value="pgto_diario" style="accent-color:#10b981"/> 💰 Pgto Diário
           </label>
           <label style="display:flex;align-items:center;gap:6px;background:#f5f3ff;border:1.5px solid #c4b5fd;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:700">
             <input type="checkbox" id="fs-dashboard" value="dashboard" style="accent-color:#7c3aed"/> 📊 Dashboard
           </label>
-          <label style="display:flex;align-items:center;gap:6px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:700">
-            <input type="checkbox" id="fs-financeiro" value="financeiro" style="accent-color:#15803d"/> 💰 Financeiro
-          </label>
           <label style="display:flex;align-items:center;gap:6px;background:#ede9fe;border:1.5px solid #c4b5fd;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:700">
             <input type="checkbox" id="fs-uploads" value="uploads" style="accent-color:#6d28d9"/> 📂 Upload Relatórios
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;background:#fce7f3;border:1.5px solid #f9a8d4;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:700">
+            <input type="checkbox" id="fs-cfg_acesso" value="cfg_acesso" style="accent-color:#be185d"/> 👥 Config. Acessos
           </label>
         </div>
         <p style="font-size:11px;color:#6b7280;margin-top:6px" id="f-sistemas-hint"></p>
@@ -382,6 +396,17 @@
 <script>
 'use strict';
 
+/* ══ IDs DOS CHECKBOXES DE SISTEMAS (ordem de exibição) ══ */
+const _TODOS_FS = [
+  'fs-producao',
+  'fs-escala_motoboys',
+  'fs-pgto_motoboys',
+  'fs-pgto_diario',
+  'fs-dashboard',
+  'fs-uploads',
+  'fs-cfg_acesso',
+];
+
 /* ══ LISTA DE CARDS DISPONÍVEIS ══ */
 const TODOS_CARDS = [
   'ALAN RICARDO','ALINE','ALINE INICIO','ALINE FINALIZAÇÃO',
@@ -401,6 +426,7 @@ const ADMIN_PASS_HASH = btoa('lider12345*'); // base64 simples
 
 /* ══ SESSÃO ══ */
 let _cfgLogado = false;
+let _cfgPapelAtual = 'admin'; // 'admin' ou 'rh'
 let _todosUsuarios = [];
 
 function _cfgHash(s){ return btoa(unescape(encodeURIComponent(s))); }
@@ -418,12 +444,16 @@ async function _cfgLogin() {
     _cfgEntrar();
     return;
   }
-  // Testa no Firebase
+  // Testa no Firebase — admin e rh têm acesso
   try {
     const todos = await fbv2_getAll('usuarios');
-    const usr = todos.find(x => x.username===u && x.papel==='admin' && x.ativo!==false);
+    const usr = todos.find(x =>
+      x.username === u &&
+      (x.papel === 'admin' || x.papel === 'rh') &&
+      x.ativo !== false
+    );
     if (usr && _cfgUnhash(usr.senha||'') === p) {
-      _cfgEntrar();
+      _cfgEntrar(usr.papel || 'admin');
     } else {
       err.textContent = '❌ Usuário ou senha incorretos';
     }
@@ -432,9 +462,15 @@ async function _cfgLogin() {
   }
 }
 
-function _cfgEntrar() {
+function _cfgEntrar(papel = 'admin') {
+  _cfgPapelAtual = papel;
   sessionStorage.setItem('cfg_ok','1');
+  sessionStorage.setItem('cfg_papel', papel);
   document.getElementById('login-overlay').classList.add('hidden');
+  // RH: mostra aviso de restrição
+  if (papel === 'rh') {
+    _toast('👁️ Acesso RH: você pode gerenciar apenas colaboradores e atendentes.');
+  }
   _cfgLogado = true;
   _carregarUsuarios();
 }
@@ -457,13 +493,20 @@ function _cfgTab(tab) {
   document.getElementById('content-'+tab).classList.add('active');
 }
 
+/* Papéis que RH não pode ver/editar */
+const _PAPEIS_PROTEGIDOS = ['admin','lider'];
+
 /* ══ CARREGAR USUÁRIOS ══ */
 async function _carregarUsuarios() {
   const tbody = document.getElementById('user-tbody');
   tbody.innerHTML = '<tr><td colspan="6" class="loading-row">⏳ Carregando...</td></tr>';
   try {
     _todosUsuarios = await fbv2_getAll('usuarios');
-    _renderUsuarios(_todosUsuarios);
+    // RH só vê colaboradores / atendentes (não admin e não lider)
+    const visiveis = _cfgPapelAtual === 'rh'
+      ? _todosUsuarios.filter(u => !_PAPEIS_PROTEGIDOS.includes(u.papel))
+      : _todosUsuarios;
+    _renderUsuarios(visiveis);
   } catch(e) {
     tbody.innerHTML = `<tr><td colspan="6" class="loading-row">❌ Erro: ${e.message}</td></tr>`;
   }
@@ -475,8 +518,26 @@ function _renderUsuarios(lista) {
     tbody.innerHTML = '<tr><td colspan="6" class="loading-row">📭 Nenhum usuário cadastrado ainda.</td></tr>';
     return;
   }
-  const papelCls = { admin:'bp-admin', lider:'bp-lider', colaborador:'bp-colab', uploader:'bp-uploader' };
-  const papelLabel = { admin:'👑 Admin', lider:'🎖️ Líder', colaborador:'👷 Colaborador', uploader:'📂 Uploader' };
+  const papelCls   = {
+    admin:         'bp-admin',
+    lider:         'bp-lider',
+    colaborador:   'bp-colab',
+    uploader:      'bp-uploader',
+    financeiro:    'bp-financeiro',
+    rh:            'bp-rh',
+    atendente:     'bp-atendente',
+    aux_financeiro:'bp-aux-fin',
+  };
+  const papelLabel = {
+    admin:         '👑 Admin',
+    lider:         '🎖️ Líder',
+    colaborador:   '👷 Colaborador',
+    uploader:      '📂 Uploader',
+    financeiro:    '💰 Financeiro',
+    rh:            '🧑‍💼 RH',
+    atendente:     '🎯 Atendente',
+    aux_financeiro:'💳 Aux. Financeiro',
+  };
   tbody.innerHTML = lista.map(u => `
     <tr>
       <td><strong>${u.username||'—'}</strong>
@@ -508,7 +569,10 @@ function _renderUsuarios(lista) {
 
 function _filtrarUsuarios() {
   const q = document.getElementById('search-user').value.toLowerCase();
-  const filtrado = _todosUsuarios.filter(u =>
+  const base = _cfgPapelAtual === 'rh'
+    ? _todosUsuarios.filter(u => !_PAPEIS_PROTEGIDOS.includes(u.papel))
+    : _todosUsuarios;
+  const filtrado = base.filter(u =>
     (u.username||'').toLowerCase().includes(q) ||
     (u.nome_display||'').toLowerCase().includes(q) ||
     (u.papel||'').toLowerCase().includes(q) ||
@@ -529,32 +593,52 @@ function _abrirModalNovoUser() {
   document.getElementById('f-primeiro-acesso').checked = true;
   document.getElementById('modal-user-err').textContent = '';
   // Reset permissões de sistemas
-  ['fs-producao','fs-motoboys','fs-dashboard','fs-financeiro','fs-uploads'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.checked = id === 'fs-producao'; // Produção marcado por padrão
+  _TODOS_FS.forEach(fid => {
+    const el = document.getElementById(fid);
+    if (el) el.checked = fid === 'fs-producao'; // Produção marcado por padrão
   });
   document.getElementById('f-turno').value = '';
   _popularSelectCards('');
+  _ajustarSelectPapelParaRH();
   _onPapelChange();
   document.getElementById('modal-user').classList.remove('hidden');
+}
+
+/* Esconde opções protegidas do select de papel quando logado como RH */
+function _ajustarSelectPapelParaRH() {
+  const sel = document.getElementById('f-papel');
+  Array.from(sel.options).forEach(opt => {
+    const esconder = _cfgPapelAtual === 'rh' && _PAPEIS_PROTEGIDOS.includes(opt.value);
+    opt.hidden = esconder;
+  });
+  // Garante que o valor atual não seja um prot egido
+  if (_cfgPapelAtual === 'rh' && _PAPEIS_PROTEGIDOS.includes(sel.value)) {
+    sel.value = 'colaborador';
+  }
 }
 
 function _editarUser(id) {
   const u = _todosUsuarios.find(x=>x.id===id);
   if (!u) return;
+  // RH não pode editar admin ou lider
+  if (_cfgPapelAtual === 'rh' && _PAPEIS_PROTEGIDOS.includes(u.papel)) {
+    _toast('🚫 RH não pode editar usuários Admin ou Líder.');
+    return;
+  }
   document.getElementById('modal-user-title').textContent = '✏️ Editar Usuário';
   document.getElementById('edit-user-id').value = id;
   document.getElementById('f-username').value = u.username||'';
   document.getElementById('f-nome').value = u.nome_display||'';
   document.getElementById('f-senha').value = '';
   document.getElementById('f-papel').value = u.papel||'colaborador';
+  _ajustarSelectPapelParaRH();
   document.getElementById('f-dept').value = u.departamento||'PRODUCAO';
   document.getElementById('f-primeiro-acesso').checked = u.primeiro_acesso===true;
   document.getElementById('modal-user-err').textContent = '';
   // Restaura permissões de sistemas
   const sistUser = Array.isArray(u.sistemas) ? u.sistemas : (u.papel==='colaborador' ? ['producao'] : []);
-  ['fs-producao','fs-motoboys','fs-dashboard','fs-financeiro','fs-uploads'].forEach(id => {
-    const el = document.getElementById(id);
+  _TODOS_FS.forEach(fid => {
+    const el = document.getElementById(fid);
     if (el) el.checked = sistUser.includes(el.value);
   });
   document.getElementById('f-turno').value = u.turno_preferido || '';
@@ -596,20 +680,67 @@ function _onPapelChange() {
     if (hint) hint.textContent = '⚠️ Se nenhum sistema for marcado, o líder terá acesso a todos.';
     document.getElementById('f-card').value  = '';
     document.getElementById('f-dept').value  = 'TODOS';
-  } else if (p === 'uploader') {
-    // uploader — acesso restrito: só escolhe sistemas
+  } else if (p === 'atendente') {
+    cardG.style.display = '';
+    deptG.style.display = '';
+    sistG.style.display = '';
+    turnG.style.display = '';
+    if (hint) hint.textContent = '🎯 Atendente: acessa Escala Motoboys + Produção (seu card) por padrão.';
+    _TODOS_FS.forEach(fid => {
+      const el = document.getElementById(fid);
+      if (el) el.checked = fid === 'fs-escala_motoboys' || fid === 'fs-producao';
+    });
+    document.getElementById('f-dept').value = 'ATENDIMENTO';
+
+  } else if (p === 'rh') {
     cardG.style.display = 'none';
     deptG.style.display = 'none';
     sistG.style.display = '';
     turnG.style.display = 'none';
-    if (hint) hint.textContent = '📂 Uploader acessa apenas os sistemas marcados (geralmente Upload Relatórios).';
-    // Marca apenas "uploads" por padrão ao selecionar o papel
-    ['fs-producao','fs-motoboys','fs-dashboard','fs-financeiro','fs-uploads'].forEach(fid => {
+    if (hint) hint.textContent = '🧑‍💼 RH: acessa Produção + Config. Acessos por padrão. Não pode editar líderes e admins.';
+    _TODOS_FS.forEach(fid => {
       const el = document.getElementById(fid);
-      if (el) el.checked = fid === 'fs-uploads';
+      if (el) el.checked = fid === 'fs-producao' || fid === 'fs-cfg_acesso';
     });
-    document.getElementById('f-card').value  = '';
-    document.getElementById('f-dept').value  = 'TODOS';
+    document.getElementById('f-card').value = '';
+    document.getElementById('f-dept').value = 'TODOS';
+
+  } else if (p === 'financeiro') {
+    cardG.style.display = 'none';
+    deptG.style.display = 'none';
+    sistG.style.display = '';
+    turnG.style.display = 'none';
+    if (hint) hint.textContent = '💰 Financeiro: acessa Pgto Diário + Pgto Motoboys + Upload Relatórios por padrão.';
+    _TODOS_FS.forEach(fid => {
+      const el = document.getElementById(fid);
+      if (el) el.checked = ['fs-pgto_diario','fs-pgto_motoboys','fs-uploads'].includes(fid);
+    });
+    document.getElementById('f-card').value = '';
+    document.getElementById('f-dept').value = 'TODOS';
+
+  } else if (p === 'aux_financeiro') {
+    cardG.style.display = 'none';
+    deptG.style.display = 'none';
+    sistG.style.display = '';
+    turnG.style.display = 'none';
+    if (hint) hint.textContent = '💳 Aux. Financeiro: acessa Pgto Motoboys + Upload Relatórios por padrão.';
+    _TODOS_FS.forEach(fid => {
+      const el = document.getElementById(fid);
+      if (el) el.checked = ['fs-pgto_motoboys','fs-uploads'].includes(fid);
+    });
+    document.getElementById('f-card').value = '';
+    document.getElementById('f-dept').value = 'TODOS';
+
+  } else if (p === 'uploader') {
+    cardG.style.display = 'none';
+    deptG.style.display = 'none';
+    sistG.style.display = '';
+    turnG.style.display = 'none';
+    if (hint) hint.textContent = '📂 Uploader: acessa apenas Upload de Relatórios.';
+    _TODOS_FS.forEach(fid => { const el = document.getElementById(fid); if (el) el.checked = fid === 'fs-uploads'; });
+    document.getElementById('f-card').value = '';
+    document.getElementById('f-dept').value = 'TODOS';
+
   } else {
     // admin — acesso total, sem restrições
     cardG.style.display = 'none';
@@ -636,15 +767,21 @@ async function _salvarUser() {
   if (!nome)    { err.textContent='Nome de exibição obrigatório'; return; }
   if (!id && !senha){ err.textContent='Senha obrigatória para novo usuário'; return; }
   if (senha && senha.length < 4){ err.textContent='Senha mínima de 4 caracteres'; return; }
+  // Restrição de RH: não pode criar nem editar papéis protegidos
+  if (_cfgPapelAtual === 'rh' && _PAPEIS_PROTEGIDOS.includes(papel)) {
+    err.textContent = '🚫 RH não pode criar ou editar usuários Admin ou Líder.';
+    return;
+  }
 
   // Verifica duplicata de username
   const dup = _todosUsuarios.find(u=>u.username===username && u.id!==id);
   if (dup){ err.textContent='Este nome de usuário já existe'; return; }
 
   // Coleta sistemas permitidos (só relevante para colaborador)
-  const sistSelecionados = ['producao','motoboys','dashboard','financeiro','uploads']
-    .filter(id => {
-      const el = document.getElementById('fs-'+id);
+  const sistSelecionados = _TODOS_FS
+    .map(fid => fid.replace('fs-',''))
+    .filter(sid => {
+      const el = document.getElementById('fs-'+sid);
       return el && el.checked;
     });
 
@@ -757,6 +894,7 @@ document.addEventListener('DOMContentLoaded', () => {
   _popularSelectCards('');
   // Verifica sessão
   if (sessionStorage.getItem('cfg_ok')==='1') {
+    _cfgPapelAtual = sessionStorage.getItem('cfg_papel') || 'admin';
     document.getElementById('login-overlay').classList.add('hidden');
     _cfgLogado = true;
     _carregarUsuarios();
