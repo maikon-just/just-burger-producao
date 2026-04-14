@@ -209,22 +209,18 @@ function _abrirModalKmInicio(id) {
   // Pré-preenche com valor anterior se já preenchido
   const conf = S.s1[id] || {};
   const kmAnt = conf.km_inicial !== undefined ? conf.km_inicial : '';
-  const horaAnt = conf.hora_saida || '';
   const inp1 = document.getElementById('km-inicio-val');
-  const inp2 = document.getElementById('km-inicio-hora');
   if (inp1) inp1.value = kmAnt;
-  if (inp2) inp2.value = horaAnt || new Date().toTimeString().slice(0,5);
   document.getElementById('modal-km-inicio').classList.remove('hidden');
   setTimeout(()=>{ if(inp1) inp1.focus(); }, 80);
 }
 
 function _confirmKmInicio() {
   const inp1 = document.getElementById('km-inicio-val');
-  const inp2 = document.getElementById('km-inicio-hora');
-  const kmVal  = Number(inp1 ? inp1.value : 0);
-  const horaVal = inp2 ? inp2.value : new Date().toTimeString().slice(0,5);
+  const kmVal = Number((inp1 ? inp1.value : '').toString().replace(/\D/g,'')) || 0;
   if (!kmVal || kmVal <= 0) { showToast('⚠️ Informe o KM inicial!'); inp1 && inp1.focus(); return; }
-  if (!horaVal) { showToast('⚠️ Informe a hora de saída!'); inp2 && inp2.focus(); return; }
+  // Registra hora automaticamente
+  const horaVal = new Date().toTimeString().slice(0,5);
 
   // Salva no S.s1 como entrada KM
   const id = _kmTarefaId || _s1Id;
@@ -239,7 +235,7 @@ function _confirmKmInicio() {
   };
   closeModal('modal-km-inicio');
   renderStep1();
-  showToast('🚐 KM inicial registrado: ' + kmVal + ' km — ' + horaVal);
+  showToast('🚐 KM inicial: ' + kmVal + ' km');
 }
 
 /* ── Abre modal de KM retorno (Step 2 do motorista) ── */
@@ -250,21 +246,16 @@ function _abrirModalKmRetorno(id) {
 
   const conf = S.s1[id] || {};
   const kmIni  = conf.km_inicial;
-  const horaSaida = conf.hora_saida || '—';
 
-  const lblSaida  = document.getElementById('km-ret-saida-lbl');
-  const lblHSaida = document.getElementById('km-ret-hora-saida-lbl');
-  if (lblSaida)  lblSaida.textContent  = kmIni !== undefined ? kmIni + ' km' : '—';
-  if (lblHSaida) lblHSaida.textContent = horaSaida;
+  // Exibe o KM inicial no resumo
+  const lblSaida = document.getElementById('km-ret-saida-lbl');
+  if (lblSaida) lblSaida.textContent = kmIni !== undefined ? kmIni + ' km' : '—';
 
   // Pré-preenche retorno se já preenchido antes
   const d2 = S.s2[id] || {};
-  const kmRetAnt  = d2.km_final !== undefined ? d2.km_final : '';
-  const horaRetAnt = d2.hora_retorno || '';
+  const kmRetAnt = d2.km_final !== undefined ? d2.km_final : '';
   const inp3 = document.getElementById('km-retorno-val');
-  const inp4 = document.getElementById('km-retorno-hora');
   if (inp3) { inp3.value = kmRetAnt; }
-  if (inp4) { inp4.value = horaRetAnt || new Date().toTimeString().slice(0,5); }
 
   // Esconde o box de percorrido até digitar
   const percBox = document.getElementById('km-percorrido-box');
@@ -275,11 +266,10 @@ function _abrirModalKmRetorno(id) {
 }
 
 function _calcKmPercorrido() {
-  const inp1 = document.getElementById('km-inicio-val');   // existe? não nesse modal
   const conf  = S.s1[_kmTarefaId || _s2Id] || {};
-  const kmIni = conf.km_inicial !== undefined ? conf.km_inicial : 0;
+  const kmIni = conf.km_inicial !== undefined ? Number(conf.km_inicial) : 0;
   const inp3  = document.getElementById('km-retorno-val');
-  const kmRet = Number(inp3 ? inp3.value : 0);
+  const kmRet = Number((inp3 ? inp3.value : '').toString().replace(/\D/g,'')) || 0;
   const perc  = kmRet > 0 ? Math.max(0, kmRet - kmIni) : 0;
   const box   = document.getElementById('km-percorrido-box');
   const val   = document.getElementById('km-percorrido-val');
@@ -288,16 +278,15 @@ function _calcKmPercorrido() {
 }
 
 function _confirmKmRetorno() {
-  const inp3  = document.getElementById('km-retorno-val');
-  const inp4  = document.getElementById('km-retorno-hora');
-  const kmRet = Number(inp3 ? inp3.value : 0);
-  const horaRet = inp4 ? inp4.value : new Date().toTimeString().slice(0,5);
-  if (!kmRet || kmRet <= 0) { showToast('⚠️ Informe o KM de retorno!'); inp3 && inp3.focus(); return; }
-  if (!horaRet) { showToast('⚠️ Informe a hora de retorno!'); inp4 && inp4.focus(); return; }
+  const inp3 = document.getElementById('km-retorno-val');
+  const kmRet = Number((inp3 ? inp3.value : '').toString().replace(/\D/g,'')) || 0;
+  if (!kmRet || kmRet <= 0) { showToast('⚠️ Informe o KM final!'); inp3 && inp3.focus(); return; }
+  // Hora de retorno registrada automaticamente
+  const horaRet = new Date().toTimeString().slice(0,5);
 
   const id    = _kmTarefaId || _s2Id;
   const conf  = S.s1[id] || {};
-  const kmIni = conf.km_inicial !== undefined ? conf.km_inicial : 0;
+  const kmIni = conf.km_inicial !== undefined ? Number(conf.km_inicial) : 0;
   const perc  = Math.max(0, kmRet - kmIni);
 
   // Salva no S.s2 — status sempre 'total' para KM
@@ -312,7 +301,7 @@ function _confirmKmRetorno() {
   };
   closeModal('modal-km-retorno');
   renderStep2();
-  showToast('✅ Retorno registrado: ' + kmRet + ' km (' + perc + ' km rodados)');
+  showToast('✅ KM final: ' + kmRet + ' km (' + perc + ' km rodados)');
 
   // Salva no Firebase (registro)
   _salvarRegistroKm(id, kmIni, kmRet, perc, horaRet, conf.hora_saida||'');
@@ -382,28 +371,20 @@ function _abrirModalKmVisualizacao(id) {
       <div style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);padding:16px 20px;color:#fff">
         <div style="font-size:11px;opacity:.8;font-weight:700;text-transform:uppercase;letter-spacing:.5px">🚐 Logística</div>
         <div style="font-size:18px;font-weight:900;margin-top:4px">${t.item}</div>
-        <div style="font-size:11px;opacity:.75;margin-top:2px">Visualização da Conferência</div>
+        <div style="font-size:11px;opacity:.75;margin-top:2px">Conferência de KM</div>
       </div>
       <div style="padding:20px;display:flex;flex-direction:column;gap:10px">
-        <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between">
+        <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
           <span style="font-size:12px;font-weight:700;color:#1d4ed8">🛣️ KM Inicial</span>
-          <span style="font-size:15px;font-weight:900;color:#1d4ed8">${kmIni} km</span>
+          <span style="font-size:18px;font-weight:900;color:#1d4ed8">${kmIni} km</span>
         </div>
-        <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between">
-          <span style="font-size:12px;font-weight:700;color:#1d4ed8">🕐 Hora Saída</span>
-          <span style="font-size:15px;font-weight:900;color:#1d4ed8">${hSaida}</span>
-        </div>
-        <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between">
-          <span style="font-size:12px;font-weight:700;color:#15803d">🏁 KM Retorno</span>
-          <span style="font-size:15px;font-weight:900;color:#15803d">${kmFim} km</span>
-        </div>
-        <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between">
-          <span style="font-size:12px;font-weight:700;color:#15803d">🕐 Hora Retorno</span>
-          <span style="font-size:15px;font-weight:900;color:#15803d">${hRet}</span>
+        <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;font-weight:700;color:#15803d">🏁 KM Final</span>
+          <span style="font-size:18px;font-weight:900;color:#15803d">${kmFim} km</span>
         </div>
         <div style="background:#ecfdf5;border:2px solid #6ee7b7;border-radius:12px;padding:14px;text-align:center">
           <div style="font-size:12px;font-weight:700;color:#15803d;margin-bottom:4px">📍 Total Percorrido</div>
-          <span style="font-size:28px;font-weight:900;color:#15803d">${kmPerc}</span>
+          <span style="font-size:32px;font-weight:900;color:#15803d">${kmPerc}</span>
           <span style="font-size:16px;font-weight:700;color:#15803d"> km</span>
         </div>
       </div>
@@ -1977,8 +1958,8 @@ function renderStep1() {
     if (km) {
       // Card especial para KM (motorista)
       infoLine = isConf
-        ? `<div class="task-qty-display" style="color:#1d4ed8;font-weight:800">🚐 Saída: ${conf.km_inicial} km — ${conf.hora_saida||'—'}</div>`
-        : '<div class="task-qty-display" style="color:#1d4ed8;font-weight:700">🚐 Toque para registrar KM de saída</div>';
+        ? `<div class="task-qty-display" style="color:#1d4ed8;font-weight:800">🚐 KM Inicial: ${conf.km_inicial} km</div>`
+        : '<div class="task-qty-display" style="color:#1d4ed8;font-weight:700">🚐 Toque para registrar KM inicial</div>';
     } else if (ck) {
       infoLine = isConf
         ? '<div class="task-qty-display" style="color:#16a34a;font-weight:800">✓ Confirmada</div>'
@@ -2181,19 +2162,17 @@ function renderStep2() {
     if (km) {
       // Card KM — mostra saída e retorno registrados
       if (isConf && status==='total') {
-        const kmIni = d1.km_inicial!==undefined ? d1.km_inicial : (d2.km_final ? '?' : '—');
-        const kmFim = d2.km_final!==undefined ? d2.km_final : '—';
-        const kmPerc = d2.produzida!==undefined ? d2.produzida : '—';
-        const hSaida = d1.hora_saida||'—';
-        const hRet   = d2.hora_retorno||'—';
+        const kmIni  = d1.km_inicial !== undefined ? d1.km_inicial : '—';
+        const kmFim  = d2.km_final   !== undefined ? d2.km_final   : '—';
+        const kmPerc = d2.produzida  !== undefined ? d2.produzida  : '—';
         infoLine2=`<div class="task-qty-display" style="color:#15803d;font-weight:800">
-          ✅ ${kmIni} → ${kmFim} km &nbsp;·&nbsp; ${kmPerc} km rodados
-          <div style="font-size:11px;color:#6b7280;margin-top:2px">Saída: ${hSaida} &nbsp;·&nbsp; Retorno: ${hRet}</div>
+          ✅ Inicial: ${kmIni} km &nbsp;→&nbsp; Final: ${kmFim} km
+          <div style="font-size:12px;font-weight:900;color:#15803d;margin-top:4px">📍 ${kmPerc} km rodados</div>
         </div>`;
       } else if (d1.km_inicial !== undefined) {
-        infoLine2=`<div class="task-qty-display" style="color:#1d4ed8;font-weight:700">🚐 Saída: ${d1.km_inicial} km (${d1.hora_saida||'—'})<br><span style="color:#f59e0b;font-size:11px">⏳ Aguardando retorno</span></div>`;
+        infoLine2=`<div class="task-qty-display" style="color:#1d4ed8;font-weight:700">🚐 KM Inicial: ${d1.km_inicial} km<br><span style="color:#f59e0b;font-size:11px">⏳ Aguardando KM final</span></div>`;
       } else {
-        infoLine2='<div class="task-qty-display" style="color:#f59e0b;font-weight:700">⏳ Registre o KM de saída</div>';
+        infoLine2='<div class="task-qty-display" style="color:#f59e0b;font-weight:700">⏳ Registre o KM inicial</div>';
       }
     } else if (ck) {
       infoLine2=isConf
