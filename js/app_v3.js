@@ -155,8 +155,11 @@ const S = {
   leaderOk: false, leaderData: [],
   currentLeaderTab: 'registros',
   producaoIniciada: false,
-  _modoConferenciaLider: false, // true quando líder entra em modo conferência
-  _sessIdConferencia: null,     // id da sessão sendo conferida
+  _modoConferenciaLider: false,   // true quando líder entra em modo conferência
+  _sessIdConferencia: null,       // id da sessão sendo conferida
+  _confCards: {},                 // { [tarefaId]: true } cards já conferidos pelo líder nesta sessão
+  _nomeConferencia: null,         // nome do colaborador sendo conferido
+  _turnoAutorizadoLider: false,   // true quando o turno já foi conferido e autorizado pelo líder
 };
 
 /* ══ HELPERS FIREBASE ════════════════════════════════════ */
@@ -851,14 +854,14 @@ async function _reabrirTurnoColab(nome) {
 }
 
 /* ══ CONFERÊNCIA DO LÍDER ════════════════════════════════
-   Fluxo:
-   1. Líder clica no card finalizado → modal com opções
-   2. "Conferir"  → entra no card em modo leitura, volta e marca lider_conferiu=true
-   3. "Autorizar" → só disponível após conferência, grava lider_autorizado=true
-   4. "Reabrir"   → disponível sempre (com confirmação)
+   Fluxo novo:
+   1. Líder clica no card finalizado → modal simples (Conferir / Reabrir)
+   2. "Conferir" → entra nos cards em modo conferência
+   3. Dentro de cada card: "✅ Finalizar Conferência" ou "⚠️ Inf. Incorreta"
+   4. Ao finalizar todos os cards → volta automático ao setor com badge 🎖️
+   5. "Inf. Incorreta" → líder corrige qtd, cria pendência, -20pts no dashboard
 ══════════════════════════════════════════════════════════ */
 function _clickColabLiderConferencia(nome, sessId, jaConferiu, jaAutoriz) {
-  // Se já autorizado, só oferece opção de reabrir
   const ne = nome.replace(/'/g,"\\'");
   let ov = document.getElementById('_modal_lider_conf');
   if (!ov) {
@@ -871,34 +874,20 @@ function _clickColabLiderConferencia(nome, sessId, jaConferiu, jaAutoriz) {
   const em = COLLAB_EMOJI[nome.toUpperCase()] || '👤';
   const setor = COLLAB_SETOR[nome.toUpperCase()] || '';
 
-  // Monta botões de acordo com o estado
+  const statusLabel = jaAutoriz
+    ? '🎖️ Conferência Concluída'
+    : jaConferiu ? '👁️ Conferido' : '✅ Turno Finalizado';
+  const statusBg    = jaAutoriz ? '#dcfce7' : jaConferiu ? '#dbeafe' : '#fef9c3';
+  const statusColor = jaAutoriz ? '#15803d' : jaConferiu ? '#1d4ed8' : '#92400e';
+
   const btnConferir = `
     <button onclick="_liderConferir('${ne}','${sessId}')"
       style="width:100%;padding:14px 16px;border-radius:14px;border:none;
              background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;
              font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;
              display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px">
-      👁️ ${jaConferiu ? 'Conferir Novamente' : 'Conferir Turno'}
+      👁️ ${jaAutoriz ? 'Ver Novamente' : jaConferiu ? 'Conferir Novamente' : 'Conferir Turno'}
     </button>`;
-
-  const btnAutorizar = jaConferiu && !jaAutoriz ? `
-    <button onclick="_liderAutorizarFim('${ne}','${sessId}')"
-      style="width:100%;padding:14px 16px;border-radius:14px;border:none;
-             background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;
-             font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;
-             display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px">
-      ✅ Autorizar Finalização
-    </button>` : jaAutoriz ? `
-    <div style="padding:10px 14px;border-radius:12px;background:#f0fdf4;color:#15803d;
-                font-size:13px;font-weight:700;text-align:center;margin-bottom:10px;
-                border:1px solid #bbf7d0">
-      🎖️ Turno já autorizado pelo Líder
-    </div>` : `
-    <div style="padding:10px 14px;border-radius:12px;background:#fefce8;color:#92400e;
-                font-size:12px;font-weight:600;text-align:center;margin-bottom:10px;
-                border:1px solid #fde68a">
-      ⚠️ Confira o turno antes de autorizar
-    </div>`;
 
   const btnReabrir = `
     <button onclick="_liderReabrirDoModal('${ne}')"
@@ -925,14 +914,12 @@ function _clickColabLiderConferencia(nome, sessId, jaConferiu, jaAutoriz) {
         <h2 style="font-size:17px;font-weight:900;margin:0 0 2px;color:#1e293b">${nome}</h2>
         ${setor ? `<p style="font-size:12px;color:#64748b;margin:0 0 8px">${setor}</p>` : ''}
         <div style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;
-                    background:${jaAutoriz?'#dcfce7':jaConferiu?'#dbeafe':'#fef9c3'};
-                    color:${jaAutoriz?'#15803d':jaConferiu?'#1d4ed8':'#92400e'}">
-          ${jaAutoriz ? '🎖️ Autorizado' : jaConferiu ? '👁️ Conferido' : '✅ Turno Finalizado'}
+                    background:${statusBg};color:${statusColor}">
+          ${statusLabel}
         </div>
       </div>
       <div style="height:1px;background:#f1f5f9;margin:0 0 16px"></div>
       ${btnConferir}
-      ${btnAutorizar}
       ${btnReabrir}
       ${btnFechar}
     </div>`;
@@ -1122,10 +1109,249 @@ function _voltarDoModoConferencia() {
   if (dica) dica.remove();
   const step = document.getElementById('screen-step1');
   if (step) step.style.paddingTop = '';
-  // Volta para a tela do setor
+  // Reseta estado de conferência
   S._modoConferenciaLider = false;
+  S._confCards = {};
+  S._nomeConferencia = null;
   _cache.sessoes = null; // força reload para mostrar badge atualizado
   _mostrarTelaSetor(_deptAtual);
+}
+
+/* ══ FINALIZAR CARD NA CONFERÊNCIA ══════════════════════════════════════
+   Líder clica em "Finalizar Conferência" dentro de um card aberto.
+   - Marca o card como conferido (esmaecido)
+   - Se for o último card → grava lider_autorizado=true e volta ao setor
+════════════════════════════════════════════════════════════════════════ */
+async function _liderFinalizarCard(nome, tarefaId) {
+  // Registra card como conferido nesta sessão
+  S._confCards[tarefaId] = true;
+  closeModal('modal-s2');
+
+  // Esmaece o card visualmente na tela de conferência
+  const cardEl = document.getElementById('s2c-' + tarefaId);
+  if (cardEl) {
+    cardEl.style.opacity = '0.35';
+    cardEl.style.filter  = 'grayscale(.7)';
+    cardEl.style.pointerEvents = 'none';
+    // Adiciona ícone de conferido
+    const header = cardEl.querySelector('.task-card-header');
+    if (header && !header.querySelector('._conf_ok_badge')) {
+      const badge = document.createElement('span');
+      badge.className = '_conf_ok_badge';
+      badge.style.cssText = 'background:#16a34a;color:#fff;font-size:10px;font-weight:900;padding:2px 6px;border-radius:8px;';
+      badge.textContent = '🎖️ OK';
+      header.appendChild(badge);
+    }
+  }
+
+  // Verifica se todos os cards foram conferidos
+  const total   = S.tarefas.length;
+  const conferidos = Object.keys(S._confCards).length;
+
+  // Atualiza contador no banner
+  const dica = document.getElementById('_dica_leitura');
+  if (dica) dica.textContent = `👁️ Conferidos: ${conferidos}/${total} — ${conferidos < total ? 'continue conferindo' : 'tudo conferido!'}`;
+
+  if (conferidos >= total) {
+    // Todos conferidos → finaliza a conferência
+    showLoading(true);
+    try {
+      const sessId = S._sessIdConferencia;
+      if (sessId) {
+        await _fbPatch('sessoes', sessId, {
+          lider_conferiu:   true,
+          lider_autorizado: true,
+          lider_nome: JB_SESSION ? (JB_SESSION.nome || JB_SESSION.username) : 'Líder',
+          lider_hora: new Date().toLocaleTimeString('pt-BR'),
+        });
+      }
+      _cache.sessoes = null;
+      showToast('🎖️ Conferência de ' + nome + ' finalizada!');
+    } catch(e) {
+      showToast('❌ Erro ao finalizar conferência');
+      console.error(e);
+    } finally {
+      showLoading(false);
+    }
+
+    // Aguarda 800ms para o usuário ver o efeito e depois volta ao setor
+    setTimeout(() => _voltarDoModoConferencia(), 800);
+  }
+}
+
+/* ══ INFORMAÇÃO INCORRETA NA CONFERÊNCIA ════════════════════════════════
+   Líder detecta inconsistência → corrige quantidade → cria pendência
+   → abate 20 pts no dashboard via coleção 'inconsistencias'
+════════════════════════════════════════════════════════════════════════ */
+function _liderInfIncorreta(nome, tarefaId) {
+  const tarefa = S.tarefas.find(t => t.id === tarefaId);
+  if (!tarefa) return;
+
+  const d2     = S.s2[tarefaId] || {};
+  const ck     = isChecklist(tarefa);
+  const prodAt = d2.produzida !== undefined ? d2.produzida : (tarefa.quantidade_padrao || 0);
+  const prog   = (S.s1[tarefaId] || {}).programada !== undefined
+    ? (S.s1[tarefaId]).programada
+    : (tarefa.quantidade_padrao || 0);
+
+  // Fecha modal-s2 e abre modal de inconsistência
+  closeModal('modal-s2');
+
+  let ov = document.getElementById('_modal_inf_incorreta');
+  if (!ov) {
+    ov = document.createElement('div'); ov.id = '_modal_inf_incorreta';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px';
+    document.body.appendChild(ov);
+  }
+  const ne = nome.replace(/'/g,"\\'");
+  const tid = tarefaId.replace(/'/g,"\\'");
+
+  ov.innerHTML = `
+    <div style="background:#fff;border-radius:20px;padding:24px 20px;width:100%;max-width:360px;
+                box-shadow:0 20px 60px rgba(0,0,0,.5);font-family:inherit">
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:36px">⚠️</div>
+        <h3 style="font-size:16px;font-weight:900;margin:6px 0 2px;color:#1e293b">Informação Incorreta</h3>
+        <p style="font-size:12px;color:#64748b;margin:0">${tarefa.item}</p>
+      </div>
+      <div style="background:#fef3c7;border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#92400e;font-weight:600;">
+        ⚠️ Esta ação cria uma pendência e desconta <strong>20 pontos</strong> no dashboard do colaborador.
+      </div>
+      ${!ck ? `
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">
+          📦 Quantidade real produzida <span style="font-size:11px;color:#9ca3af;">(informado: ${fmt(prodAt)} ${tarefa.unidade||''})</span>
+        </label>
+        <div style="display:flex;align-items:center;gap:8px;justify-content:center">
+          <button onclick="
+            const v=document.getElementById('_inf_qtd_real');
+            v.value=Math.max(0,(parseInt(v.value)||0)-1)
+          " style="width:36px;height:36px;border-radius:8px;border:2px solid #e2e8f0;background:#f9fafb;font-size:18px;cursor:pointer;font-weight:900">−</button>
+          <input id="_inf_qtd_real" type="number" min="0" value="${prodAt}"
+            style="width:80px;text-align:center;padding:8px;border:2px solid #e2e8f0;border-radius:10px;font-size:16px;font-weight:900;font-family:inherit"/>
+          <button onclick="
+            const v=document.getElementById('_inf_qtd_real');
+            v.value=(parseInt(v.value)||0)+1
+          " style="width:36px;height:36px;border-radius:8px;border:2px solid #e2e8f0;background:#f9fafb;font-size:18px;cursor:pointer;font-weight:900">+</button>
+        </div>
+      </div>` : ''}
+      <div style="margin-bottom:16px">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">📝 Observação</label>
+        <textarea id="_inf_obs" rows="2" placeholder="Descreva a inconsistência encontrada..."
+          style="width:100%;padding:10px;border:2px solid #e2e8f0;border-radius:10px;font-size:13px;
+                 font-family:inherit;box-sizing:border-box;resize:none;"></textarea>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="document.getElementById('_modal_inf_incorreta').style.display='none';openS2Modal('${tid}')"
+          style="flex:1;padding:11px;border-radius:12px;border:2px solid #e2e8f0;background:#f9fafb;
+                 font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:#6b7280">
+          Cancelar
+        </button>
+        <button onclick="_confirmarInfIncorreta('${ne}','${tid}',${ck?'true':'false'})"
+          style="flex:2;padding:11px;border-radius:12px;border:none;
+                 background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;
+                 font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">
+          ⚠️ Confirmar e Registrar
+        </button>
+      </div>
+    </div>`;
+  ov.style.display = 'flex';
+}
+
+async function _confirmarInfIncorreta(nome, tarefaId, isChecklist) {
+  const tarefa = S.tarefas.find(t => t.id === tarefaId);
+  if (!tarefa) return;
+
+  const obs    = (document.getElementById('_inf_obs')?.value || '').trim();
+  const qtdRealEl = document.getElementById('_inf_qtd_real');
+  const qtdReal   = qtdRealEl ? Math.max(0, parseInt(qtdRealEl.value) || 0) : 0;
+  const prog      = (S.s1[tarefaId] || {}).programada !== undefined
+    ? (S.s1[tarefaId]).programada : (tarefa.quantidade_padrao || 0);
+
+  if (!obs) { showToast('⚠️ Descreva a inconsistência!'); return; }
+
+  // Fecha modal de inconsistência
+  const ovInc = document.getElementById('_modal_inf_incorreta');
+  if (ovInc) ovInc.style.display = 'none';
+
+  showLoading(true);
+  try {
+    const dt = S.dataTrabalho || today();
+
+    // 1. Cria pendência na coleção 'pendencias' para o dashboard de resultados
+    await _fbPost('pendencias', {
+      data: dt, turno: S.turno, dia_semana: S.dia,
+      colaborador: nome,
+      item: tarefa.item, categoria: tarefa.categoria || '',
+      quantidade_programada: prog,
+      quantidade_produzida:  isChecklist ? 0 : qtdReal,
+      status: 'nao_finalizado',
+      motivo: `⚠️ Inconsistência — ${obs}`,
+      vistoriado: 0,
+      origem_falta: 'inconsistencia_lider',
+      sessao_id: S._sessIdConferencia || '',
+    });
+
+    // 2. Grava inconsistência na coleção própria para abater 20 pts no dashboard
+    await _fbPost('inconsistencias', {
+      data: dt, turno: S.turno, dia_semana: S.dia,
+      colaborador: nome,
+      tarefa_id: tarefaId,
+      item: tarefa.item,
+      pontos: 20,
+      obs: obs,
+      lider_nome: JB_SESSION ? (JB_SESSION.nome || JB_SESSION.username) : 'Líder',
+      hora: new Date().toLocaleTimeString('pt-BR'),
+    });
+
+    showToast(`⚠️ Inconsistência registrada! −20 pts para ${nome}`);
+
+    // 3. Marca card como conferido (com inconsistência) e continua o fluxo
+    S._confCards[tarefaId] = true;
+
+    // Esmaece card visualmente
+    const cardEl = document.getElementById('s2c-' + tarefaId);
+    if (cardEl) {
+      cardEl.style.opacity = '0.35';
+      cardEl.style.filter  = 'grayscale(.7)';
+      cardEl.style.pointerEvents = 'none';
+      const header = cardEl.querySelector('.task-card-header');
+      if (header && !header.querySelector('._conf_ok_badge')) {
+        const badge = document.createElement('span');
+        badge.className = '_conf_ok_badge';
+        badge.style.cssText = 'background:#f97316;color:#fff;font-size:10px;font-weight:900;padding:2px 6px;border-radius:8px;';
+        badge.textContent = '⚠️ Inc.';
+        header.appendChild(badge);
+      }
+    }
+
+    // Verifica se todos foram conferidos após esta inconsistência
+    const total      = S.tarefas.length;
+    const conferidos = Object.keys(S._confCards).length;
+
+    const dica = document.getElementById('_dica_leitura');
+    if (dica) dica.textContent = `👁️ Conferidos: ${conferidos}/${total}`;
+
+    if (conferidos >= total) {
+      const sessId = S._sessIdConferencia;
+      if (sessId) {
+        await _fbPatch('sessoes', sessId, {
+          lider_conferiu:   true,
+          lider_autorizado: true,
+          lider_nome: JB_SESSION ? (JB_SESSION.nome || JB_SESSION.username) : 'Líder',
+          lider_hora: new Date().toLocaleTimeString('pt-BR'),
+        });
+      }
+      _cache.sessoes = null;
+      showToast('🎖️ Conferência de ' + nome + ' concluída com inconsistências!');
+      setTimeout(() => _voltarDoModoConferencia(), 800);
+    }
+  } catch(e) {
+    showToast('❌ Erro ao registrar inconsistência');
+    console.error(e);
+  } finally {
+    showLoading(false);
+  }
 }
 
 /* ══ FALTAS ══════════════════════════════════════════════ */
@@ -1244,6 +1470,14 @@ async function selectColaborador(nome) {
       s.colaborador_card===nome&&s.data===dt&&s.turno===S.turno&&
       s.dia_semana===S.dia&&s.status_geral==='etapa1_ok'
     );
+
+    // ── Verifica se o turno já foi autorizado pelo líder ──
+    const sessAutorizada = todasSessoes.find(s=>
+      s.colaborador_card===nome&&s.data===dt&&s.turno===S.turno&&
+      s.dia_semana===S.dia&&(s.status_geral==='completo'||s.status_geral==='parcial')&&
+      s.lider_autorizado===true
+    );
+    S._turnoAutorizadoLider = !!sessAutorizada && !_isLider();
 
     // ── MODO CONFERÊNCIA DO LÍDER ─────────────────────────
     // Quando o líder clica em "Conferir" num card já finalizado
@@ -1640,6 +1874,13 @@ let _s2Id=null,_s2Status=null,_s2Motivo=null;
 
 function openS2Modal(id) {
   const t=S.tarefas.find(x=>x.id===id); if (!t) return;
+
+  // ── Colaborador não pode abrir card após turno autorizado pelo líder ──
+  // S._turnoAutorizadoLider é setado em selectColaborador quando a sessão tem lider_autorizado=true
+  if (S._turnoAutorizadoLider && !_isLider()) {
+    showToast('🎖️ Este turno já foi conferido e autorizado pelo líder.');
+    return;
+  }
   _s2Id=id; _s2Status=null; _s2Motivo='';
   const ck=isChecklist(t);
   const d2=S.s2[id]||{}; const d1=S.s1[id]||{};
@@ -1679,38 +1920,78 @@ function openS2Modal(id) {
   }
   document.getElementById('modal-s2').classList.remove('hidden');
 
-  // ── MODO CONFERÊNCIA DO LÍDER: desativa todos os controles do modal ──
+  // ── MODO CONFERÊNCIA DO LÍDER ─────────────────────────────────────────
   if (S._modoConferenciaLider) {
-    // Pequeno timeout para garantir que o DOM do modal já foi renderizado
-    setTimeout(() => {
-      const modal = document.getElementById('modal-s2');
-      if (!modal) return;
-      // Desativa botões de status
-      modal.querySelectorAll('.sbtn, .motivo-btn, #modal-s2-confirm, #btn-confirm-s2').forEach(el => {
-        el.disabled = true;
-        el.style.opacity = '0.45';
-        el.style.cursor  = 'not-allowed';
-        el.style.pointerEvents = 'none';
-      });
-      // Desativa campo de quantidade produzida
-      const qtyInput = modal.querySelector('#modal-s2-prod');
-      if (qtyInput) { qtyInput.contentEditable = 'false'; qtyInput.style.pointerEvents = 'none'; }
-      // Desativa motivo custom
-      const mc2 = modal.querySelector('#motivo-custom');
-      if (mc2) { mc2.disabled = true; }
-      // Adiciona banner de leitura dentro do modal
-      let dicaModal = modal.querySelector('#_dica_modal_lider');
-      if (!dicaModal) {
-        dicaModal = document.createElement('div');
-        dicaModal.id = '_dica_modal_lider';
-        dicaModal.style.cssText = 'text-align:center;padding:6px 12px;font-size:11px;font-weight:700;color:#1d4ed8;background:#dbeafe;border-radius:8px;margin:8px 16px;';
-        dicaModal.textContent = '👁️ Somente leitura — modo conferência';
-        const header = modal.querySelector('#modal-s2-header') || modal.firstElementChild;
-        if (header && header.nextSibling) header.parentNode.insertBefore(dicaModal, header.nextSibling);
-        else if (header) header.after(dicaModal);
-      }
-    }, 50);
+    setTimeout(() => _montarFooterConferencia(id), 50);
   }
+}
+
+/* Monta o rodapé especial de conferência dentro do modal-s2 */
+function _montarFooterConferencia(tarefaId) {
+  const modal = document.getElementById('modal-s2');
+  if (!modal) return;
+
+  const jaConferido = !!S._confCards[tarefaId];
+
+  // Desativa controles de edição de status do colaborador
+  modal.querySelectorAll('.sbtn, .motivo-btn').forEach(el => {
+    el.disabled = true; el.style.opacity='0.35';
+    el.style.cursor='not-allowed'; el.style.pointerEvents='none';
+  });
+  const qtyBtns = modal.querySelectorAll('.qty-btn');
+  qtyBtns.forEach(b => { b.disabled=true; b.style.opacity='0.35'; b.style.pointerEvents='none'; });
+  const mc2 = modal.querySelector('#motivo-custom');
+  if (mc2) mc2.disabled = true;
+
+  // Oculta footer original e injeta footer de conferência
+  const footerOrig = document.getElementById('s2-modal-footer');
+  if (footerOrig) footerOrig.style.display = 'none';
+
+  // Remove footer antigo se existir
+  const oldFt = document.getElementById('_conf_lider_footer');
+  if (oldFt) oldFt.remove();
+
+  const ne = (S.colaborador||'').replace(/'/g,"\\'");
+  const ft = document.createElement('div');
+  ft.id = '_conf_lider_footer';
+  ft.style.cssText = 'padding:12px 16px 16px;display:flex;flex-direction:column;gap:8px;border-top:1px solid #f1f5f9;';
+
+  if (jaConferido) {
+    // Card já conferido → mostra apenas aviso e botão fechar
+    ft.innerHTML = `
+      <div style="text-align:center;padding:10px;background:#d1fae5;border-radius:12px;
+                  color:#065f46;font-size:13px;font-weight:800;">
+        ✅ Card já conferido
+      </div>
+      <button onclick="closeModal('modal-s2')"
+        style="padding:12px;border-radius:12px;border:2px solid #e2e8f0;background:#f9fafb;
+               font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;color:#6b7280;">
+        Fechar
+      </button>`;
+  } else {
+    ft.innerHTML = `
+      <div style="text-align:center;padding:6px 10px;background:#dbeafe;border-radius:10px;
+                  color:#1d4ed8;font-size:11px;font-weight:700;margin-bottom:2px;">
+        👁️ Modo Conferência — confira o resultado
+      </div>
+      <button onclick="_liderFinalizarCard('${ne}','${tarefaId}')"
+        style="padding:13px;border-radius:12px;border:none;
+               background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;
+               font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;">
+        ✅ Finalizar Conferência
+      </button>
+      <button onclick="_liderInfIncorreta('${ne}','${tarefaId}')"
+        style="padding:11px;border-radius:12px;border:2px solid #f97316;background:#fff7ed;
+               color:#c2410c;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">
+        ⚠️ Informação Incorreta
+      </button>
+      <button onclick="closeModal('modal-s2')"
+        style="padding:10px;border-radius:12px;border:2px solid #e2e8f0;background:#f9fafb;
+               font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:#6b7280;">
+        Fechar sem conferir
+      </button>`;
+  }
+  modal.querySelector('.modal-box').appendChild(ft);
 }
 
 function selectStatus(status) {
@@ -3080,18 +3361,24 @@ function closeModal(id) {
     const allDone = S.tarefas.length > 0 && S.tarefas.every(t=>S.s2[t.id]&&S.s2[t.id].status);
     if (concludeBtn && allDone) concludeBtn.classList.remove('hidden');
   }
-  // Remove o banner de somente leitura do modal de conferência do líder ao fechar
+  // Limpeza do modal-s2 ao fechar (modo conferência ou normal)
   if (id === 'modal-s2') {
-    const dicaModal = document.getElementById('_dica_modal_lider');
-    if (dicaModal) dicaModal.remove();
-    // Reativa os botões do modal para uso normal (serão desativados novamente se necessário)
+    // Remove footer de conferência do líder
+    const confFt = document.getElementById('_conf_lider_footer');
+    if (confFt) confFt.remove();
+    // Reexibe footer original
+    const footerOrig = document.getElementById('s2-modal-footer');
+    if (footerOrig) footerOrig.style.display = '';
+    // Reativa todos os botões do modal para próximo uso
     if (el) {
-      el.querySelectorAll('.sbtn, .motivo-btn, #btn-s2-salvar').forEach(btn => {
+      el.querySelectorAll('.sbtn, .motivo-btn, #btn-s2-salvar, .qty-btn').forEach(btn => {
         btn.disabled = false;
         btn.style.opacity = '';
         btn.style.cursor  = '';
         btn.style.pointerEvents = '';
       });
+      const mc2 = el.querySelector('#motivo-custom');
+      if (mc2) mc2.disabled = false;
     }
   }
 }
