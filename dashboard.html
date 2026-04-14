@@ -764,11 +764,12 @@ async function buscar(){
   setState('loading');
 
   try {
-    /* Busca paralela incluindo faltas */
-    const [sessoes, pendencias, faltas] = await Promise.all([
+    /* Busca paralela incluindo faltas e inconsistências do líder */
+    const [sessoes, pendencias, faltas, inconsistencias] = await Promise.all([
       fetchAll('sessoes'),
       fetchAll('pendencias'),
-      fetchAll('faltas')
+      fetchAll('faltas'),
+      fetchAll('inconsistencias').catch(() => [])  // tolerante: se coleção não existir retorna []
     ]);
 
     /* Filtra pelo período */
@@ -790,6 +791,12 @@ async function buscar(){
       if(_turno === 'todos') return true;
       return f.turno === _turno;
     });
+    const filtraInconsis = (inconsistencias||[]).filter(i => {
+      const ok = i.data >= de && i.data <= ate;
+      if(!ok) return false;
+      if(_turno === 'todos') return true;
+      return i.turno === _turno;
+    });
 
     if(filtraSess.length === 0 && filtraFaltas.length === 0){
       setState('empty');
@@ -797,7 +804,7 @@ async function buscar(){
       return;
     }
 
-    renderDash(filtraSess, filtraPend, filtraFaltas, de, ate);
+    renderDash(filtraSess, filtraPend, filtraFaltas, de, ate, filtraInconsis);
 
   } catch(e){
     console.error('Dashboard buscar error:', e);
@@ -840,7 +847,8 @@ function destroyChart(id){
 /* ── Variável global para filtro de motivo ── */
 let _allPendencias = [];
 
-function renderDash(sessoes, pendencias, faltas, de, ate){
+function renderDash(sessoes, pendencias, faltas, de, ate, inconsistencias){
+  inconsistencias = inconsistencias || [];
 
   /* ── Período bar ── */
   const pb = document.getElementById('periodo-bar');
@@ -873,6 +881,14 @@ function renderDash(sessoes, pendencias, faltas, de, ate){
     else faltaMap[n].j++;
   });
 
+  /* ── Mapa de inconsistências (penalidade do líder: -20 pts cada) ── */
+  const inconsisMap = {};
+  inconsistencias.forEach(i=>{
+    const n = i.colaborador;
+    if(!inconsisMap[n]) inconsisMap[n] = 0;
+    inconsisMap[n] += (i.pontos || 20);
+  });
+
   /* ── Métricas por colaborador ── */
   const metricas = Object.entries(colabs).map(([nome, d]) => {
     const totalSess    = d.sessoes.length;
@@ -885,13 +901,16 @@ function renderDash(sessoes, pendencias, faltas, de, ate){
     const pctTurnos100 = totalSess ? Math.round(turnos100/totalSess*100) : 0;
     const fNJ = faltaMap[nome]?.nj || 0;
     const fJ  = faltaMap[nome]?.j  || 0;
-    /* Penalidade: falta NJ desconta 15 pts, falta J desconta 7 pts */
-    const penalidade = Math.min(80, fNJ*15 + fJ*7);
-    const scoreBase  = Math.round(pctConclusao*0.6 + pctTurnos100*0.4);
-    const score      = Math.max(0, scoreBase - penalidade);
+    /* Penalidade: falta NJ -15pts, falta J -7pts, inconsistência líder -20pts cada */
+    const penFaltas     = Math.min(80, fNJ*15 + fJ*7);
+    const penInconsis   = inconsisMap[nome] || 0;
+    const penalidade    = Math.min(100, penFaltas + penInconsis);
+    const scoreBase     = Math.round(pctConclusao*0.6 + pctTurnos100*0.4);
+    const score         = Math.max(0, scoreBase - penalidade);
+    const qtdInconsis   = inconsistencias.filter(i=>i.colaborador===nome).length;
     return { nome, totalSess, totalTarefas, concluidas, pctConclusao,
              naoFeitas, parciais, turnos100, pctTurnos100, score, scoreBase,
-             penalidade, fNJ, fJ, pend:d.pend };
+             penalidade, penFaltas, penInconsis, qtdInconsis, fNJ, fJ, pend:d.pend };
   }).sort((a,b)=> b.score - a.score);
 
   /* ── KPIs globais ── */
@@ -1116,14 +1135,17 @@ function renderRanking(metricas){
     const cls  = i < 3 ? posClass[i] : 'other';
     const stars = m.score>=90?'⭐⭐⭐':m.score>=75?'⭐⭐':m.score>=50?'⭐':'';
     const faltaInfo = (m.fNJ||m.fJ) ?
-      ` · 🚫 ${m.fNJ} NJ${m.fJ?` · 📋 ${m.fJ} J`:''} (−${m.penalidade}pts)` : '';
+      ` · 🚫 ${m.fNJ} NJ${m.fJ?` · 📋 ${m.fJ} J`:''}` : '';
+    const inconsisInfo = m.qtdInconsis
+      ? ` · ⚠️ ${m.qtdInconsis} inconsist. (−${m.penInconsis}pts)` : '';
+    const penInfo = m.penalidade ? ` · Total: −${m.penalidade}pts` : '';
     return `
       <div class="ranking-item">
         <div class="rank-pos ${cls}">${i<3?medalhas[i]:i+1}</div>
         <div class="rank-emoji">${emoji(m.nome)}</div>
         <div class="rank-info">
           <div class="rank-name">${m.nome} ${stars}</div>
-          <div class="rank-sub">${m.totalSess} turnos · ${m.pctConclusao}% conclusão · ${m.naoFeitas} não feitas${faltaInfo}</div>
+          <div class="rank-sub">${m.totalSess} turnos · ${m.pctConclusao}% conclusão · ${m.naoFeitas} não feitas${faltaInfo}${inconsisInfo}${penInfo}</div>
           <div class="rank-bar-wrap">
             <div class="rank-bar" style="width:${pct}%;background:${m.score>=80?'#16a34a':m.score>=60?'#e6a800':'#dc2626'}"></div>
           </div>
