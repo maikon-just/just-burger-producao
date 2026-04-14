@@ -138,7 +138,8 @@ function _isColaborador() {
   return JB_SESSION && JB_SESSION.papel === 'colaborador';
 }
 function _isColaboradorRestrito() {
-  return JB_SESSION && JB_SESSION.papel === 'colaborador' && !!JB_SESSION.nome_card;
+  // Inclui 'atendente' com nome_card vinculado
+  return JB_SESSION && (JB_SESSION.papel === 'colaborador' || JB_SESSION.papel === 'atendente') && !!JB_SESSION.nome_card;
 }
 function _isLider() {
   return JB_SESSION && (JB_SESSION.papel === 'lider' || JB_SESSION.papel === 'admin');
@@ -179,6 +180,7 @@ function _invalidarCache() {
 /* ══ CHECKLIST DETECTOR ══════════════════════════════════ */
 function isChecklist(t) {
   if (!t) return false;
+  if (isKm(t)) return false; // KM não é checklist
   const u  = (t.unidade||'').toLowerCase().trim();
   const uN = u.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   const listN = UNIDADES_CHECKLIST.map(x=>x.normalize('NFD').replace(/[\u0300-\u036f]/g,''));
@@ -187,6 +189,232 @@ function isChecklist(t) {
   const qtdUnits=['kg','g','l','ml','un','unidade','pote','sache','saches','sachê','sachês','cx','caixa'];
   if (Number(t.quantidade_padrao)===0 && u && !qtdUnits.includes(u)) return true;
   return false;
+}
+
+/* ══ KM DETECTOR (tarefa de hodômetro para motorista) ════ */
+function isKm(t) {
+  if (!t) return false;
+  return (t.unidade||'').toLowerCase().trim() === 'km';
+}
+
+/* ══ FLUXO KM — ESTADO ══════════════════════════════════ */
+let _kmTarefaId = null; // tarefa KM em edição
+
+/* ── Abre modal de KM inicial (Step 1 do motorista) ── */
+function _abrirModalKmInicio(id) {
+  const t = S.tarefas.find(x=>x.id===id); if (!t) return;
+  _kmTarefaId = id;
+  _s1Id       = id;
+
+  // Pré-preenche com valor anterior se já preenchido
+  const conf = S.s1[id] || {};
+  const kmAnt = conf.km_inicial !== undefined ? conf.km_inicial : '';
+  const horaAnt = conf.hora_saida || '';
+  const inp1 = document.getElementById('km-inicio-val');
+  const inp2 = document.getElementById('km-inicio-hora');
+  if (inp1) inp1.value = kmAnt;
+  if (inp2) inp2.value = horaAnt || new Date().toTimeString().slice(0,5);
+  document.getElementById('modal-km-inicio').classList.remove('hidden');
+  setTimeout(()=>{ if(inp1) inp1.focus(); }, 80);
+}
+
+function _confirmKmInicio() {
+  const inp1 = document.getElementById('km-inicio-val');
+  const inp2 = document.getElementById('km-inicio-hora');
+  const kmVal  = Number(inp1 ? inp1.value : 0);
+  const horaVal = inp2 ? inp2.value : new Date().toTimeString().slice(0,5);
+  if (!kmVal || kmVal <= 0) { showToast('⚠️ Informe o KM inicial!'); inp1 && inp1.focus(); return; }
+  if (!horaVal) { showToast('⚠️ Informe a hora de saída!'); inp2 && inp2.focus(); return; }
+
+  // Salva no S.s1 como entrada KM
+  const id = _kmTarefaId || _s1Id;
+  const t  = S.tarefas.find(x=>x.id===id);
+  const padrao = t ? (Number(t.quantidade_padrao)||0) : 0;
+  S.s1[id] = {
+    estoque:     kmVal,
+    programada:  padrao,
+    confirmed:   true,
+    km_inicial:  kmVal,
+    hora_saida:  horaVal,
+  };
+  closeModal('modal-km-inicio');
+  renderStep1();
+  showToast('🚐 KM inicial registrado: ' + kmVal + ' km — ' + horaVal);
+}
+
+/* ── Abre modal de KM retorno (Step 2 do motorista) ── */
+function _abrirModalKmRetorno(id) {
+  const t = S.tarefas.find(x=>x.id===id); if (!t) return;
+  _kmTarefaId = id;
+  _s2Id       = id;
+
+  const conf = S.s1[id] || {};
+  const kmIni  = conf.km_inicial;
+  const horaSaida = conf.hora_saida || '—';
+
+  const lblSaida  = document.getElementById('km-ret-saida-lbl');
+  const lblHSaida = document.getElementById('km-ret-hora-saida-lbl');
+  if (lblSaida)  lblSaida.textContent  = kmIni !== undefined ? kmIni + ' km' : '—';
+  if (lblHSaida) lblHSaida.textContent = horaSaida;
+
+  // Pré-preenche retorno se já preenchido antes
+  const d2 = S.s2[id] || {};
+  const kmRetAnt  = d2.km_final !== undefined ? d2.km_final : '';
+  const horaRetAnt = d2.hora_retorno || '';
+  const inp3 = document.getElementById('km-retorno-val');
+  const inp4 = document.getElementById('km-retorno-hora');
+  if (inp3) { inp3.value = kmRetAnt; }
+  if (inp4) { inp4.value = horaRetAnt || new Date().toTimeString().slice(0,5); }
+
+  // Esconde o box de percorrido até digitar
+  const percBox = document.getElementById('km-percorrido-box');
+  if (percBox) percBox.style.display = 'none';
+
+  document.getElementById('modal-km-retorno').classList.remove('hidden');
+  setTimeout(()=>{ if(inp3) inp3.focus(); }, 80);
+}
+
+function _calcKmPercorrido() {
+  const inp1 = document.getElementById('km-inicio-val');   // existe? não nesse modal
+  const conf  = S.s1[_kmTarefaId || _s2Id] || {};
+  const kmIni = conf.km_inicial !== undefined ? conf.km_inicial : 0;
+  const inp3  = document.getElementById('km-retorno-val');
+  const kmRet = Number(inp3 ? inp3.value : 0);
+  const perc  = kmRet > 0 ? Math.max(0, kmRet - kmIni) : 0;
+  const box   = document.getElementById('km-percorrido-box');
+  const val   = document.getElementById('km-percorrido-val');
+  if (box) box.style.display = kmRet > 0 ? '' : 'none';
+  if (val) val.textContent = perc;
+}
+
+function _confirmKmRetorno() {
+  const inp3  = document.getElementById('km-retorno-val');
+  const inp4  = document.getElementById('km-retorno-hora');
+  const kmRet = Number(inp3 ? inp3.value : 0);
+  const horaRet = inp4 ? inp4.value : new Date().toTimeString().slice(0,5);
+  if (!kmRet || kmRet <= 0) { showToast('⚠️ Informe o KM de retorno!'); inp3 && inp3.focus(); return; }
+  if (!horaRet) { showToast('⚠️ Informe a hora de retorno!'); inp4 && inp4.focus(); return; }
+
+  const id    = _kmTarefaId || _s2Id;
+  const conf  = S.s1[id] || {};
+  const kmIni = conf.km_inicial !== undefined ? conf.km_inicial : 0;
+  const perc  = Math.max(0, kmRet - kmIni);
+
+  // Salva no S.s2 — status sempre 'total' para KM
+  const existingRegId = (S.s2[id]||{}).reg_id || null;
+  S.s2[id] = {
+    produzida:    perc,        // km percorrido
+    status:       'total',
+    motivo:       '',
+    km_final:     kmRet,
+    hora_retorno: horaRet,
+    reg_id:       existingRegId,
+  };
+  closeModal('modal-km-retorno');
+  renderStep2();
+  showToast('✅ Retorno registrado: ' + kmRet + ' km (' + perc + ' km rodados)');
+
+  // Salva no Firebase (registro)
+  _salvarRegistroKm(id, kmIni, kmRet, perc, horaRet, conf.hora_saida||'');
+}
+
+async function _salvarRegistroKm(id, kmIni, kmFinal, perc, horaRet, horaSaida) {
+  const t  = S.tarefas.find(x=>x.id===id); if (!t) return;
+  const dt = S.dataTrabalho||today();
+  const payload = {
+    data:                dt,
+    turno:               S.turno,
+    dia_semana:          S.dia,
+    colaborador_nome:    S.colaborador,
+    colaborador_card:    S.colaborador,
+    tarefa_id:           id,
+    item:                t.item,
+    categoria:           t.categoria||'',
+    quantidade_padrao:   t.quantidade_padrao||0,
+    quantidade_programada: t.quantidade_padrao||0,
+    quantidade_produzida:  perc,
+    status:              'total',
+    motivo:              '',
+    sessao_id:           S.sessaoId,
+    hora_registro:       new Date().toLocaleTimeString('pt-BR'),
+    km_inicial:          kmIni,
+    km_final:            kmFinal,
+    km_percorrido:       perc,
+    hora_saida:          horaSaida,
+    hora_retorno:        horaRet,
+    tipo_registro:       'km_motorista',
+  };
+  const existReg = (S.s2[id]||{}).reg_id;
+  try {
+    if (existReg) {
+      await _fbPatch('registros', existReg, {
+        quantidade_produzida: perc, status:'total',
+        km_final: kmFinal, km_percorrido: perc, hora_retorno: horaRet,
+      });
+    } else {
+      const res = await _fbPost('registros', payload);
+      if (res?.id) S.s2[id].reg_id = res.id;
+    }
+  } catch(e) { console.error('Erro ao salvar KM:', e); }
+}
+
+/* ── Visualização KM para o líder (somente leitura) ── */
+function _abrirModalKmVisualizacao(id) {
+  const t   = S.tarefas.find(x=>x.id===id); if (!t) return;
+  const d1  = S.s1[id] || {};
+  const d2  = S.s2[id] || {};
+  const kmIni  = d1.km_inicial  !== undefined ? d1.km_inicial  : '—';
+  const kmFim  = d2.km_final    !== undefined ? d2.km_final    : '—';
+  const kmPerc = d2.produzida   !== undefined ? d2.produzida   : '—';
+  const hSaida = d1.hora_saida  || '—';
+  const hRet   = d2.hora_retorno || '—';
+
+  // Cria / reutiliza overlay de visualização KM
+  let ov = document.getElementById('_modal_km_view');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = '_modal_km_view';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML = `
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:340px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);padding:16px 20px;color:#fff">
+        <div style="font-size:11px;opacity:.8;font-weight:700;text-transform:uppercase;letter-spacing:.5px">🚐 Logística</div>
+        <div style="font-size:18px;font-weight:900;margin-top:4px">${t.item}</div>
+        <div style="font-size:11px;opacity:.75;margin-top:2px">Visualização da Conferência</div>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:10px">
+        <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between">
+          <span style="font-size:12px;font-weight:700;color:#1d4ed8">🛣️ KM Inicial</span>
+          <span style="font-size:15px;font-weight:900;color:#1d4ed8">${kmIni} km</span>
+        </div>
+        <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between">
+          <span style="font-size:12px;font-weight:700;color:#1d4ed8">🕐 Hora Saída</span>
+          <span style="font-size:15px;font-weight:900;color:#1d4ed8">${hSaida}</span>
+        </div>
+        <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between">
+          <span style="font-size:12px;font-weight:700;color:#15803d">🏁 KM Retorno</span>
+          <span style="font-size:15px;font-weight:900;color:#15803d">${kmFim} km</span>
+        </div>
+        <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between">
+          <span style="font-size:12px;font-weight:700;color:#15803d">🕐 Hora Retorno</span>
+          <span style="font-size:15px;font-weight:900;color:#15803d">${hRet}</span>
+        </div>
+        <div style="background:#ecfdf5;border:2px solid #6ee7b7;border-radius:12px;padding:14px;text-align:center">
+          <div style="font-size:12px;font-weight:700;color:#15803d;margin-bottom:4px">📍 Total Percorrido</div>
+          <span style="font-size:28px;font-weight:900;color:#15803d">${kmPerc}</span>
+          <span style="font-size:16px;font-weight:700;color:#15803d"> km</span>
+        </div>
+      </div>
+      <div style="padding:0 20px 20px">
+        <button onclick="document.getElementById('_modal_km_view').style.display='none'"
+          style="width:100%;padding:12px;border-radius:12px;border:none;background:#1d4ed8;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">
+          Fechar
+        </button>
+      </div>
+    </div>`;
+  ov.style.display = 'flex';
 }
 
 /* ══ INIT ════════════════════════════════════════════════ */
@@ -663,6 +891,15 @@ async function _carregarAreasExtras() {
 
 function _abrirSetorCards(dept) {
   if (dept==='ATENDIMENTO') {
+    // Se já está logado como atendente ou colaborador com card de atendimento, não pede senha
+    const isAtendentLogado = JB_SESSION && (
+      JB_SESSION.papel === 'atendente' ||
+      (JB_SESSION.nome_card && ATEND_COLABS.some(c=>c.toUpperCase()===JB_SESSION.nome_card.toUpperCase()))
+    );
+    if (isAtendentLogado || _isLider()) {
+      _mostrarTelaSetor(dept);
+      return;
+    }
     _pedirSenhaDepto(()=>_mostrarTelaSetor(dept));
     return;
   }
@@ -862,14 +1099,22 @@ function _abrirModalSenha(emoji,titulo,subtitulo,senhaEsperada,callback) {
 /* ══ CLICK COLABORADOR ═══════════════════════════════════ */
 function _clickColab(nome,acao) {
   const pw=COLLAB_PASSWORDS[nome.toUpperCase()];
+
+  // Se o usuário já está logado com este card específico, não pede senha
+  const _esteCard = JB_SESSION && JB_SESSION.nome_card &&
+    JB_SESSION.nome_card.toUpperCase() === nome.toUpperCase();
+
   if (acao==='__reabrir__') {
     const confirmarReabrir=()=>{
       _abrirModalSenha('🔑','Reabrir Turno','Senha do líder para confirmar',LEADER_PASSWORD,()=>_reabrirTurnoColab(nome));
     };
-    if (pw) _abrirModalSenha(COLLAB_EMOJI[nome.toUpperCase()]||'👤',nome,'Sua senha para confirmar identidade',pw,confirmarReabrir);
+    // Reabrir sempre exige senha de líder — mesmo sendo o próprio card
+    if (pw && !_isLider()) _abrirModalSenha(COLLAB_EMOJI[nome.toUpperCase()]||'👤',nome,'Sua senha para confirmar identidade',pw,confirmarReabrir);
     else confirmarReabrir();
     return;
   }
+  // Já logado com o card vinculado → sem senha
+  if (_esteCard) { selectColaborador(nome); return; }
   if (pw) _abrirModalSenha(COLLAB_EMOJI[nome.toUpperCase()]||'👤',nome,'Sua senha para acessar',pw,()=>selectColaborador(nome));
   else selectColaborador(nome);
 }
@@ -1696,11 +1941,19 @@ function _setNavChips(nome) {
 }
 
 /* ══ ETAPA 1 — PROGRAMAÇÃO ═══════════════════════════════ */
+function _tarefaConfirmada(t) {
+  const conf = S.s1[t.id];
+  if (!conf || !conf.confirmed) return false;
+  // Tarefa KM: só considerada confirmada se km_inicial foi preenchido
+  if (isKm(t)) return conf.km_inicial !== undefined && conf.km_inicial > 0;
+  return true;
+}
+
 function renderStep1() {
   const list=document.getElementById('s1-list');
   if (!list) return;
-  const allConfirmed=S.tarefas.every(t=>S.s1[t.id]&&S.s1[t.id].confirmed);
-  const confirmed   =S.tarefas.filter(t=>S.s1[t.id]&&S.s1[t.id].confirmed).length;
+  const allConfirmed=S.tarefas.every(t=>_tarefaConfirmada(t));
+  const confirmed   =S.tarefas.filter(t=>_tarefaConfirmada(t)).length;
   const total       =S.tarefas.length;
 
   const fill=document.getElementById('s1-progress');
@@ -1715,12 +1968,18 @@ function renderStep1() {
     const cc=getCatColor(t.categoria);
     const ce=getCatEmoji(t.categoria);
     const ck=isChecklist(t);
+    const km=isKm(t);
     const conf=S.s1[t.id];
-    const isConf=conf&&conf.confirmed;
+    const isConf=_tarefaConfirmada(t);
     const qtdPadrao = Number(t.quantidade_padrao)||0;
-    const isExcCard = !ck && qtdPadrao === 0;
+    const isExcCard = !ck && !km && qtdPadrao === 0;
     let infoLine;
-    if (ck) {
+    if (km) {
+      // Card especial para KM (motorista)
+      infoLine = isConf
+        ? `<div class="task-qty-display" style="color:#1d4ed8;font-weight:800">🚐 Saída: ${conf.km_inicial} km — ${conf.hora_saida||'—'}</div>`
+        : '<div class="task-qty-display" style="color:#1d4ed8;font-weight:700">🚐 Toque para registrar KM de saída</div>';
+    } else if (ck) {
       infoLine = isConf
         ? '<div class="task-qty-display" style="color:#16a34a;font-weight:800">✓ Confirmada</div>'
         : '<div class="task-qty-display" style="color:#9ca3af">Toque para confirmar</div>';
@@ -1733,9 +1992,10 @@ function renderStep1() {
         ? `<div class="task-qty-display"><strong>${fmt(conf.programada)}</strong> ${t.unidade||''} a produzir</div>`
         : `<div class="task-qty-display">Padrão: <strong>${fmt(qtdPadrao)}</strong> ${t.unidade||''} em estoque</div>`;
     }
+    const headerBg = km ? 'linear-gradient(135deg,#1d4ed8,#3b82f6)' : cc;
     return `<div class="task-card s1-card${isConf?' task-confirmed':''}" id="s1c-${t.id}" onclick="openS1Modal('${t.id}')">
-      <div class="task-card-header" style="background:${cc}">
-        <span class="cat-label">${ce} ${t.categoria||'Geral'}</span>
+      <div class="task-card-header" style="background:${headerBg}">
+        <span class="cat-label">${km?'🚐':ce} ${t.categoria||'Geral'}</span>
         ${isConf?'<span class="task-check-badge">✅</span>':''}
       </div>
       <div class="task-card-body">
@@ -1770,6 +2030,9 @@ function openS1Modal(id) {
   const t=S.tarefas.find(x=>x.id===id);
   if (!t) return;
   _s1Id=id;
+
+  // Tarefa KM: abre o modal especial de KM ao invés do modal padrão
+  if (isKm(t)) { _abrirModalKmInicio(id); return; }
 
   const padrao = Number(t.quantidade_padrao)||0;
   const ck     = isChecklist(t);
@@ -1858,7 +2121,13 @@ async function iniciarProducao() {
   if (iniBtn) { iniBtn.disabled = true; iniBtn.style.opacity='0.5'; }
 
   S.producaoIniciada=true;
-  S.tarefas.forEach(t=>{ if (!S.s1[t.id]) S.s1[t.id]={estoque:0,programada:t.quantidade_padrao||0,confirmed:true}; });
+  S.tarefas.forEach(t=>{
+    if (!S.s1[t.id]) {
+      // Tarefa KM: não marca como confirmed automaticamente — requer registro manual
+      if (isKm(t)) S.s1[t.id]={estoque:0,programada:0,confirmed:false};
+      else          S.s1[t.id]={estoque:0,programada:t.quantidade_padrao||0,confirmed:true};
+    }
+  });
   const dt=S.dataTrabalho||today();
   try {
     const s1Json=JSON.stringify(S.s1);
@@ -1900,6 +2169,7 @@ function renderStep2() {
     const cc=getCatColor(t.categoria);
     const ce=getCatEmoji(t.categoria);
     const ck=isChecklist(t);
+    const km=isKm(t);
     const d1=S.s1[t.id]||{};
     const d2=S.s2[t.id]||{};
     const status=d2.status||'';
@@ -1908,7 +2178,24 @@ function renderStep2() {
     const prog=d1.programada!==undefined?d1.programada:(t.quantidade_padrao||0);
     const isConf=!!status;
     let infoLine2;
-    if (ck) {
+    if (km) {
+      // Card KM — mostra saída e retorno registrados
+      if (isConf && status==='total') {
+        const kmIni = d1.km_inicial!==undefined ? d1.km_inicial : (d2.km_final ? '?' : '—');
+        const kmFim = d2.km_final!==undefined ? d2.km_final : '—';
+        const kmPerc = d2.produzida!==undefined ? d2.produzida : '—';
+        const hSaida = d1.hora_saida||'—';
+        const hRet   = d2.hora_retorno||'—';
+        infoLine2=`<div class="task-qty-display" style="color:#15803d;font-weight:800">
+          ✅ ${kmIni} → ${kmFim} km &nbsp;·&nbsp; ${kmPerc} km rodados
+          <div style="font-size:11px;color:#6b7280;margin-top:2px">Saída: ${hSaida} &nbsp;·&nbsp; Retorno: ${hRet}</div>
+        </div>`;
+      } else if (d1.km_inicial !== undefined) {
+        infoLine2=`<div class="task-qty-display" style="color:#1d4ed8;font-weight:700">🚐 Saída: ${d1.km_inicial} km (${d1.hora_saida||'—'})<br><span style="color:#f59e0b;font-size:11px">⏳ Aguardando retorno</span></div>`;
+      } else {
+        infoLine2='<div class="task-qty-display" style="color:#f59e0b;font-weight:700">⏳ Registre o KM de saída</div>';
+      }
+    } else if (ck) {
       infoLine2=isConf
         ?(status==='total'?'<div class="task-qty-display" style="color:#16a34a;font-weight:800">✅ Realizada</div>'
          :'<div class="task-qty-display" style="color:#dc2626;font-weight:800">❌ Não realizada</div>')
@@ -1918,9 +2205,10 @@ function renderStep2() {
         ?`<div class="task-qty-display"><strong>${fmt(d2.produzida)}</strong>/${fmt(prog)} ${t.unidade||''}</div>`
         :`<div class="task-qty-display">Prog: ${fmt(prog)} ${t.unidade||''}</div>`;
     }
+    const headerBg = km ? (isConf && status==='total' ? 'linear-gradient(135deg,#15803d,#22c55e)' : 'linear-gradient(135deg,#1d4ed8,#3b82f6)') : cc;
     return `<div class="task-card s2-card ${stClass}" id="s2c-${t.id}" onclick="openS2Modal('${t.id}')">
-      <div class="task-card-header" style="background:${cc}">
-        <span class="cat-label">${ce} ${t.categoria||'Geral'}</span>
+      <div class="task-card-header" style="background:${headerBg}">
+        <span class="cat-label">${km?'🚐':ce} ${t.categoria||'Geral'}</span>
         ${isConf?`<span class="task-check-badge">${stBadge}</span>`:''}
       </div>
       <div class="task-card-body">
@@ -1961,6 +2249,16 @@ function openS2Modal(id) {
   // S._turnoAutorizadoLider é setado em selectColaborador quando a sessão tem lider_autorizado=true
   if (S._turnoAutorizadoLider && !_isLider()) {
     showToast('🎖️ Este turno já foi conferido e autorizado pelo líder.');
+    return;
+  }
+
+  // Tarefa KM: abre modal de retorno (editar) ou visualização (líder)
+  if (isKm(t)) {
+    if (S._modoConferenciaLider) {
+      _abrirModalKmVisualizacao(id); // só visualiza, não edita
+    } else {
+      _abrirModalKmRetorno(id);
+    }
     return;
   }
   _s2Id=id; _s2Status=null; _s2Motivo='';
@@ -2265,12 +2563,13 @@ function _autoPrintPendencias(tarefas,s1,s2,col,turno,dia) {
     const feito=d2.produzida!==undefined?d2.produzida:0;
     const rest=Math.max(0,(prog||0)-feito);
     const ck=isChecklist(t);
+    const km=isKm(t);
     return `<tr>
       <td style="font-size:11px;color:#555">${t.categoria||''}</td>
       <td><strong>${t.item}</strong></td>
-      <td>${ck?'—':fmt(prog)+' '+(t.unidade||'')}</td>
-      <td>${ck?'—':fmt(feito)+' '+(t.unidade||'')}</td>
-      <td style="color:#c0392b;font-weight:900">${ck?'—':fmt(rest)+' '+(t.unidade||'')}</td>
+      <td>${(ck||km)?'—':fmt(prog)+' '+(t.unidade||'')}</td>
+      <td>${(ck||km)?'—':fmt(feito)+' '+(t.unidade||'')}</td>
+      <td style="color:#c0392b;font-weight:900">${(ck||km)?'—':fmt(rest)+' '+(t.unidade||'')}</td>
       <td>${sl2[d2.status||'']}</td>
       <td style="font-size:11px">${d2.motivo||'—'}</td>
     </tr>`;
