@@ -473,8 +473,8 @@ let M = { turno:'dia', dia:'segunda', tarefas:[], colabs:[], todos:[] };
 let _trocarId = null;
 
 window.addEventListener('DOMContentLoaded',()=>{
-  // Inicia com "Todos os dias" para exibir todas as tarefas de cara
-  setDia('todos', false);
+  const dias=['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
+  setDia(dias[new Date().getDay()], false);
   carregar();
   const _fixSticky=()=>{
     const tb=document.querySelector('.top-bar');
@@ -506,9 +506,8 @@ async function carregar(){
     M.todos=todos;
     const sel=document.getElementById('sel-colab');
     const colabSel = sel ? sel.value : '';
-    // Se colaborador específico está selecionado: mostra TODAS as tarefas dele
-    // sem filtro de turno nem de dia — reflete exatamente o que está cadastrado
-    if(colabSel){
+    // Se colaborador específico está selecionado e dia='todos': mostra TODAS as tarefas dele (sem filtro de turno/dia)
+    if(colabSel && M.dia==='todos'){
       M.tarefas=todos.filter(t=>t.colaborador===colabSel);
     } else if(M.dia==='todos'){
       // Sem colaborador selecionado + todos os dias: filtra só por turno
@@ -516,12 +515,7 @@ async function carregar(){
     } else {
       M.tarefas=todos.filter(t=>t.turno===M.turno&&t.dia_semana===M.dia);
     }
-    // Lista de colabs: inclui todos que têm tarefa no turno/dia filtrado
-    // (quando há colab selecionado, garante que ele apareça mesmo que tenha tarefas em outro turno)
-    const colabsBase = colabSel
-      ? [...new Set(todos.map(t=>t.colaborador).filter(Boolean))]
-      : [...new Set(todos.filter(t=>t.turno===M.turno&&(M.dia==='todos'||t.dia_semana===M.dia)).map(t=>t.colaborador).filter(Boolean))];
-    M.colabs = colabsBase.sort();
+    M.colabs=[...new Set(todos.filter(t=>t.turno===M.turno&&(M.dia==='todos'||t.dia_semana===M.dia)).map(t=>t.colaborador).filter(Boolean))].sort();
     const cur=sel.value;
     sel.innerHTML='<option value="">Todos</option>'+M.colabs.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
     renderTabela();
@@ -530,20 +524,15 @@ async function carregar(){
   }
 }
 
-/* Quando seleciona um colaborador: sempre vai para "Todos os dias" e recarrega */
+/* Quando seleciona um colaborador: muda para "Todos os dias" e recarrega */
 function _onColabChange(){
   const colab = document.getElementById('sel-colab').value;
-  if(colab){
-    // Sempre muda para "Todos os dias" ao selecionar colaborador específico
-    // assim mostra TODAS as tarefas cadastradas para ele (todos turnos e dias)
-    if(M.dia !== 'todos'){
-      setDia('todos'); // já chama carregar()
-    } else {
-      carregar(); // já está em 'todos', mas recarrega com novo filtro de colab
-    }
+  if(colab && M.dia !== 'todos'){
+    // Ao selecionar um colaborador específico, vai para "Todos os dias"
+    // para mostrar TODAS as tarefas dele (não só as do dia atual)
+    setDia('todos'); // isso já chama carregar()
   } else {
-    // Sem colaborador: mantém filtro atual de dia/turno
-    carregar();
+    renderTabela();
   }
 }
 
@@ -551,13 +540,11 @@ function _onColabChange(){
 function renderTabela(){
   const cont=document.getElementById('main-content');
   const colab=document.getElementById('sel-colab').value;
-  // M.tarefas já foi filtrado corretamente em carregar():
-  // - com colab selecionado: todas as tarefas do colab (todos os dias/turnos)
-  // - sem colab: filtrado por turno e/ou dia conforme M.turno e M.dia
+  // Se colaborador selecionado + dia='todos': já foi filtrado em carregar() com TODAS as tarefas do colab
   let lista = M.tarefas;
-  const colabCount = Object.keys(lista.reduce((acc,t)=>{acc[t.colaborador]=1;return acc;},{})).length;
-  document.getElementById('count-txt').innerHTML=`<strong>${lista.length}</strong> tarefa${lista.length!==1?'s':''} · <strong>${colabCount}</strong> colaborador${colabCount!==1?'es':''}${colab?' <span style="background:#ede9fe;color:#6d28d9;border-radius:6px;padding:1px 8px;font-size:11px;font-weight:700;margin-left:4px">'+colab+'</span>':''}`;
-  if(!lista.length){ cont.innerHTML=`<div class="state-box"><i class="fas fa-inbox"></i><p>Nenhuma tarefa ${colab?'para <strong>'+colab+'</strong>':'para '+(M.turno==='dia'?'☀️ Dia':'🌙 Noite')+(M.dia!=='todos'?' — '+(DIAS_LABEL[M.dia]||M.dia):'')}</p></div>`; return; }
+  if(colab && M.dia!=='todos') lista=M.tarefas.filter(t=>t.colaborador===colab);
+  document.getElementById('count-txt').innerHTML=`<strong>${lista.length}</strong> tarefa${lista.length!==1?'s':''} · <strong>${M.colabs.length}</strong> colaborador${M.colabs.length!==1?'es':''}`;
+  if(!lista.length){ cont.innerHTML=`<div class="state-box"><i class="fas fa-inbox"></i><p>Nenhuma tarefa ${colab?'para <strong>'+colab+'</strong>':'para '+( M.turno==='dia'?'☀️ Dia':'🌙 Noite')+(M.dia!=='todos'?' — '+DIAS_LABEL[M.dia]||M.dia:'')}</p></div>`; return; }
 
   // Verifica se há tarefas em múltiplos turnos (só exibe coluna turno nesse caso)
   const turnos=[...new Set(lista.map(t=>t.turno).filter(Boolean))];
