@@ -1,4 +1,4 @@
-<!DOCTYPE html>.
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8"/>
@@ -246,7 +246,7 @@
 
 <!-- MODAL NOVA TAREFA -->
 <div class="modal-overlay hidden" id="modal-nova">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:520px">
     <div class="modal-hdr"><h3>➕ Nova Tarefa</h3><button class="modal-close" onclick="fecharModalNova()">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label>Colaborador *</label><input type="text" id="nt-colab" list="nt-colab-list" placeholder="Digite ou selecione…" oninput="_autoFillDepto()"/><datalist id="nt-colab-list"></datalist></div>
@@ -256,7 +256,23 @@
       </div>
       <div class="form-row">
         <div class="form-group"><label>Turno</label><select id="nt-turno"><option value="dia">☀️ Dia</option><option value="noite">🌙 Noite</option></select></div>
-        <div class="form-group"><label>Dia</label><select id="nt-dia"><option value="segunda">Segunda</option><option value="terca">Terça</option><option value="quarta">Quarta</option><option value="quinta">Quinta</option><option value="sexta">Sexta</option><option value="sabado">Sábado</option><option value="domingo">Domingo</option></select></div>
+      </div>
+      <!-- Dias como checkboxes — pode selecionar múltiplos -->
+      <div class="form-group">
+        <label>Dias da semana * <span style="font-size:10px;color:var(--muted);font-weight:400">(selecione um ou mais)</span></label>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px" id="nt-dias-grid">
+          <label class="nc-dia-lbl"><input type="checkbox" value="segunda"/> Segunda</label>
+          <label class="nc-dia-lbl"><input type="checkbox" value="terca"/>   Terça</label>
+          <label class="nc-dia-lbl"><input type="checkbox" value="quarta"/>  Quarta</label>
+          <label class="nc-dia-lbl"><input type="checkbox" value="quinta"/>  Quinta</label>
+          <label class="nc-dia-lbl"><input type="checkbox" value="sexta"/>   Sexta</label>
+          <label class="nc-dia-lbl"><input type="checkbox" value="sabado"/>  Sábado</label>
+          <label class="nc-dia-lbl"><input type="checkbox" value="domingo"/> Domingo</label>
+          <label class="nc-dia-lbl" style="grid-column:span 1">
+            <input type="checkbox" id="nt-todos-dias" onchange="_toggleTodosDias()"/> Todos
+          </label>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:5px">💡 Selecione todos os dias em que esta tarefa deve aparecer.</p>
       </div>
       <div class="form-group">
         <label>Categoria</label>
@@ -273,7 +289,42 @@
     </div>
     <div class="modal-footer">
       <button class="btn-cancel" onclick="fecharModalNova()">Cancelar</button>
-      <button class="btn-confirm green" onclick="salvarNovaTarefa()"><i class="fas fa-save"></i> Criar Tarefa</button>
+      <button class="btn-confirm green" id="btn-criar-tarefa" onclick="salvarNovaTarefa()"><i class="fas fa-save"></i> Criar Tarefa</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL REPLICAR TAREFA PARA OUTROS DIAS -->
+<div class="modal-overlay hidden" id="modal-replicar">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-hdr"><h3>📋 Replicar para outros dias</h3><button class="modal-close" onclick="fecharModalReplicar()">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">
+        Tarefa: <strong id="rep-item-nome"></strong><br>
+        Colaborador: <strong id="rep-colab-nome"></strong>
+      </p>
+      <div class="form-group">
+        <label>Selecione os dias para replicar *</label>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px" id="rep-dias-grid">
+          <label class="nc-dia-lbl"><input type="checkbox" value="segunda"/> Segunda</label>
+          <label class="nc-dia-lbl"><input type="checkbox" value="terca"/>   Terça</label>
+          <label class="nc-dia-lbl"><input type="checkbox" value="quarta"/>  Quarta</label>
+          <label class="nc-dia-lbl"><input type="checkbox" value="quinta"/>  Quinta</label>
+          <label class="nc-dia-lbl"><input type="checkbox" value="sexta"/>   Sexta</label>
+          <label class="nc-dia-lbl"><input type="checkbox" value="sabado"/>  Sábado</label>
+          <label class="nc-dia-lbl"><input type="checkbox" value="domingo"/> Domingo</label>
+          <label class="nc-dia-lbl">
+            <input type="checkbox" id="rep-todos-dias" onchange="_toggleTodosDiasRep()"/> Todos
+          </label>
+        </div>
+        <p style="font-size:11px;color:#f59e0b;margin-top:8px;background:#fffbeb;padding:8px 10px;border-radius:8px;border:1px solid #fde68a">
+          ⚠️ Dias onde já existe a mesma tarefa serão ignorados.
+        </p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fecharModalReplicar()">Cancelar</button>
+      <button class="btn-confirm green" id="btn-confirmar-rep" onclick="confirmarReplicar()"><i class="fas fa-copy"></i> Replicar</button>
     </div>
   </div>
 </div>
@@ -422,8 +473,8 @@ let M = { turno:'dia', dia:'segunda', tarefas:[], colabs:[], todos:[] };
 let _trocarId = null;
 
 window.addEventListener('DOMContentLoaded',()=>{
-  const dias=['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
-  setDia(dias[new Date().getDay()], false);
+  // Inicia com "Todos os dias" para exibir todas as tarefas de cara
+  setDia('todos', false);
   carregar();
   const _fixSticky=()=>{
     const tb=document.querySelector('.top-bar');
@@ -455,8 +506,9 @@ async function carregar(){
     M.todos=todos;
     const sel=document.getElementById('sel-colab');
     const colabSel = sel ? sel.value : '';
-    // Se colaborador específico está selecionado e dia='todos': mostra TODAS as tarefas dele (sem filtro de turno/dia)
-    if(colabSel && M.dia==='todos'){
+    // Se colaborador específico está selecionado: mostra TODAS as tarefas dele
+    // sem filtro de turno nem de dia — reflete exatamente o que está cadastrado
+    if(colabSel){
       M.tarefas=todos.filter(t=>t.colaborador===colabSel);
     } else if(M.dia==='todos'){
       // Sem colaborador selecionado + todos os dias: filtra só por turno
@@ -464,7 +516,12 @@ async function carregar(){
     } else {
       M.tarefas=todos.filter(t=>t.turno===M.turno&&t.dia_semana===M.dia);
     }
-    M.colabs=[...new Set(todos.filter(t=>t.turno===M.turno&&(M.dia==='todos'||t.dia_semana===M.dia)).map(t=>t.colaborador).filter(Boolean))].sort();
+    // Lista de colabs: inclui todos que têm tarefa no turno/dia filtrado
+    // (quando há colab selecionado, garante que ele apareça mesmo que tenha tarefas em outro turno)
+    const colabsBase = colabSel
+      ? [...new Set(todos.map(t=>t.colaborador).filter(Boolean))]
+      : [...new Set(todos.filter(t=>t.turno===M.turno&&(M.dia==='todos'||t.dia_semana===M.dia)).map(t=>t.colaborador).filter(Boolean))];
+    M.colabs = colabsBase.sort();
     const cur=sel.value;
     sel.innerHTML='<option value="">Todos</option>'+M.colabs.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
     renderTabela();
@@ -473,15 +530,20 @@ async function carregar(){
   }
 }
 
-/* Quando seleciona um colaborador: muda para "Todos os dias" e recarrega */
+/* Quando seleciona um colaborador: sempre vai para "Todos os dias" e recarrega */
 function _onColabChange(){
   const colab = document.getElementById('sel-colab').value;
-  if(colab && M.dia !== 'todos'){
-    // Ao selecionar um colaborador específico, vai para "Todos os dias"
-    // para mostrar TODAS as tarefas dele (não só as do dia atual)
-    setDia('todos'); // isso já chama carregar()
+  if(colab){
+    // Sempre muda para "Todos os dias" ao selecionar colaborador específico
+    // assim mostra TODAS as tarefas cadastradas para ele (todos turnos e dias)
+    if(M.dia !== 'todos'){
+      setDia('todos'); // já chama carregar()
+    } else {
+      carregar(); // já está em 'todos', mas recarrega com novo filtro de colab
+    }
   } else {
-    renderTabela();
+    // Sem colaborador: mantém filtro atual de dia/turno
+    carregar();
   }
 }
 
@@ -489,11 +551,13 @@ function _onColabChange(){
 function renderTabela(){
   const cont=document.getElementById('main-content');
   const colab=document.getElementById('sel-colab').value;
-  // Se colaborador selecionado + dia='todos': já foi filtrado em carregar() com TODAS as tarefas do colab
+  // M.tarefas já foi filtrado corretamente em carregar():
+  // - com colab selecionado: todas as tarefas do colab (todos os dias/turnos)
+  // - sem colab: filtrado por turno e/ou dia conforme M.turno e M.dia
   let lista = M.tarefas;
-  if(colab && M.dia!=='todos') lista=M.tarefas.filter(t=>t.colaborador===colab);
-  document.getElementById('count-txt').innerHTML=`<strong>${lista.length}</strong> tarefa${lista.length!==1?'s':''} · <strong>${M.colabs.length}</strong> colaborador${M.colabs.length!==1?'es':''}`;
-  if(!lista.length){ cont.innerHTML=`<div class="state-box"><i class="fas fa-inbox"></i><p>Nenhuma tarefa ${colab?'para <strong>'+colab+'</strong>':'para '+( M.turno==='dia'?'☀️ Dia':'🌙 Noite')+(M.dia!=='todos'?' — '+DIAS_LABEL[M.dia]||M.dia:'')}</p></div>`; return; }
+  const colabCount = Object.keys(lista.reduce((acc,t)=>{acc[t.colaborador]=1;return acc;},{})).length;
+  document.getElementById('count-txt').innerHTML=`<strong>${lista.length}</strong> tarefa${lista.length!==1?'s':''} · <strong>${colabCount}</strong> colaborador${colabCount!==1?'es':''}${colab?' <span style="background:#ede9fe;color:#6d28d9;border-radius:6px;padding:1px 8px;font-size:11px;font-weight:700;margin-left:4px">'+colab+'</span>':''}`;
+  if(!lista.length){ cont.innerHTML=`<div class="state-box"><i class="fas fa-inbox"></i><p>Nenhuma tarefa ${colab?'para <strong>'+colab+'</strong>':'para '+(M.turno==='dia'?'☀️ Dia':'🌙 Noite')+(M.dia!=='todos'?' — '+(DIAS_LABEL[M.dia]||M.dia):'')}</p></div>`; return; }
 
   // Verifica se há tarefas em múltiplos turnos (só exibe coluna turno nesse caso)
   const turnos=[...new Set(lista.map(t=>t.turno).filter(Boolean))];
@@ -717,15 +781,30 @@ function toggleNovaCategoria(){
   document.getElementById('nt-cat-nova').style.display=chk?'block':'none';
   document.getElementById('nt-cat').style.display=chk?'none':'block';
 }
+function _toggleTodosDias(){
+  const all=document.getElementById('nt-todos-dias').checked;
+  document.querySelectorAll('#nt-dias-grid input[type=checkbox]').forEach(c=>{ if(c.id!=='nt-todos-dias') c.checked=all; });
+}
+function _toggleTodosDiasRep(){
+  const all=document.getElementById('rep-todos-dias').checked;
+  document.querySelectorAll('#rep-dias-grid input[type=checkbox]').forEach(c=>{ if(c.id!=='rep-todos-dias') c.checked=all; });
+}
+
 async function abrirModalNova(){
   document.getElementById('nt-turno').value=M.turno;
-  document.getElementById('nt-dia').value=M.dia!=='todos'?M.dia:'segunda';
   document.getElementById('nt-item').value='';document.getElementById('nt-qty').value=0;
   document.getElementById('nt-unidade').value='un';document.getElementById('nt-ordem').value=99;
   document.getElementById('nt-colab').value='';
   document.getElementById('nt-cat-chk').checked=false;
   document.getElementById('nt-cat-nova').style.display='none';document.getElementById('nt-cat-nova').value='';
   document.getElementById('nt-cat').style.display='block';
+  // Desmarca todos os dias e pré-marca o dia atual (se não for 'todos')
+  document.querySelectorAll('#nt-dias-grid input[type=checkbox]').forEach(c=>c.checked=false);
+  const diaAtual=M.dia!=='todos'?M.dia:null;
+  if(diaAtual){
+    const cb=document.querySelector(`#nt-dias-grid input[value="${diaAtual}"]`);
+    if(cb) cb.checked=true;
+  }
   const cats=[...new Set(M.todos.map(t=>t.categoria).filter(Boolean))].sort();
   document.getElementById('nt-cat').innerHTML='<option value="">-- Selecione --</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
   const colabs=[...new Set(M.todos.map(t=>t.colaborador).filter(Boolean))].sort();
@@ -744,24 +823,85 @@ async function salvarNovaTarefa(){
   if(!colab){showToastM('⚠️ Informe o colaborador!');return;}
   if(!depto){showToastM('⚠️ Selecione o departamento!');return;}
   if(!item){showToastM('⚠️ Informe o item/tarefa!');return;}
+  // Coleta dias selecionados
+  const dias=[...document.querySelectorAll('#nt-dias-grid input[type=checkbox]:checked')]
+    .filter(c=>c.id!=='nt-todos-dias').map(c=>c.value);
+  if(!dias.length){showToastM('⚠️ Selecione pelo menos um dia!');return;}
   const useNova=document.getElementById('nt-cat-chk').checked;
   const cat=useNova?document.getElementById('nt-cat-nova').value.trim():document.getElementById('nt-cat').value.trim();
-  const btn=document.querySelector('#modal-nova .btn-confirm');
+  const btn=document.getElementById('btn-criar-tarefa');
   btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Salvando…';
+  let ok=0,err=0;
   try{
-    await _fbPost('tarefas',{
-      turno:document.getElementById('nt-turno').value,
-      dia_semana:document.getElementById('nt-dia').value,
-      colaborador:colab,
-      departamento:depto,
-      categoria:cat||'Geral',item,
-      quantidade_padrao:Number(document.getElementById('nt-qty').value)||0,
-      unidade:document.getElementById('nt-unidade').value||'un',
-      ordem:Number(document.getElementById('nt-ordem').value)||99
-    });
-    showToastM('✅ Tarefa criada!');fecharModalNova();carregar();
+    const turno=document.getElementById('nt-turno').value;
+    const qty=Number(document.getElementById('nt-qty').value)||0;
+    const unidade=document.getElementById('nt-unidade').value||'un';
+    const ordem=Number(document.getElementById('nt-ordem').value)||99;
+    // Cria uma entrada por dia selecionado
+    for(const dia of dias){
+      try{
+        await _fbPost('tarefas',{
+          turno, dia_semana:dia, colaborador:colab, departamento:depto,
+          categoria:cat||'Geral', item, quantidade_padrao:qty, unidade, ordem
+        });
+        ok++;
+      }catch{err++;}
+    }
+    showToastM(err===0?`✅ Tarefa criada em ${ok} dia(s)!`:`⚠️ ${ok} ok, ${err} com erro`);
+    if(ok>0){fecharModalNova();carregar();}
   }catch(e){showToastM('❌ Erro: '+e.message);}
   finally{btn.disabled=false;btn.innerHTML='<i class="fas fa-save"></i> Criar Tarefa';}
+}
+
+/* ══ REPLICAR TAREFA PARA OUTROS DIAS ══ */
+let _replicarId=null;
+function abrirModalReplicar(id,nome,colabNome,diaAtual,turnoAtual){
+  _replicarId=id;
+  document.getElementById('rep-item-nome').textContent=nome;
+  document.getElementById('rep-colab-nome').textContent=colabNome;
+  // Desmarca todos os dias; marca o dia atual para referência visual
+  document.querySelectorAll('#rep-dias-grid input[type=checkbox]').forEach(c=>c.checked=false);
+  // Desabilita o dia onde a tarefa já existe
+  document.querySelectorAll('#rep-dias-grid input[type=checkbox]').forEach(c=>{
+    c.disabled = (c.value===diaAtual);
+    if(c.value===diaAtual) c.closest('label').style.opacity='0.4';
+    else c.closest('label').style.opacity='';
+  });
+  document.getElementById('modal-replicar').classList.remove('hidden');
+}
+function fecharModalReplicar(){document.getElementById('modal-replicar').classList.add('hidden');_replicarId=null;}
+
+async function confirmarReplicar(){
+  if(!_replicarId) return;
+  const orig=M.todos.find(t=>t.id===_replicarId);
+  if(!orig){showToastM('⚠️ Tarefa não encontrada.');return;}
+  const dias=[...document.querySelectorAll('#rep-dias-grid input[type=checkbox]:checked')]
+    .filter(c=>c.id!=='rep-todos-dias'&&!c.disabled).map(c=>c.value);
+  if(!dias.length){showToastM('⚠️ Selecione pelo menos um dia!');return;}
+  // Verifica quais dias já têm a tarefa (mesmo item + colab + turno)
+  const jaExistem=new Set(M.todos
+    .filter(t=>t.colaborador===orig.colaborador&&t.item===orig.item&&t.turno===orig.turno)
+    .map(t=>t.dia_semana));
+  const diasNovos=dias.filter(d=>!jaExistem.has(d));
+  if(!diasNovos.length){showToastM('ℹ️ Já existe essa tarefa em todos os dias selecionados!');return;}
+  const btn=document.getElementById('btn-confirmar-rep');
+  btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
+  let ok=0,err=0;
+  for(const dia of diasNovos){
+    try{
+      await _fbPost('tarefas',{
+        turno:orig.turno, dia_semana:dia, colaborador:orig.colaborador,
+        departamento:orig.departamento||'', categoria:orig.categoria||'Geral',
+        item:orig.item, quantidade_padrao:orig.quantidade_padrao||0,
+        unidade:orig.unidade||'un', ordem:orig.ordem||99
+      });
+      ok++;
+    }catch{err++;}
+  }
+  btn.disabled=false;btn.innerHTML='<i class="fas fa-copy"></i> Replicar';
+  fecharModalReplicar();
+  showToastM(err===0?`✅ Replicada em ${ok} dia(s) novo(s)!`:`⚠️ ${ok} ok, ${err} com erro`);
+  if(ok>0) setTimeout(()=>carregar(),400);
 }
 
 function abrirModalTrocar(id,nome){
