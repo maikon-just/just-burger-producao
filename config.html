@@ -948,19 +948,36 @@ function _toast(msg) {
 
 /* ══ INIT ══ */
 document.addEventListener('DOMContentLoaded', () => {
-  // Preenche o select de cards
   _popularSelectCards('');
-  // Verifica sessão
-  if (sessionStorage.getItem('cfg_ok')==='1') {
+
+  // 1. Verifica sessão própria (cfg_ok)
+  if (sessionStorage.getItem('cfg_ok') === '1') {
     _cfgPapelAtual = sessionStorage.getItem('cfg_papel') || 'admin';
     document.getElementById('login-overlay').classList.add('hidden');
     _cfgLogado = true;
     _carregarUsuarios();
+    document.getElementById('cfg-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') _cfgLogin(); });
+    return;
   }
-  // Enter no login
-  document.getElementById('cfg-pass').addEventListener('keydown', e=>{
-    if (e.key==='Enter') _cfgLogin();
-  });
+
+  // 2. Tenta aproveitar sessão do hub (JbAuth ou localStorage) — evita pedir senha novamente
+  let hubSess = null;
+  try {
+    if (typeof JbAuth !== 'undefined') { hubSess = JbAuth.read(); }
+    if (!hubSess) { hubSess = JSON.parse(sessionStorage.getItem('jb_user') || 'null'); }
+    if (!hubSess) {
+      const lsRaw   = localStorage.getItem('jb_user');
+      const lsStamp = parseInt(localStorage.getItem('jb_ts') || '0', 10);
+      if (lsRaw && Date.now() < lsStamp) { hubSess = JSON.parse(lsRaw); }
+    }
+  } catch(e) {}
+
+  if (hubSess && (hubSess.papel === 'admin' || hubSess.papel === 'rh' || hubSess.papel === 'lider')) {
+    // Já logado pelo hub com papel autorizado → entra direto sem pedir senha
+    _cfgEntrar(hubSess.papel);
+  }
+
+  document.getElementById('cfg-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') _cfgLogin(); });
 });
 </script>
 </body>
