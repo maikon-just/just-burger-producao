@@ -311,9 +311,10 @@
 
 <!-- ABAS -->
 <div class="tabs-bar">
-  <button class="tab-btn active" id="tab-pendencias" onclick="switchTab('pendencias')">⚠️ Pendências</button>
-  <button class="tab-btn" id="tab-historico"  onclick="switchTab('historico')">📋 Histórico</button>
-  <button class="tab-btn" id="tab-nova"        onclick="switchTab('nova')">➕ Nova Tarefa</button>
+  <button class="tab-btn active" id="tab-pendencias"   onclick="switchTab('pendencias')">⚠️ Pendências</button>
+  <button class="tab-btn"        id="tab-conferencias" onclick="switchTab('conferencias')">🎖️ Conferências</button>
+  <button class="tab-btn"        id="tab-historico"    onclick="switchTab('historico')">📋 Histórico</button>
+  <button class="tab-btn"        id="tab-nova"         onclick="switchTab('nova')">➕ Nova Tarefa</button>
 </div>
 
 <!-- FILTROS -->
@@ -356,6 +357,16 @@
 
 <!-- SUMMARY -->
 <div class="summary-bar" id="summary-bar"></div>
+
+<!-- ── TAB: CONFERÊNCIAS ── -->
+<div id="section-conferencias" style="display:none">
+  <div class="res-list" id="conf-lista">
+    <div class="loading-state">
+      <div class="ls-icon">⏳</div>
+      <p style="margin-top:10px">Carregando...</p>
+    </div>
+  </div>
+</div>
 
 <!-- ── TAB: PENDÊNCIAS ── -->
 <div id="section-pendencias">
@@ -553,7 +564,7 @@ let _tabAtual = 'pendencias';
 
 function switchTab(tab) {
   _tabAtual = tab;
-  ['pendencias','historico','nova'].forEach(t => {
+  ['pendencias','conferencias','historico','nova'].forEach(t => {
     const btn = document.getElementById(`tab-${t}`);
     const sec = document.getElementById(`section-${t}`);
     if (btn) btn.classList.toggle('active', t === tab);
@@ -563,8 +574,9 @@ function switchTab(tab) {
   const sb = document.getElementById('summary-bar');
   if (fb) fb.style.display = (tab === 'nova') ? 'none' : '';
   if (sb) sb.style.display = (tab === 'nova') ? 'none' : '';
-  if (tab === 'pendencias') loadResultados();
-  if (tab === 'historico')  loadHistorico();
+  if (tab === 'pendencias')   loadResultados();
+  if (tab === 'conferencias') loadConferencias();
+  if (tab === 'historico')    loadHistorico();
 }
 
 /* ── INIT ── */
@@ -688,6 +700,125 @@ async function fbPatch(col, id, data) {
 }
 async function fbDelete(col, id) {
   await DB.ref(`${col}/${id}`).remove();
+}
+
+/* ══════════════════════════════════════════
+   TAB: CONFERÊNCIAS DO LÍDER
+   Mostra colaboradores com turno finalizado
+   mas ainda sem conferência do líder.
+   Ao clicar → abre app de produção na tela
+   do colaborador já em modo conferência.
+══════════════════════════════════════════ */
+const APP_PRODUCAO_URL = 'https://maikon-just.github.io/just-burger-producao/';
+
+async function loadConferencias() {
+  const container = document.getElementById('conf-lista');
+  const summBar   = document.getElementById('summary-bar');
+  if (!container) return;
+
+  container.innerHTML = `<div class="loading-state"><div class="ls-icon">⏳</div><p style="margin-top:10px">Carregando conferências...</p></div>`;
+  if (summBar) summBar.innerHTML = '';
+
+  const turno = document.getElementById('res-turno').value || 'dia';
+  const data  = document.getElementById('res-data').value  || _hoje();
+  const [_y,_m,_d] = data.split('-').map(Number);
+  const dia = DIA_JS_MAP[new Date(_y, _m-1, _d).getDay()];
+
+  try {
+    const sessoes = await fbGetAll('sessoes');
+
+    // Sessões finalizadas do dia/turno
+    const sessDia = sessoes.filter(s =>
+      s.data === data && s.turno === turno &&
+      (s.status_geral === 'completo' || s.status_geral === 'parcial')
+    );
+
+    // Separa: aguardando conferência vs já conferidas/autorizadas
+    const aguardando  = sessDia.filter(s => !s.lider_autorizado);
+    const autorizadas = sessDia.filter(s =>  s.lider_autorizado);
+    // Cards já autorizados somem da listagem principal (conferência concluída)
+
+    /* Summary */
+    if (summBar) {
+      summBar.innerHTML = `
+        <div class="sum-card sc-orange"><span class="sum-val">${aguardando.length}</span><span class="sum-lbl">Aguard. Conferência</span></div>
+        <div class="sum-card sc-green" ><span class="sum-val">${autorizadas.length}</span><span class="sum-lbl">Conferidos ✅</span></div>
+        <div class="sum-card sc-blue"  ><span class="sum-val">${sessDia.length}</span><span class="sum-lbl">Total Turnos</span></div>`;
+    }
+
+    if (!sessDia.length) {
+      container.innerHTML = `<div class="empty-state"><div class="es-icon">📭</div><strong>Nenhum turno finalizado</strong><small>Aguarde os colaboradores finalizarem o turno.</small></div>`;
+      return;
+    }
+
+    if (!aguardando.length) {
+      container.innerHTML = `<div class="empty-state"><div class="es-icon">🎖️</div><strong>Todas as conferências concluídas!</strong><small>${autorizadas.length} turno(s) conferido(s) pelo líder hoje.</small></div>`;
+      return;
+    }
+
+    // Função para gerar URL de conferência passando sessão como token
+    function _urlConferencia(sess) {
+      // Recupera sessão do localStorage (compartilhada no domínio)
+      const raw = localStorage.getItem('jb_user') || sessionStorage.getItem('jb_user') || '';
+      const token = raw ? encodeURIComponent(btoa(unescape(encodeURIComponent(raw)))) : '';
+      const params = new URLSearchParams({
+        _conf_colab: sess.colaborador_card || sess.colaborador_nome || '',
+        _conf_sessid: sess.id || '',
+        _conf_turno: sess.turno || turno,
+        _conf_dia: sess.dia_semana || dia,
+        _conf_data: sess.data || data,
+      });
+      const sep = token ? '&' : '?';
+      return `${APP_PRODUCAO_URL}${token?'?_jbs='+token+'&':'?'}${params.toString().replace(/^\?/,'')}`;
+    }
+
+    // Renderiza apenas os aguardando (autorizados já sumiram)
+    const todosOrdenados = [
+      ...aguardando.sort((a,b)=>(a.colaborador_card||'').localeCompare(b.colaborador_card||'')),
+    ];
+
+    container.innerHTML = `<div style="padding:8px 0">` + todosOrdenados.map(sess => {
+      const nome       = sess.colaborador_card || sess.colaborador_nome || '?';
+      const em         = COLLAB_EMOJI_MAP[nome] || _emojiFor(nome);
+      const autorizado = !!sess.lider_autorizado;
+      const conferido  = !!sess.lider_conferiu;
+      const isCompleto = sess.status_geral === 'completo';
+      const url        = _urlConferencia(sess);
+
+      const badge = autorizado
+        ? `<span class="pill pill-green" style="font-size:11px">🎖️ Conferido</span>`
+        : conferido
+          ? `<span class="pill pill-orange" style="font-size:11px">👁️ Ag. Autorização</span>`
+          : `<span class="pill pill-red" style="font-size:11px">⏳ Aguardando</span>`;
+
+      const statusLabel = isCompleto ? '✅ 100% Concluído' : '⚠️ Parcial';
+      const statusColor = isCompleto ? '#16a34a' : '#d97706';
+
+      return `
+      <div class="collab-card" style="cursor:pointer" onclick="window.location.href='${url}'">
+        <div class="collab-card-header">
+          <div class="collab-avatar">${em}</div>
+          <div class="collab-info">
+            <div class="collab-name">${nome}</div>
+            <div class="collab-meta" style="color:${statusColor};font-weight:700">${statusLabel}</div>
+          </div>
+          <div class="pills-row" style="margin-right:8px;flex-direction:column;align-items:flex-end;gap:4px">
+            ${badge}
+          </div>
+          <i class="fas fa-chevron-right" style="color:#e8590c;font-size:16px;flex-shrink:0"></i>
+        </div>
+        <div style="padding:8px 16px 12px;border-top:1px solid #f1f5f9">
+          <span style="font-size:12px;color:#6b7280;font-weight:600">
+            👆 Toque para abrir a conferência do turno
+          </span>
+        </div>
+      </div>`;
+    }).join('') + `</div>`;
+
+  } catch(e) {
+    console.error(e);
+    container.innerHTML = `<div class="error-state">❌ Erro ao carregar: ${e.message}</div>`;
+  }
 }
 
 /* ══════════════════════════════════════════
