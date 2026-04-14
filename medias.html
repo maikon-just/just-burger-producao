@@ -189,6 +189,7 @@
     </div>
     <span class="filter-label">Dia</span>
     <div class="dia-btns">
+      <button class="dbtn" data-d="todos"   onclick="setDia('todos')" title="Todos os dias">📅 Todos</button>
       <button class="dbtn" data-d="segunda" onclick="setDia('segunda')">SEG</button>
       <button class="dbtn" data-d="terca"   onclick="setDia('terca')">TER</button>
       <button class="dbtn" data-d="quarta"  onclick="setDia('quarta')">QUA</button>
@@ -198,7 +199,7 @@
       <button class="dbtn" data-d="domingo" onclick="setDia('domingo')">DOM</button>
     </div>
     <span class="filter-label">Colab.</span>
-    <select class="colab-sel" id="sel-colab" onchange="renderTabela()"><option value="">Todos</option></select>
+    <select class="colab-sel" id="sel-colab" onchange="_onColabChange()"><option value="">Todos</option></select>
     <button class="btn-refresh" onclick="carregar()"><i class="fas fa-sync-alt"></i> Atualizar</button>
   </div>
   <!-- Linha 2: ações — Novo Colaborador · Novo Departamento · Nova Tarefa · Renomear Colab. · Salvar Tudo -->
@@ -266,7 +267,7 @@
       <div class="form-group"><label>Item / Tarefa *</label><input type="text" id="nt-item" placeholder="Nome do item"/></div>
       <div class="form-row">
         <div class="form-group"><label>Qtd Padrão</label><input type="number" id="nt-qty" value="0" min="0"/></div>
-        <div class="form-group"><label>Unidade</label><select id="nt-unidade"><option value="un">un</option><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="ml">ml</option><option value="pct">pct</option><option value="cx">cx</option><option value="band">band</option><option value="porção">porção</option><option value="checklist">checklist</option></select></div>
+        <div class="form-group"><label>Unidade</label><select id="nt-unidade"><option value="un">un</option><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="ml">ml</option><option value="pct">pct</option><option value="cx">cx</option><option value="band">band</option><option value="porção">porção</option><option value="km">🚐 km (Motorista)</option><option value="checklist">checklist</option></select></div>
       </div>
       <div class="form-group"><label>Ordem</label><input type="number" id="nt-ordem" value="99" min="1"/></div>
     </div>
@@ -415,6 +416,8 @@ function _fbDelete(col,id){ return _DB.ref(col+'/'+id).remove(); }
 /* ═══════════════════════════════════════════
    ESTADO
 ═══════════════════════════════════════════ */
+const DIAS_ORDER = ['segunda','terca','quarta','quinta','sexta','sabado','domingo'];
+const DIAS_LABEL = {segunda:'Segunda',terca:'Terça',quarta:'Quarta',quinta:'Quinta',sexta:'Sexta',sabado:'Sábado',domingo:'Domingo'};
 let M = { turno:'dia', dia:'segunda', tarefas:[], colabs:[], todos:[] };
 let _trocarId = null;
 
@@ -450,9 +453,18 @@ async function carregar(){
   try{
     const todos=await _fbGetAll('tarefas');
     M.todos=todos;
-    M.tarefas=todos.filter(t=>t.turno===M.turno&&t.dia_semana===M.dia);
-    M.colabs=[...new Set(M.tarefas.map(t=>t.colaborador).filter(Boolean))].sort();
     const sel=document.getElementById('sel-colab');
+    const colabSel = sel ? sel.value : '';
+    // Se colaborador específico está selecionado e dia='todos': mostra TODAS as tarefas dele (sem filtro de turno/dia)
+    if(colabSel && M.dia==='todos'){
+      M.tarefas=todos.filter(t=>t.colaborador===colabSel);
+    } else if(M.dia==='todos'){
+      // Sem colaborador selecionado + todos os dias: filtra só por turno
+      M.tarefas=todos.filter(t=>t.turno===M.turno);
+    } else {
+      M.tarefas=todos.filter(t=>t.turno===M.turno&&t.dia_semana===M.dia);
+    }
+    M.colabs=[...new Set(todos.filter(t=>t.turno===M.turno&&(M.dia==='todos'||t.dia_semana===M.dia)).map(t=>t.colaborador).filter(Boolean))].sort();
     const cur=sel.value;
     sel.innerHTML='<option value="">Todos</option>'+M.colabs.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
     renderTabela();
@@ -461,52 +473,111 @@ async function carregar(){
   }
 }
 
+/* Quando seleciona um colaborador: muda para "Todos os dias" e recarrega */
+function _onColabChange(){
+  const colab = document.getElementById('sel-colab').value;
+  if(colab && M.dia !== 'todos'){
+    // Ao selecionar um colaborador específico, vai para "Todos os dias"
+    // para mostrar TODAS as tarefas dele (não só as do dia atual)
+    setDia('todos'); // isso já chama carregar()
+  } else {
+    renderTabela();
+  }
+}
+
 /* ── Renderizar tabela ── */
 function renderTabela(){
   const cont=document.getElementById('main-content');
   const colab=document.getElementById('sel-colab').value;
-  const lista=colab?M.tarefas.filter(t=>t.colaborador===colab):M.tarefas;
+  // Se colaborador selecionado + dia='todos': já foi filtrado em carregar() com TODAS as tarefas do colab
+  let lista = M.tarefas;
+  if(colab && M.dia!=='todos') lista=M.tarefas.filter(t=>t.colaborador===colab);
   document.getElementById('count-txt').innerHTML=`<strong>${lista.length}</strong> tarefa${lista.length!==1?'s':''} · <strong>${M.colabs.length}</strong> colaborador${M.colabs.length!==1?'es':''}`;
-  if(!lista.length){ cont.innerHTML=`<div class="state-box"><i class="fas fa-inbox"></i><p>Nenhuma tarefa para ${M.turno==='dia'?'☀️ Dia':'🌙 Noite'} — ${M.dia}</p></div>`; return; }
+  if(!lista.length){ cont.innerHTML=`<div class="state-box"><i class="fas fa-inbox"></i><p>Nenhuma tarefa ${colab?'para <strong>'+colab+'</strong>':'para '+( M.turno==='dia'?'☀️ Dia':'🌙 Noite')+(M.dia!=='todos'?' — '+DIAS_LABEL[M.dia]||M.dia:'')}</p></div>`; return; }
+
+  // Verifica se há tarefas em múltiplos turnos (só exibe coluna turno nesse caso)
+  const turnos=[...new Set(lista.map(t=>t.turno).filter(Boolean))];
+  const multiTurno = turnos.length > 1;
+
+  function _renderTaskRows(tasks){
+    return tasks.sort((a,b)=>{
+      // ordena por turno (se multi-turno), depois por dia (se todos os dias), depois por ordem
+      if(multiTurno){
+        const ti=(a.turno==='dia'?0:1)-(b.turno==='dia'?0:1);
+        if(ti!==0) return ti;
+      }
+      if(M.dia==='todos'){
+        const di=DIAS_ORDER.indexOf(a.dia_semana||'')-DIAS_ORDER.indexOf(b.dia_semana||'');
+        if(di!==0) return di;
+      }
+      return (a.ordem||0)-(b.ordem||0);
+    }).map(t=>{
+      const isKmCard = (t.unidade||'').toLowerCase().trim()==='km';
+      return `
+      <tr id="row-${t.id}">
+        <td style="text-align:center"><input type="checkbox" class="row-chk" data-id="${t.id}" style="width:15px;height:15px;accent-color:#dc2626;cursor:pointer" onchange="_onChkChange()"/></td>
+        <td><span class="cat-chip" style="${isKmCard?'background:rgba(29,78,216,0.12);color:#1d4ed8':''}">${t.categoria||'Geral'}</span></td>
+        ${M.dia==='todos'?`<td style="text-align:center;font-size:11px;font-weight:700;color:#6b7280">${DIAS_LABEL[t.dia_semana]||t.dia_semana||'—'}</td>`:''}
+        ${multiTurno?`<td style="text-align:center;font-size:11px;font-weight:700;color:${t.turno==='dia'?'#b45309':'#4f46e5'}">${t.turno==='dia'?'☀️':'🌙'}</td>`:''}
+        <td><textarea class="item-name-inp" id="ni-${t.id}" placeholder="Nome da tarefa" rows="1" oninput="_autoResize(this);markDirty('${t.id}')">${(t.item||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea></td>
+        <td>${isKmCard
+          ? `<div style="text-align:center;font-size:12px;color:#1d4ed8;font-weight:700;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:8px;padding:6px 10px">🚐 KM Motorista<br><span style="font-size:10px;color:#6b7280">Registro de Hodômetro</span></div>
+             <input type="hidden" id="qi-${t.id}" value="0"/>`
+          : `<div class="qty-ctrl">
+          <button class="qty-btn minus" onclick="adjQty('${t.id}',-10)">−10</button>
+          <button class="qty-btn minus" onclick="adjQty('${t.id}',-1)">−</button>
+          <input class="qty-inp" type="number" id="qi-${t.id}" value="${t.quantidade_padrao||0}" min="0" onchange="markDirty('${t.id}')"/>
+          <button class="qty-btn plus"  onclick="adjQty('${t.id}',1)">+</button>
+          <button class="qty-btn plus"  onclick="adjQty('${t.id}',10)">+10</button>
+        </div>`}</td>
+        <td style="text-align:center"><span class="unit-lbl" style="${isKmCard?'color:#1d4ed8;font-weight:800':''}">${t.unidade||''}</span></td>
+        <td><div class="row-actions">
+          <button class="btn-save-row" id="sbtn-${t.id}" onclick="salvarItem('${t.id}')"><i class="fas fa-save"></i> Salvar</button>
+          <button class="btn-trocar" onclick="abrirModalTrocar('${t.id}','${(t.item||'').replace(/'/g,"\\'")}')"><i class="fas fa-exchange-alt"></i> Trocar</button>
+          <button class="btn-del" onclick="excluirTarefa('${t.id}','${(t.item||'').replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
+        </div></td>
+      </tr>`;
+    }).join('');
+  }
+
   const por={};
   lista.forEach(t=>{ if(!por[t.colaborador]) por[t.colaborador]=[]; por[t.colaborador].push(t); });
-  cont.innerHTML=Object.entries(por).sort((a,b)=>a[0].localeCompare(b[0])).map(([col,tasks])=>` 
+
+  cont.innerHTML=Object.entries(por).sort((a,b)=>a[0].localeCompare(b[0])).map(([col,tasks])=>{
+    // Conta tarefas por dia para exibir no cabeçalho quando 'todos'
+    const diasResumo = M.dia==='todos'
+      ? [...new Set(tasks.map(t=>t.dia_semana).filter(Boolean))]
+          .sort((a,b)=>DIAS_ORDER.indexOf(a)-DIAS_ORDER.indexOf(b))
+          .map(d=>`<span style="font-size:10px;background:#ede9fe;color:#6d28d9;border-radius:6px;padding:1px 7px;font-weight:700">${DIAS_LABEL[d]||d}</span>`)
+          .join(' ')
+      : '';
+    const extraColDia = M.dia==='todos' ? '<th style="width:80px;text-align:center">Dia</th>' : '';
+    const extraColTurno = multiTurno ? '<th style="width:50px;text-align:center">Turno</th>' : '';
+    return `
     <div class="collab-block">
       <div class="collab-hdr">
         <div class="collab-avatar">${_emoji(col)}</div>
         <div class="collab-hdr-name">${col}</div>
-        <div class="collab-hdr-cnt">${tasks.length} tarefa${tasks.length!==1?'s':''}</div>
+        <div class="collab-hdr-cnt" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span>${tasks.length} tarefa${tasks.length!==1?'s':''}</span>
+          ${diasResumo}
+        </div>
       </div>
       <table class="med-table">
         <thead><tr>
           <th style="width:34px;text-align:center"><input type="checkbox" style="width:15px;height:15px;accent-color:#dc2626;cursor:pointer" onchange="_selTodos('${col}',this.checked)"/></th>
-          <th style="width:18%">Categoria</th><th>Item</th>
+          <th style="width:18%">Categoria</th>
+          ${extraColDia}
+          ${extraColTurno}
+          <th>Item</th>
           <th style="width:195px;text-align:center">Qtd Padrão</th>
           <th style="width:44px;text-align:center">Un</th>
           <th style="width:210px;text-align:center">Ações</th>
         </tr></thead>
-        <tbody>${tasks.sort((a,b)=>(a.ordem||0)-(b.ordem||0)).map(t=>`
-          <tr id="row-${t.id}">
-            <td style="text-align:center"><input type="checkbox" class="row-chk" data-id="${t.id}" style="width:15px;height:15px;accent-color:#dc2626;cursor:pointer" onchange="_onChkChange()"/></td>
-            <td><span class="cat-chip">${t.categoria||'Geral'}</span></td>
-            <td><textarea class="item-name-inp" id="ni-${t.id}" placeholder="Nome da tarefa" rows="1" oninput="_autoResize(this);markDirty('${t.id}')">${(t.item||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea></td>
-            <td><div class="qty-ctrl">
-              <button class="qty-btn minus" onclick="adjQty('${t.id}',-10)">−10</button>
-              <button class="qty-btn minus" onclick="adjQty('${t.id}',-1)">−</button>
-              <input class="qty-inp" type="number" id="qi-${t.id}" value="${t.quantidade_padrao||0}" min="0" onchange="markDirty('${t.id}')"/>
-              <button class="qty-btn plus"  onclick="adjQty('${t.id}',1)">+</button>
-              <button class="qty-btn plus"  onclick="adjQty('${t.id}',10)">+10</button>
-            </div></td>
-            <td style="text-align:center"><span class="unit-lbl">${t.unidade||''}</span></td>
-            <td><div class="row-actions">
-              <button class="btn-save-row" id="sbtn-${t.id}" onclick="salvarItem('${t.id}')"><i class="fas fa-save"></i> Salvar</button>
-              <button class="btn-trocar" onclick="abrirModalTrocar('${t.id}','${(t.item||'').replace(/'/g,"\\'")}')"><i class="fas fa-exchange-alt"></i> Trocar</button>
-              <button class="btn-del" onclick="excluirTarefa('${t.id}','${(t.item||'').replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
-            </div></td>
-          </tr>`).join('')}
-        </tbody>
+        <tbody>${_renderTaskRows(tasks)}</tbody>
       </table>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   /* Após injetar HTML, ajusta alturas dos textareas */
   requestAnimationFrame(_initNomeInputs);
 }
@@ -543,7 +614,8 @@ async function salvarItem(id){
     const t=M.tarefas.find(x=>x.id===id);
     if(t && qty>0){
       const u=(t.unidade||'').toLowerCase().trim();
-      if(_CHECKLIST_UNITS.includes(u) || !u){
+      // Não altera unidade 'km' — é um card especial de motorista
+      if(u!=='km' && (_CHECKLIST_UNITS.includes(u) || !u)){
         patch.unidade='un';
       }
     }
@@ -646,7 +718,8 @@ function toggleNovaCategoria(){
   document.getElementById('nt-cat').style.display=chk?'none':'block';
 }
 async function abrirModalNova(){
-  document.getElementById('nt-turno').value=M.turno;document.getElementById('nt-dia').value=M.dia;
+  document.getElementById('nt-turno').value=M.turno;
+  document.getElementById('nt-dia').value=M.dia!=='todos'?M.dia:'segunda';
   document.getElementById('nt-item').value='';document.getElementById('nt-qty').value=0;
   document.getElementById('nt-unidade').value='un';document.getElementById('nt-ordem').value=99;
   document.getElementById('nt-colab').value='';
@@ -698,7 +771,7 @@ function abrirModalTrocar(id,nome){
   const colabs=[...new Set(M.todos.map(t=>t.colaborador).filter(Boolean))].sort();
   document.getElementById('trocar-colab').innerHTML=colabs.map(c=>`<option value="${c}"${tar&&tar.colaborador===c?' selected':''}>${c}</option>`).join('');
   document.getElementById('trocar-turno').value=tar?tar.turno:M.turno;
-  document.getElementById('trocar-dia').value=tar?tar.dia_semana:M.dia;
+  document.getElementById('trocar-dia').value=tar?tar.dia_semana:(M.dia!=='todos'?M.dia:'segunda');
   document.getElementById('modal-trocar').classList.remove('hidden');
 }
 function fecharModalTrocar(){document.getElementById('modal-trocar').classList.add('hidden');_trocarId=null;}
