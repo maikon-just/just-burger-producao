@@ -122,8 +122,15 @@ let _atendRegIds = {};
 let JB_SESSION = null;
 (function _lerSessaoPortal() {
   try {
-    const raw = sessionStorage.getItem('jb_user');
-    if (raw) JB_SESSION = JSON.parse(raw);
+    // Tenta sessionStorage primeiro (mesma aba), depois localStorage (compartilhado no domínio)
+    const raw = sessionStorage.getItem('jb_user') || localStorage.getItem('jb_user');
+    if (raw) {
+      JB_SESSION = JSON.parse(raw);
+      // Garante que a sessão também esteja no sessionStorage para consistência
+      if (!sessionStorage.getItem('jb_user') && raw) {
+        sessionStorage.setItem('jb_user', raw);
+      }
+    }
   } catch(e) { JB_SESSION = null; }
 })();
 
@@ -148,6 +155,8 @@ const S = {
   leaderOk: false, leaderData: [],
   currentLeaderTab: 'registros',
   producaoIniciada: false,
+  _modoConferenciaLider: false, // true quando líder entra em modo conferência
+  _sessIdConferencia: null,     // id da sessão sendo conferida
 };
 
 /* ══ HELPERS FIREBASE ════════════════════════════════════ */
@@ -677,11 +686,17 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
     return;
   }
   const sessMap={};
+  const sessConferMap={}; // lider_conferiu por colaborador
+  const sessAutorizMap={}; // lider_autorizado por colaborador
+  const sessIdMap={};     // id da sessão por colaborador (para patch)
   todasSessoes.forEach(s=>{
     if (s.data===dtTrab&&s.turno===S.turno&&s.dia_semana===S.dia) {
       const cur=sessMap[s.colaborador_card];
       if (!cur || s.status_geral==='completo' || s.status_geral==='parcial') {
         sessMap[s.colaborador_card]=s.status_geral;
+        sessConferMap[s.colaborador_card]=!!s.lider_conferiu;
+        sessAutorizMap[s.colaborador_card]=!!s.lider_autorizado;
+        sessIdMap[s.colaborador_card]=s.id;
       }
     }
   });
@@ -694,16 +709,20 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
   else grid.classList.remove('few-cards');
 
   grid.innerHTML=nomes.map((nome,i)=>{
-    const em       = COLLAB_EMOJI[nome]||'👤';
-    const setor    = COLLAB_SETOR[nome]||'';
-    const cnt      = map[nome];
-    const cor      = cores[i%cores.length];
-    const ne       = nome.replace(/'/g,"\\'");
-    const sessStatus=sessMap[nome];
-    const isEtapa1Ok=sessStatus==='etapa1_ok';
-    const jaFinaliz=sessStatus==='completo'||sessStatus==='parcial';
-    const isCompleto=sessStatus==='completo';
-    const tipoFalta=faltaMap[nome];
+    const em        = COLLAB_EMOJI[nome]||'👤';
+    const setor     = COLLAB_SETOR[nome]||'';
+    const cnt       = map[nome];
+    const cor       = cores[i%cores.length];
+    const ne        = nome.replace(/'/g,"\\'");
+    const sessStatus= sessMap[nome];
+    const isEtapa1Ok= sessStatus==='etapa1_ok';
+    const jaFinaliz = sessStatus==='completo'||sessStatus==='parcial';
+    const isCompleto= sessStatus==='completo';
+    const tipoFalta = faltaMap[nome];
+    const jaConferiu= sessConferMap[nome]||false;
+    const jaAutoriz = sessAutorizMap[nome]||false;
+    const sessId    = sessIdMap[nome]||'';
+
     let statusBadge='';
     let wrapClass='collab-card-wrap';
     if (tipoFalta) {
@@ -713,16 +732,35 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
     } else if (isEtapa1Ok) {
       statusBadge=`<div class="collab-status-badge csb-andamento">▶️ Em Produção</div>`;
     } else if (jaFinaliz) {
-      statusBadge=`<div class="collab-status-badge ${isCompleto?'csb-100':'csb-parcial'}">${isCompleto?'✅ Finalizado 100%':'⚠️ Parcial / Pendências'}</div>`;
+      if (jaAutoriz) {
+        // Líder já autorizou — badge verde especial
+        statusBadge=`<div class="collab-status-badge csb-lider-ok">🎖️ Conferido pelo Líder</div>`;
+      } else if (jaConferiu) {
+        // Líder conferiu mas ainda não autorizou
+        statusBadge=`<div class="collab-status-badge csb-lider-conf">👁️ Conferido — Ag. Autorização</div>`;
+      } else {
+        statusBadge=`<div class="collab-status-badge ${isCompleto?'csb-100':'csb-parcial'}">${isCompleto?'✅ Finalizado 100%':'⚠️ Parcial / Pendências'}</div>`;
+      }
     }
+
     let acao;
-    if (tipoFalta&&S.leaderOk)  acao=`_gerenciarFalta('${ne}','${tipoFalta}','remover')`;
-    else if (jaFinaliz)          acao=`_clickColab('${ne}','__reabrir__')`;
-    else                         acao=`_clickColab('${ne}','__selecionar__')`;
+    if (tipoFalta && S.leaderOk) {
+      acao=`_gerenciarFalta('${ne}','${tipoFalta}','remover')`;
+    } else if (jaFinaliz && _isLider()) {
+      // Líder vê card finalizado → abre modal de conferência
+      acao=`_clickColabLiderConferencia('${ne}','${sessId}',${jaConferiu},${jaAutoriz})`;
+    } else if (jaFinaliz) {
+      // Não-líder vê card finalizado → comportamento original (reabrir com senha)
+      acao=`_clickColab('${ne}','__reabrir__')`;
+    } else {
+      acao=`_clickColab('${ne}','__selecionar__')`;
+    }
+
     const btnFalta=((!tipoFalta&&!jaFinaliz) && (S.leaderOk||_isLider()))
       ?`<div class="collab-falta-row"><button class="btn-falta-card" onclick="event.stopPropagation();_abrirFaltaComSenha('${ne}')">🚫 Registrar Falta</button></div>`:'';
+
     return `<div class="${wrapClass}">
-      <button class="collab-card ${cor}${jaFinaliz?' collab-done':''}${isEtapa1Ok?' collab-etapa1':''}${tipoFalta?' collab-falta':''}" onclick="${acao}">
+      <button class="collab-card ${cor}${jaFinaliz?' collab-done':''}${isEtapa1Ok?' collab-etapa1':''}${tipoFalta?' collab-falta':''}${jaAutoriz?' collab-lider-ok':''}" onclick="${acao}">
         <div class="collab-emoji">${em}</div>
         <span class="collab-name">${nome}</span>
         ${setor?`<span class="collab-setor">${setor}</span>`:''}
@@ -810,6 +848,284 @@ async function _reabrirTurnoColab(nome) {
     _mostrarTelaSetor(_deptAtual);
   } catch(e) { showToast('❌ Erro ao reabrir turno'); }
   finally { showLoading(false); }
+}
+
+/* ══ CONFERÊNCIA DO LÍDER ════════════════════════════════
+   Fluxo:
+   1. Líder clica no card finalizado → modal com opções
+   2. "Conferir"  → entra no card em modo leitura, volta e marca lider_conferiu=true
+   3. "Autorizar" → só disponível após conferência, grava lider_autorizado=true
+   4. "Reabrir"   → disponível sempre (com confirmação)
+══════════════════════════════════════════════════════════ */
+function _clickColabLiderConferencia(nome, sessId, jaConferiu, jaAutoriz) {
+  // Se já autorizado, só oferece opção de reabrir
+  const ne = nome.replace(/'/g,"\\'");
+  let ov = document.getElementById('_modal_lider_conf');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = '_modal_lider_conf';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+    document.body.appendChild(ov);
+  }
+
+  const em = COLLAB_EMOJI[nome.toUpperCase()] || '👤';
+  const setor = COLLAB_SETOR[nome.toUpperCase()] || '';
+
+  // Monta botões de acordo com o estado
+  const btnConferir = `
+    <button onclick="_liderConferir('${ne}','${sessId}')"
+      style="width:100%;padding:14px 16px;border-radius:14px;border:none;
+             background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;
+             font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;
+             display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px">
+      👁️ ${jaConferiu ? 'Conferir Novamente' : 'Conferir Turno'}
+    </button>`;
+
+  const btnAutorizar = jaConferiu && !jaAutoriz ? `
+    <button onclick="_liderAutorizarFim('${ne}','${sessId}')"
+      style="width:100%;padding:14px 16px;border-radius:14px;border:none;
+             background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;
+             font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;
+             display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px">
+      ✅ Autorizar Finalização
+    </button>` : jaAutoriz ? `
+    <div style="padding:10px 14px;border-radius:12px;background:#f0fdf4;color:#15803d;
+                font-size:13px;font-weight:700;text-align:center;margin-bottom:10px;
+                border:1px solid #bbf7d0">
+      🎖️ Turno já autorizado pelo Líder
+    </div>` : `
+    <div style="padding:10px 14px;border-radius:12px;background:#fefce8;color:#92400e;
+                font-size:12px;font-weight:600;text-align:center;margin-bottom:10px;
+                border:1px solid #fde68a">
+      ⚠️ Confira o turno antes de autorizar
+    </div>`;
+
+  const btnReabrir = `
+    <button onclick="_liderReabrirDoModal('${ne}')"
+      style="width:100%;padding:11px 16px;border-radius:12px;border:2px solid #e2e8f0;
+             background:#f9fafb;color:#6b7280;
+             font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;
+             display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:10px">
+      🔓 Reabrir Turno
+    </button>`;
+
+  const btnFechar = `
+    <button onclick="document.getElementById('_modal_lider_conf').style.display='none'"
+      style="width:100%;padding:10px;border-radius:12px;border:2px solid #e2e8f0;
+             background:#fff;color:#6b7280;
+             font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">
+      Fechar
+    </button>`;
+
+  ov.innerHTML = `
+    <div style="background:#fff;border-radius:20px;padding:24px 20px;width:100%;max-width:360px;
+                box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:inherit">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:42px;margin-bottom:4px">${em}</div>
+        <h2 style="font-size:17px;font-weight:900;margin:0 0 2px;color:#1e293b">${nome}</h2>
+        ${setor ? `<p style="font-size:12px;color:#64748b;margin:0 0 8px">${setor}</p>` : ''}
+        <div style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;
+                    background:${jaAutoriz?'#dcfce7':jaConferiu?'#dbeafe':'#fef9c3'};
+                    color:${jaAutoriz?'#15803d':jaConferiu?'#1d4ed8':'#92400e'}">
+          ${jaAutoriz ? '🎖️ Autorizado' : jaConferiu ? '👁️ Conferido' : '✅ Turno Finalizado'}
+        </div>
+      </div>
+      <div style="height:1px;background:#f1f5f9;margin:0 0 16px"></div>
+      ${btnConferir}
+      ${btnAutorizar}
+      ${btnReabrir}
+      ${btnFechar}
+    </div>`;
+  ov.style.display = 'flex';
+}
+
+/* Líder entra no card em modo somente-leitura para conferir */
+async function _liderConferir(nome, sessId) {
+  // Fecha o modal
+  const ov = document.getElementById('_modal_lider_conf');
+  if (ov) ov.style.display = 'none';
+
+  // Marca no Firebase que o líder está conferindo (lider_conferiu=true)
+  // Faz isso ANTES de abrir o card para garantir o registro
+  if (sessId) {
+    try {
+      await _fbPatch('sessoes', sessId, { lider_conferiu: true });
+      _cache.sessoes = null; // invalida cache para recarregar badge
+    } catch(e) { console.error('Erro ao marcar conferência:', e); }
+  }
+
+  // Abre o card do colaborador em modo leitura (líder pode ver tudo)
+  S._modoConferenciaLider = true;
+  S._sessIdConferencia = sessId;
+  await selectColaborador(nome);
+}
+
+/* Líder autoriza a finalização do turno */
+async function _liderAutorizarFim(nome, sessId) {
+  const ov = document.getElementById('_modal_lider_conf');
+
+  // Confirmação antes de autorizar
+  let ovConf = document.getElementById('_modal_lider_confirm_aut');
+  if (!ovConf) {
+    ovConf = document.createElement('div');
+    ovConf.id = '_modal_lider_confirm_aut';
+    ovConf.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px';
+    document.body.appendChild(ovConf);
+  }
+  const ne = nome.replace(/'/g,"\\'");
+  ovConf.innerHTML = `
+    <div style="background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:320px;
+                box-shadow:0 20px 60px rgba(0,0,0,.5);font-family:inherit;text-align:center">
+      <div style="font-size:48px;margin-bottom:10px">✅</div>
+      <h3 style="font-size:16px;font-weight:900;margin:0 0 8px;color:#1e293b">Autorizar Finalização</h3>
+      <p style="font-size:13px;color:#64748b;margin:0 0 20px">
+        Confirmar que o turno de <strong>${nome}</strong> foi conferido e está autorizado?
+      </p>
+      <div style="display:flex;gap:10px">
+        <button onclick="document.getElementById('_modal_lider_confirm_aut').style.display='none'"
+          style="flex:1;padding:12px;border-radius:12px;border:2px solid #e2e8f0;background:#f9fafb;
+                 font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;color:#6b7280">
+          Cancelar
+        </button>
+        <button onclick="_confirmarAutorizacaoLider('${ne}','${sessId}')"
+          style="flex:2;padding:12px;border-radius:12px;border:none;
+                 background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;
+                 font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">
+          ✅ Confirmar
+        </button>
+      </div>
+    </div>`;
+  ovConf.style.display = 'flex';
+}
+
+async function _confirmarAutorizacaoLider(nome, sessId) {
+  // Fecha modais
+  const ovConf = document.getElementById('_modal_lider_confirm_aut');
+  if (ovConf) ovConf.style.display = 'none';
+  const ovMain = document.getElementById('_modal_lider_conf');
+  if (ovMain) ovMain.style.display = 'none';
+
+  showLoading(true);
+  try {
+    if (sessId) {
+      await _fbPatch('sessoes', sessId, {
+        lider_conferiu:   true,
+        lider_autorizado: true,
+        lider_nome:       JB_SESSION ? (JB_SESSION.nome || JB_SESSION.username) : 'Líder',
+        lider_hora:       new Date().toLocaleTimeString('pt-BR'),
+      });
+    }
+    _cache.sessoes = null;
+    showToast(`🎖️ Turno de ${nome} autorizado pelo Líder!`);
+    _mostrarTelaSetor(_deptAtual);
+  } catch(e) {
+    showToast('❌ Erro ao autorizar. Tente novamente.');
+    console.error(e);
+  } finally {
+    showLoading(false);
+  }
+}
+
+/* Reabrir turno a partir do modal de conferência do líder */
+function _liderReabrirDoModal(nome) {
+  const ovMain = document.getElementById('_modal_lider_conf');
+  if (ovMain) ovMain.style.display = 'none';
+  // Usa o fluxo original de reabrir (pede senha se necessário)
+  _reabrirTurnoColab(nome);
+}
+
+/* ══ BANNER DE CONFERÊNCIA DO LÍDER ══════════════════════ */
+function _injetarBannerConferencia(nome, sess) {
+  // Remove banner anterior se existir
+  const antigo = document.getElementById('_banner_conferencia_lider');
+  if (antigo) antigo.remove();
+
+  const banner = document.createElement('div');
+  banner.id = '_banner_conferencia_lider';
+  const statusLabel = sess.status_geral==='completo'
+    ? '<span style="color:#16a34a;font-weight:800">✅ 100% Concluído</span>'
+    : '<span style="color:#d97706;font-weight:800">⚠️ Parcial / Pendências</span>';
+  banner.style.cssText = `
+    position:fixed;top:0;left:0;right:0;z-index:4000;
+    background:linear-gradient(135deg,#1e3a8a,#1d4ed8);
+    color:#fff;padding:10px 16px;
+    display:flex;align-items:center;justify-content:space-between;
+    font-family:inherit;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,.3);
+  `;
+  banner.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;min-width:0">
+      <span style="font-size:20px">🎖️</span>
+      <div style="min-width:0">
+        <div style="font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          Conferência: ${nome}
+        </div>
+        <div style="font-size:11px;opacity:.85">${statusLabel} &nbsp;·&nbsp; Somente leitura</div>
+      </div>
+    </div>
+    <button onclick="_voltarDoModoConferencia()"
+      style="flex-shrink:0;padding:8px 14px;border-radius:10px;border:2px solid rgba(255,255,255,.3);
+             background:rgba(255,255,255,.12);color:#fff;font-family:inherit;
+             font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">
+      ← Voltar
+    </button>`;
+  document.body.prepend(banner);
+
+  // Ajusta padding do conteúdo principal
+  const step = document.getElementById('screen-step1');
+  if (step) step.style.paddingTop = '64px';
+
+  // Bloqueia interações dos cards (somente leitura)
+  _aplicarModoLeituraStep2();
+}
+
+function _aplicarModoLeituraStep2() {
+  // Mantém a flag ativa (já foi setada em _liderConferir)
+  // S._modoConferenciaLider já é true — openS2Modal verifica antes de abrir o modal de edição
+  // Aguarda o DOM do step2 estar pronto para aplicar estilos visuais
+  const _aplicar = () => {
+    const cards = document.querySelectorAll('.s2-card, .s1-card, .task-card');
+    cards.forEach(card => {
+      // Adiciona classe para estilo visual de somente leitura
+      card.classList.add('card-conf-lider');
+      // NÃO usa pointer-events:none aqui pois queremos que o líder possa clicar e VER
+      // A restrição de edição é feita dentro do openS2Modal via S._modoConferenciaLider
+    });
+    // Oculta botão de finalizar turno
+    const btnConclude = document.getElementById('btn-conclude');
+    if (btnConclude) btnConclude.style.display = 'none';
+    // Oculta botão iniciar produção
+    const btnStart = document.getElementById('btn-sm-start-footer');
+    if (btnStart) btnStart.classList.add('hidden');
+    // Mostra dica visual no topo da lista
+    const wrap = document.getElementById('screen-step1');
+    if (wrap) {
+      let dica = document.getElementById('_dica_leitura');
+      if (!dica) {
+        dica = document.createElement('div');
+        dica.id = '_dica_leitura';
+        dica.style.cssText = 'text-align:center;padding:8px 16px;font-size:12px;font-weight:700;color:#1d4ed8;background:#dbeafe;border-radius:10px;margin:8px 16px 4px;';
+        dica.textContent = '👁️ Modo Conferência — clique em qualquer card para ver o resultado';
+        wrap.prepend(dica);
+      }
+    }
+  };
+  // Aplica imediatamente e novamente após render completo
+  setTimeout(_aplicar, 100);
+  setTimeout(_aplicar, 400);
+}
+
+function _voltarDoModoConferencia() {
+  // Remove banner e ajustes
+  const banner = document.getElementById('_banner_conferencia_lider');
+  if (banner) banner.remove();
+  const dica = document.getElementById('_dica_leitura');
+  if (dica) dica.remove();
+  const step = document.getElementById('screen-step1');
+  if (step) step.style.paddingTop = '';
+  // Volta para a tela do setor
+  S._modoConferenciaLider = false;
+  _cache.sessoes = null; // força reload para mostrar badge atualizado
+  _mostrarTelaSetor(_deptAtual);
 }
 
 /* ══ FALTAS ══════════════════════════════════════════════ */
@@ -928,6 +1244,51 @@ async function selectColaborador(nome) {
       s.colaborador_card===nome&&s.data===dt&&s.turno===S.turno&&
       s.dia_semana===S.dia&&s.status_geral==='etapa1_ok'
     );
+
+    // ── MODO CONFERÊNCIA DO LÍDER ─────────────────────────
+    // Quando o líder clica em "Conferir" num card já finalizado
+    const sessFinalizadaLider = S._modoConferenciaLider
+      ? todasSessoes.find(s=>
+          s.colaborador_card===nome&&s.data===dt&&s.turno===S.turno&&
+          s.dia_semana===S.dia&&(s.status_geral==='completo'||s.status_geral==='parcial')
+        )
+      : null;
+
+    if (sessFinalizadaLider) {
+      // Mantém flag ativa durante toda a navegação no modo conferência
+      // (S._modoConferenciaLider só é zerado em _voltarDoModoConferencia)
+      // Carrega pendências para mostrar o resultado final
+      try {
+        const todasPend = await _fbGetAll('pendencias');
+        const pendColab = todasPend.filter(p=>
+          p.colaborador===nome&&p.data===dt&&p.turno===S.turno&&p.dia_semana===S.dia
+        );
+        // Reconstrói S.tarefas com os dados das pendências + tarefas sem pendência (= concluídas)
+        // Monta S.s2 a partir das pendências salvas
+        pendColab.forEach(p=>{
+          const tarefa = S.tarefas.find(t=>t.item===p.item&&(t.categoria||'')===(p.categoria||''));
+          if (tarefa) {
+            S.s2[tarefa.id]={
+              produzida: p.quantidade_produzida||0,
+              status:    p.status||'nao_finalizado',
+              motivo:    p.motivo||'',
+            };
+          }
+        });
+        // Tarefas sem pendência = concluídas 100%
+        S.tarefas.forEach(t=>{
+          if (!S.s2[t.id]) S.s2[t.id]={ produzida: t.quantidade_padrao||0, status:'total', motivo:'' };
+        });
+      } catch(e) { console.error(e); }
+
+      _setNavChips(nome);
+      renderStep2();
+      showScreen('screen-step1');
+      // Injeta banner informativo de modo conferência
+      _injetarBannerConferencia(nome, sessFinalizadaLider);
+      return;
+    }
+    // ─────────────────────────────────────────────────────
 
     if (isAtend) {
       await _carregarRegistrosAtendimento(nome);
@@ -1261,11 +1622,18 @@ function renderStep2() {
   const startBtn2  =document.getElementById('btn-sm-start-footer');
   const concludeBtn=document.getElementById('btn-conclude');
   if (startBtn2) startBtn2.classList.add('hidden');
-  if (concludeBtn) concludeBtn.classList.toggle('hidden', !allDone);
+  // Em modo conferência do líder, nunca mostra o botão de finalizar
+  if (S._modoConferenciaLider) {
+    if (concludeBtn) concludeBtn.style.display = 'none';
+  } else {
+    if (concludeBtn) concludeBtn.classList.toggle('hidden', !allDone);
+  }
   if (pInfo) pInfo.style.display='flex';
-  if (pTxt2) pTxt2.textContent = allDone
-    ? 'Tudo finalizado! Clique em Finalizar Turno.'
-    : `${done2}/${S.tarefas.length} finalizadas — pode sair e voltar!`;
+  if (pTxt2) pTxt2.textContent = S._modoConferenciaLider
+    ? `👁️ ${done2}/${S.tarefas.length} tarefas — modo conferência`
+    : allDone
+      ? 'Tudo finalizado! Clique em Finalizar Turno.'
+      : `${done2}/${S.tarefas.length} finalizadas — pode sair e voltar!`;
 }
 
 let _s2Id=null,_s2Status=null,_s2Motivo=null;
@@ -1310,6 +1678,39 @@ function openS2Modal(id) {
     if (mw) mw.classList.add('hidden');
   }
   document.getElementById('modal-s2').classList.remove('hidden');
+
+  // ── MODO CONFERÊNCIA DO LÍDER: desativa todos os controles do modal ──
+  if (S._modoConferenciaLider) {
+    // Pequeno timeout para garantir que o DOM do modal já foi renderizado
+    setTimeout(() => {
+      const modal = document.getElementById('modal-s2');
+      if (!modal) return;
+      // Desativa botões de status
+      modal.querySelectorAll('.sbtn, .motivo-btn, #modal-s2-confirm, #btn-confirm-s2').forEach(el => {
+        el.disabled = true;
+        el.style.opacity = '0.45';
+        el.style.cursor  = 'not-allowed';
+        el.style.pointerEvents = 'none';
+      });
+      // Desativa campo de quantidade produzida
+      const qtyInput = modal.querySelector('#modal-s2-prod');
+      if (qtyInput) { qtyInput.contentEditable = 'false'; qtyInput.style.pointerEvents = 'none'; }
+      // Desativa motivo custom
+      const mc2 = modal.querySelector('#motivo-custom');
+      if (mc2) { mc2.disabled = true; }
+      // Adiciona banner de leitura dentro do modal
+      let dicaModal = modal.querySelector('#_dica_modal_lider');
+      if (!dicaModal) {
+        dicaModal = document.createElement('div');
+        dicaModal.id = '_dica_modal_lider';
+        dicaModal.style.cssText = 'text-align:center;padding:6px 12px;font-size:11px;font-weight:700;color:#1d4ed8;background:#dbeafe;border-radius:8px;margin:8px 16px;';
+        dicaModal.textContent = '👁️ Somente leitura — modo conferência';
+        const header = modal.querySelector('#modal-s2-header') || modal.firstElementChild;
+        if (header && header.nextSibling) header.parentNode.insertBefore(dicaModal, header.nextSibling);
+        else if (header) header.after(dicaModal);
+      }
+    }, 50);
+  }
 }
 
 function selectStatus(status) {
@@ -2678,6 +3079,20 @@ function closeModal(id) {
     const concludeBtn = document.getElementById('btn-conclude');
     const allDone = S.tarefas.length > 0 && S.tarefas.every(t=>S.s2[t.id]&&S.s2[t.id].status);
     if (concludeBtn && allDone) concludeBtn.classList.remove('hidden');
+  }
+  // Remove o banner de somente leitura do modal de conferência do líder ao fechar
+  if (id === 'modal-s2') {
+    const dicaModal = document.getElementById('_dica_modal_lider');
+    if (dicaModal) dicaModal.remove();
+    // Reativa os botões do modal para uso normal (serão desativados novamente se necessário)
+    if (el) {
+      el.querySelectorAll('.sbtn, .motivo-btn, #btn-s2-salvar').forEach(btn => {
+        btn.disabled = false;
+        btn.style.opacity = '';
+        btn.style.cursor  = '';
+        btn.style.pointerEvents = '';
+      });
+    }
   }
 }
 function shakeEl(id)    { const el=document.getElementById(id); if (!el) return; el.classList.add('shake'); setTimeout(()=>el.classList.remove('shake'),500); }
