@@ -1,4 +1,4 @@
-/* ═════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════
    JUST BURGER 🍔 — app_v3.js
    Controle de Produção — Firebase Realtime Database (compat)
    Versão: 2026-04-13 — Botão Sair Global + iframe print
@@ -878,21 +878,25 @@ async function _reabrirTurnoColab(nome) {
   showLoading(true);
   try {
     const dt=S.dataTrabalho||today();
-    const [sessoes,pendencias,registros,inconsistencias]=await Promise.all([
+    const [sessoes,pendencias,registros,inconsistencias,conferencias]=await Promise.all([
       _fbGetAll('sessoes'), _fbGetAll('pendencias'),
       _fbGetAll('registros'),   // sempre busca registros (não só atendentes)
-      _fbGetAll('inconsistencias').catch(()=>[])
+      _fbGetAll('inconsistencias').catch(()=>[]),
+      _fbGetAll('conferencias').catch(()=>[]),
     ]);
     const sf=sessoes.filter(s=>s.colaborador_card===nome&&s.data===dt&&s.turno===S.turno&&s.dia_semana===S.dia&&(s.status_geral==='completo'||s.status_geral==='parcial'||s.status_geral==='etapa1_ok'));
     const pf=pendencias.filter(p=>p.colaborador===nome&&p.data===dt&&p.turno===S.turno&&p.dia_semana===S.dia);
     // deleta registros de TODOS os colaboradores (não só atendentes) para limpar marcações anteriores
     const rf=registros.filter(r=>r.colaborador_card===nome&&r.data===dt&&r.turno===S.turno&&r.dia_semana===S.dia);
     const inc=inconsistencias.filter(i=>i.colaborador===nome&&i.data===dt&&i.turno===S.turno&&i.dia_semana===S.dia);
+    // limpa também as conferencias gravadas (tarefas 100%) ao reabrir
+    const cf=conferencias.filter(c=>c.colaborador===nome&&c.data===dt&&c.turno===S.turno&&c.dia_semana===S.dia);
     await Promise.all([
       ...sf.map(s=>_fbDelete('sessoes',s.id)),
       ...pf.map(p=>_fbDelete('pendencias',p.id)),
       ...rf.map(r=>_fbDelete('registros',r.id)),   // sempre limpa registros
       ...inc.map(i=>_fbDelete('inconsistencias',i.id)),
+      ...cf.map(c=>_fbDelete('conferencias',c.id)), // limpa tarefas 100% ao reabrir
     ]);
     // Reseta estado local completamente
     S.s1={}; S.s2={};
@@ -2194,6 +2198,7 @@ async function finalizarTurno() {
       status_geral:completo?'completo':'parcial',
       observacao:obs, total_tarefas:total, tarefas_concluidas:totais,
     });
+    // Tarefas NÃO 100% → pendencias (fluxo existente, inalterado)
     const pendencias=S.tarefas.filter(t=>{ const d2=S.s2[t.id]; return !d2||d2.status!=='total'; });
     for (const t of pendencias) {
       const d2=S.s2[t.id]||{};
@@ -2204,6 +2209,22 @@ async function finalizarTurno() {
         quantidade_produzida:d2.produzida!==undefined?d2.produzida:0,
         status:d2.status||'nao_finalizado', motivo:d2.motivo||'',
         vistoriado:0, sessao_id:S.sessaoId,
+      });
+    }
+
+    // Tarefas 100% → conferencias (para conferência do líder nos resultados)
+    // Não afeta dashboard nem pontuação — coleção separada apenas para conferência
+    const tarefas100=S.tarefas.filter(t=>{ const d2=S.s2[t.id]; return d2&&d2.status==='total'; });
+    for (const t of tarefas100) {
+      const d2=S.s2[t.id]||{};
+      await _fbPost('conferencias',{
+        data:dt, turno:S.turno, dia_semana:S.dia, colaborador:S.colaborador,
+        item:t.item, categoria:t.categoria||'',
+        quantidade_programada:(S.s1[t.id]||{}).programada||t.quantidade_padrao||0,
+        quantidade_produzida:d2.produzida!==undefined?d2.produzida:0,
+        status:'total', motivo:'',
+        lider_conferiu:false, lider_autorizado:false,
+        sessao_id:S.sessaoId,
       });
     }
   } catch(e) { console.error(e); }
