@@ -211,8 +211,49 @@ document.addEventListener('DOMContentLoaded', () => {
       const btnLider = document.querySelector('.btn-leader-access');
       if (btnLider) btnLider.style.display = 'none';
     }
+    // ── Verifica se veio dos resultados para conferência direta ──
+    _tentarAbrirConferenciaViaUrl();
   }
 });
+
+/* Detecta parâmetros ?_conf_colab=...&_conf_sessid=... e abre conferência */
+async function _tentarAbrirConferenciaViaUrl() {
+  if (!_isLider()) return;
+  const params = new URLSearchParams(location.search);
+  const colab   = params.get('_conf_colab');
+  const sessId  = params.get('_conf_sessid');
+  const turno   = params.get('_conf_turno');
+  const dia     = params.get('_conf_dia');
+  const data    = params.get('_conf_data');
+  if (!colab) return;
+
+  // Limpa parâmetros da URL sem recarregar
+  const cleanUrl = location.pathname + location.search
+    .replace(/[?&]_conf_[^&]*/g, '').replace(/^&/, '?').replace(/^\?$/, '');
+  history.replaceState({}, '', cleanUrl || location.pathname);
+
+  // Seta estado necessário para entrar no setor certo
+  if (turno) S.turno = turno;
+  if (dia)   S.dia   = dia;
+  if (data)  S.dataTrabalho = data;
+  S.leaderOk = true;
+  S._modoConferenciaLider = true;
+  S._sessIdConferencia    = sessId || null;
+  S._confCards            = {};
+
+  showToast(`🎖️ Abrindo conferência de ${colab}...`);
+  showLoading(true);
+  try {
+    // Pequeno delay para garantir que o Firebase está pronto
+    await new Promise(r => setTimeout(r, 600));
+    await selectColaborador(colab);
+  } catch(e) {
+    console.error('Erro ao abrir conferência via URL:', e);
+    showToast('❌ Erro ao abrir conferência. Tente novamente.');
+  } finally {
+    showLoading(false);
+  }
+}
 
 function _renderUserBar() {
   if (!JB_SESSION) return;
@@ -838,18 +879,30 @@ async function _reabrirTurnoColab(nome) {
   try {
     const dt=S.dataTrabalho||today();
     const isAtend=ATEND_COLABS.includes(nome.toUpperCase());
-    const [sessoes,pendencias,registros]=await Promise.all([
+    const [sessoes,pendencias,registros,inconsistencias]=await Promise.all([
       _fbGetAll('sessoes'), _fbGetAll('pendencias'),
-      isAtend?_fbGetAll('registros'):Promise.resolve([])
+      isAtend?_fbGetAll('registros'):Promise.resolve([]),
+      _fbGetAll('inconsistencias').catch(()=>[])
     ]);
     const sf=sessoes.filter(s=>s.colaborador_card===nome&&s.data===dt&&s.turno===S.turno&&s.dia_semana===S.dia&&(s.status_geral==='completo'||s.status_geral==='parcial'||s.status_geral==='etapa1_ok'));
     const pf=pendencias.filter(p=>p.colaborador===nome&&p.data===dt&&p.turno===S.turno&&p.dia_semana===S.dia);
     const rf=registros.filter(r=>r.colaborador_card===nome&&r.data===dt&&r.turno===S.turno&&r.dia_semana===S.dia);
-    await Promise.all([...sf.map(s=>_fbDelete('sessoes',s.id)),...pf.map(p=>_fbDelete('pendencias',p.id)),...(isAtend?rf.map(r=>_fbDelete('registros',r.id)):[] )]);
+    // Também remove inconsistências do líder geradas neste turno (turno reaberto = zerado)
+    const inc=inconsistencias.filter(i=>i.colaborador===nome&&i.data===dt&&i.turno===S.turno&&i.dia_semana===S.dia);
+    await Promise.all([
+      ...sf.map(s=>_fbDelete('sessoes',s.id)),
+      ...pf.map(p=>_fbDelete('pendencias',p.id)),
+      ...(isAtend?rf.map(r=>_fbDelete('registros',r.id)):[]),
+      ...inc.map(i=>_fbDelete('inconsistencias',i.id)),
+    ]);
+    // Reseta flags de turno autorizado/conferido
+    S._turnoAutorizadoLider = false;
+    S._modoConferenciaLider = false;
+    S._confCards = {};
     _invalidarCache();
     showToast('🔓 Turno reaberto para '+nome);
     _mostrarTelaSetor(_deptAtual);
-  } catch(e) { showToast('❌ Erro ao reabrir turno'); }
+  } catch(e) { showToast('❌ Erro ao reabrir turno'); console.error(e); }
   finally { showLoading(false); }
 }
 
@@ -1077,9 +1130,9 @@ function _aplicarModoLeituraStep2() {
       // NÃO usa pointer-events:none aqui pois queremos que o líder possa clicar e VER
       // A restrição de edição é feita dentro do openS2Modal via S._modoConferenciaLider
     });
-    // Oculta botão de finalizar turno
+    // Oculta botão de finalizar turno (usa classe, nunca style.display)
     const btnConclude = document.getElementById('btn-conclude');
-    if (btnConclude) btnConclude.style.display = 'none';
+    if (btnConclude) { btnConclude.classList.add('hidden'); btnConclude.style.display = ''; }
     // Oculta botão iniciar produção
     const btnStart = document.getElementById('btn-sm-start-footer');
     if (btnStart) btnStart.classList.add('hidden');
@@ -1858,8 +1911,10 @@ function renderStep2() {
   if (startBtn2) startBtn2.classList.add('hidden');
   // Em modo conferência do líder, nunca mostra o botão de finalizar
   if (S._modoConferenciaLider) {
-    if (concludeBtn) concludeBtn.style.display = 'none';
+    if (concludeBtn) { concludeBtn.classList.add('hidden'); concludeBtn.style.display = ''; }
   } else {
+    // Garante que style.display não bloqueie o classList
+    if (concludeBtn) concludeBtn.style.display = '';
     if (concludeBtn) concludeBtn.classList.toggle('hidden', !allDone);
   }
   if (pInfo) pInfo.style.display='flex';
