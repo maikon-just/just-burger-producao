@@ -564,6 +564,20 @@
 ══════════════════════════════════════════════════════════ */
 const SENHA_LIDER = 'lider123*';
 
+/* ── Auth Guard: sem sessão → volta ao hub ── */
+(function _authGuard(){
+  try {
+    const safe = ['localhost','127.0.0.1','gitpod','preview','blob'];
+    const host = location.hostname || '';
+    const isSafe = safe.some(s => host.includes(s)) || location.protocol === 'blob:';
+    const raw = sessionStorage.getItem('jb_user');
+    if (!raw && !isSafe) {
+      location.href = 'portal.html';
+      return;
+    }
+  } catch(e) {}
+})();
+
 /* Bypass automático: líder/admin autenticado via portal não precisa digitar senha */
 (function _pwBypass(){
   try {
