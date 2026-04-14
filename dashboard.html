@@ -10,6 +10,54 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Auth Guard central -->
+  <script src="js/auth-guard.js?v=20260414"></script>
+  <!-- ══ GUARD IMEDIATO — executa antes de qualquer renderização ══ -->
+  <script>
+  (function(){
+    const PAPEIS_OK  = ['admin','lider'];
+    const SAFE_HOSTS = ['localhost','127.0.0.1','gitpod','preview','genspark'];
+    const isSafe     = SAFE_HOSTS.some(s => (location.hostname||'').includes(s)) || location.protocol === 'blob:';
+
+    /* Restaura sessão via ?_jbs= passado pelo hub */
+    try {
+      const params = new URLSearchParams(location.search);
+      const token  = params.get('_jbs');
+      if (token) {
+        const json = decodeURIComponent(escape(atob(decodeURIComponent(token))));
+        const sess = JSON.parse(json);
+        if (sess && sess.username && sess.papel) {
+          if (typeof JbAuth !== 'undefined') { JbAuth.save(sess); }
+          else { sessionStorage.setItem('jb_user', JSON.stringify(sess)); }
+        }
+        params.delete('_jbs'); params.delete('_cb');
+        history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params.toString() : ''));
+      }
+    } catch(e) {}
+
+    /* Lê sessão */
+    let u = null;
+    try {
+      if (typeof JbAuth !== 'undefined') { u = JbAuth.read(); }
+      else { u = JSON.parse(sessionStorage.getItem('jb_user') || 'null'); }
+    } catch(e) {}
+
+    if (!u && !isSafe) { location.replace('portal.html?_acesso=negado'); return; }
+    if (u && !PAPEIS_OK.includes(u.papel)) {
+      if (typeof JbAuth !== 'undefined') { JbAuth.logout('portal.html?_acesso=negado'); }
+      else { sessionStorage.clear(); location.replace('portal.html?_acesso=negado'); }
+      return;
+    }
+    if (u && typeof JbAuth !== 'undefined') { JbAuth.renew(); }
+
+    /* Listener logout outras abas */
+    window.addEventListener('storage', e => {
+      if (e.key === 'jb_out' && e.newValue === '1') {
+        sessionStorage.clear(); location.replace('portal.html');
+      }
+    });
+  })();
+  </script>
   <style>
     :root {
       --black:#1a1d2e; --white:#fff; --gray-50:#f8f9fc; --gray-100:#f0f2f8;
@@ -564,21 +612,18 @@
 ══════════════════════════════════════════════════════════ */
 const SENHA_LIDER = 'lider123*';
 
-/* ── Auth Guard: sem sessão → volta ao hub ── */
-(function _authGuard(){
-  try {
-    const safe = ['localhost','127.0.0.1','gitpod','preview','blob'];
-    const host = location.hostname || '';
-    const isSafe = safe.some(s => host.includes(s)) || location.protocol === 'blob:';
-    const raw = sessionStorage.getItem('jb_user');
-    if (!raw && !isSafe) {
-      location.href = 'portal.html';
-      return;
+/* Listener de logout de outras abas */
+if (typeof JbAuth !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'jb_out' && e.newValue === '1') {
+      sessionStorage.clear();
+      location.replace('portal.html');
     }
-  } catch(e) {}
-})();
+  });
+}
 
-/* Bypass automático: líder/admin autenticado via portal não precisa digitar senha */
+/* Bypass automático: líder/admin autenticado via portal não precisa digitar senha
+   (guard já rodou no <head> acima) */
 (function _pwBypass(){
   try {
     const raw = sessionStorage.getItem('jb_user');
