@@ -66,21 +66,40 @@ const JbAuth = (() => {
       }
     } catch(e) {}
 
-    const raw = sessionStorage.getItem(KEY);
+    // 2. Tenta sessionStorage primeiro
+    let raw   = sessionStorage.getItem(KEY);
+    let exp   = parseInt(sessionStorage.getItem(KEY_STAMP) || '0', 10);
+
+    // 3. Se sessionStorage vazio, tenta localStorage
+    //    (sessão salva pelo hub, compartilhada entre páginas do mesmo domínio)
+    if (!raw || Date.now() > exp) {
+      try {
+        const lsRaw   = localStorage.getItem(KEY);
+        const lsStamp = parseInt(localStorage.getItem(KEY_STAMP) || '0', 10);
+        if (lsRaw && Date.now() < lsStamp) {
+          raw = lsRaw;
+          exp = lsStamp;
+          // Espelha no sessionStorage para leituras futuras desta aba
+          sessionStorage.setItem(KEY, lsRaw);
+          sessionStorage.setItem(KEY_STAMP, String(lsStamp));
+        }
+      } catch(e) {}
+    }
+
     if (!raw) return null;
 
-    // 2. Verifica TTL
-    const exp = parseInt(sessionStorage.getItem(KEY_STAMP) || '0', 10);
+    // 4. Verifica TTL
     if (Date.now() > exp) {
       _wipe();
       return null;
     }
 
-    // 3. Parseia e verifica assinatura
+    // 5. Parseia e verifica assinatura
     try {
       const u = JSON.parse(raw);
       if (!u || !u.username || !u.papel) { _wipe(); return null; }
-      if (u._sig !== _sig(u)) { _wipe(); return null; } // tamper detectado
+      // Assinatura: compatível com sessões salvas pelo hub (sem _sig)
+      if (u._sig && u._sig !== _sig(u)) { _wipe(); return null; }
       return u;
     } catch(e) {
       _wipe();
