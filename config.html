@@ -378,20 +378,17 @@
         </select>
       </div>
 
-      <!-- E-MAIL PARA 2FA (visível para papéis com autenticação em 2 fatores) -->
+      <!-- E-MAIL OPCIONAL (informativo) -->
       <div class="form-group form-full" id="f-email-group" style="display:none">
         <label>
-          📧 E-mail para verificação em 2 fatores
+          📧 E-mail de contato
           <span style="font-size:11px;color:#6b7280;font-weight:600;margin-left:6px">
-            (obrigatório para este papel)
+            (opcional)
           </span>
         </label>
         <input class="form-inp" type="email" id="f-email"
                placeholder="ex: joao@justburger.com.br"
                autocomplete="email"/>
-        <p style="font-size:11px;color:#0369a1;background:#e0f2fe;border-radius:8px;padding:6px 10px;margin-top:6px">
-          🔐 Ao fazer login, um código de 6 dígitos será enviado para este e-mail para confirmar a identidade.
-        </p>
       </div>
     </div>
     <p class="err-msg" id="modal-user-err"></p>
@@ -588,7 +585,7 @@ function _renderUsuarios(lista) {
         ${u.nome_display||'—'}<br>
         ${u.email
           ? `<small style="color:#0369a1;font-size:10px">📧 ${u.email}</small>`
-          : `<small style="color:#d1d5db;font-size:10px">sem 2FA</small>`}
+          : ''}
       </td>
       <td><span class="badge-papel ${papelCls[u.papel]||'bp-colab'}">${papelLabel[u.papel]||u.papel}</span></td>
       <td>
@@ -706,9 +703,6 @@ function _popularSelectCards(selecionado) {
     TODOS_CARDS.map(c=>`<option value="${c}" ${c===selecionado?'selected':''}>${c}</option>`).join('');
 }
 
-/* Papéis que exigem e-mail para 2FA */
-const _PAPEIS_2FA = ['admin','lider','rh','atendente','financeiro','aux_financeiro'];
-
 function _onPapelChange() {
   const p      = document.getElementById('f-papel').value;
   const cardG  = document.getElementById('f-card-group');
@@ -717,8 +711,9 @@ function _onPapelChange() {
   const turnG  = document.getElementById('f-turno-group');
   const emailG = document.getElementById('f-email-group');
   const hint   = document.getElementById('f-sistemas-hint');
-  // Campo e-mail: apenas para papéis com 2FA
-  if (emailG) emailG.style.display = _PAPEIS_2FA.includes(p) ? '' : 'none';
+  // Campo e-mail: opcional, oculto apenas para colaborador e uploader
+  const _PAPEIS_SEM_EMAIL = ['colaborador', 'uploader'];
+  if (emailG) emailG.style.display = _PAPEIS_SEM_EMAIL.includes(p) ? 'none' : '';
 
   if (p === 'colaborador') {
     cardG.style.display = '';
@@ -843,11 +838,7 @@ async function _salvarUser() {
   const turnoP = document.getElementById('f-turno').value || '';
   const emailV  = ((document.getElementById('f-email')||{}).value||'').trim().toLowerCase();
 
-  // E-mail obrigatório para papéis com 2FA
-  if (_PAPEIS_2FA.includes(papel) && !emailV) {
-    err.textContent = '📧 E-mail obrigatório para este papel (autenticação em 2 fatores)';
-    return;
-  }
+  // E-mail opcional — valida formato apenas se preenchido
   if (emailV && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailV)) {
     err.textContent = '📧 Formato de e-mail inválido';
     return;
