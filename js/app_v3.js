@@ -1549,20 +1549,33 @@ async function selectColaborador(nome) {
     // ── MODO CONFERÊNCIA DO LÍDER ─────────────────────────
     // Quando o líder clica em "Conferir" num card já finalizado
     const sessFinalizadaLider = S._modoConferenciaLider
-      ? todasSessoes.find(s=>
-          s.colaborador_card===nome&&s.data===dt&&s.turno===S.turno&&
-          s.dia_semana===S.dia&&(s.status_geral==='completo'||s.status_geral==='parcial')
+      ? (
+          // Prefere buscar pelo ID exato da sessão quando disponível
+          S._sessIdConferencia
+            ? todasSessoes.find(s => s.id === S._sessIdConferencia) || todasSessoes.find(s=>
+                s.colaborador_card===nome&&s.data===dt&&s.turno===S.turno&&
+                (s.status_geral==='completo'||s.status_geral==='parcial')
+              )
+            : todasSessoes.find(s=>
+                s.colaborador_card===nome&&s.data===dt&&s.turno===S.turno&&
+                s.dia_semana===S.dia&&(s.status_geral==='completo'||s.status_geral==='parcial')
+              )
         )
       : null;
 
     if (sessFinalizadaLider) {
+      // Atualiza _sessIdConferencia com o ID real da sessão encontrada
+      if (sessFinalizadaLider.id) S._sessIdConferencia = sessFinalizadaLider.id;
+      // Sincroniza dia_semana a partir da sessão encontrada (evita bug quando S.dia é null)
+      if (sessFinalizadaLider.dia_semana) S.dia = sessFinalizadaLider.dia_semana;
+
       // Mantém flag ativa durante toda a navegação no modo conferência
       // (S._modoConferenciaLider só é zerado em _voltarDoModoConferencia)
       // Carrega pendências para mostrar o resultado final
       try {
         const todasPend = await _fbGetAll('pendencias');
         const pendColab = todasPend.filter(p=>
-          p.colaborador===nome&&p.data===dt&&p.turno===S.turno&&p.dia_semana===S.dia
+          p.colaborador===nome&&p.data===dt&&p.turno===S.turno
         );
         // Reconstrói S.tarefas com os dados das pendências + tarefas sem pendência (= concluídas)
         // Monta S.s2 a partir das pendências salvas
@@ -2191,13 +2204,15 @@ async function finalizarTurno() {
     );
     await Promise.all(sessE1.map(s=>_fbDelete('sessoes',s.id)));
 
-    await _fbPost('sessoes',{
+    const sessaoFinal = await _fbPost('sessoes',{
       data:dt, turno:S.turno, dia_semana:S.dia,
       colaborador_card:S.colaborador, colaborador_nome:S.colaborador,
       hora_fim:new Date().toLocaleTimeString('pt-BR'),
       status_geral:completo?'completo':'parcial',
       observacao:obs, total_tarefas:total, tarefas_concluidas:totais,
     });
+    // Atualiza sessaoId para apontar para a sessão final (não mais etapa1)
+    if (sessaoFinal?.id) S.sessaoId = sessaoFinal.id;
     // Tarefas NÃO 100% → pendencias (fluxo existente, inalterado)
     const pendencias=S.tarefas.filter(t=>{ const d2=S.s2[t.id]; return !d2||d2.status!=='total'; });
     for (const t of pendencias) {
