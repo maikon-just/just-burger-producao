@@ -878,27 +878,29 @@ async function _reabrirTurnoColab(nome) {
   showLoading(true);
   try {
     const dt=S.dataTrabalho||today();
-    const isAtend=ATEND_COLABS.includes(nome.toUpperCase());
     const [sessoes,pendencias,registros,inconsistencias]=await Promise.all([
       _fbGetAll('sessoes'), _fbGetAll('pendencias'),
-      isAtend?_fbGetAll('registros'):Promise.resolve([]),
+      _fbGetAll('registros'),   // sempre busca registros (não só atendentes)
       _fbGetAll('inconsistencias').catch(()=>[])
     ]);
     const sf=sessoes.filter(s=>s.colaborador_card===nome&&s.data===dt&&s.turno===S.turno&&s.dia_semana===S.dia&&(s.status_geral==='completo'||s.status_geral==='parcial'||s.status_geral==='etapa1_ok'));
     const pf=pendencias.filter(p=>p.colaborador===nome&&p.data===dt&&p.turno===S.turno&&p.dia_semana===S.dia);
+    // deleta registros de TODOS os colaboradores (não só atendentes) para limpar marcações anteriores
     const rf=registros.filter(r=>r.colaborador_card===nome&&r.data===dt&&r.turno===S.turno&&r.dia_semana===S.dia);
-    // Também remove inconsistências do líder geradas neste turno (turno reaberto = zerado)
     const inc=inconsistencias.filter(i=>i.colaborador===nome&&i.data===dt&&i.turno===S.turno&&i.dia_semana===S.dia);
     await Promise.all([
       ...sf.map(s=>_fbDelete('sessoes',s.id)),
       ...pf.map(p=>_fbDelete('pendencias',p.id)),
-      ...(isAtend?rf.map(r=>_fbDelete('registros',r.id)):[]),
+      ...rf.map(r=>_fbDelete('registros',r.id)),   // sempre limpa registros
       ...inc.map(i=>_fbDelete('inconsistencias',i.id)),
     ]);
-    // Reseta flags de turno autorizado/conferido
+    // Reseta estado local completamente
+    S.s1={}; S.s2={};
+    S.producaoIniciada=false;
     S._turnoAutorizadoLider = false;
     S._modoConferenciaLider = false;
     S._confCards = {};
+    _atendRegIds = {};
     _invalidarCache();
     showToast('🔓 Turno reaberto para '+nome);
     _mostrarTelaSetor(_deptAtual);
