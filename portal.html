@@ -535,6 +535,25 @@
    Hub central de sistemas com login e controle de acesso
 ══════════════════════════════════════════════════ */
 
+/* ── Restaura sessão passada pelo Hub via query param _jbs ── */
+(function _restoreHubSession() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const token  = params.get('_jbs');
+    if (!token) return;
+    const json = decodeURIComponent(escape(atob(decodeURIComponent(token))));
+    const sess = JSON.parse(json);
+    if (sess && sess.username) {
+      sessionStorage.setItem('jb_user', JSON.stringify(sess));
+    }
+    /* Limpa o token da URL sem recarregar */
+    params.delete('_jbs');
+    params.delete('_cb');
+    const novaUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    history.replaceState(null, '', novaUrl);
+  } catch(e) { /* silencioso */ }
+})();
+
 /* ── Credenciais admin de emergência (sem Firebase) ── */
 const _ADMFB = { u: 'justadm', h: btoa('lider12345*') };
 
