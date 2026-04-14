@@ -35,11 +35,22 @@
       }
     } catch(e) {}
 
-    /* Lê sessão */
+    /* Lê sessão — tenta JbAuth, sessionStorage e localStorage */
     let u = null;
     try {
       if (typeof JbAuth !== 'undefined') { u = JbAuth.read(); }
-      else { u = JSON.parse(sessionStorage.getItem('jb_user') || 'null'); }
+      if (!u) { u = JSON.parse(sessionStorage.getItem('jb_user') || 'null'); }
+      if (!u) { 
+        /* Tenta localStorage (sessão salva pelo hub, compartilhada entre páginas) */
+        const lsRaw   = localStorage.getItem('jb_user');
+        const lsStamp = parseInt(localStorage.getItem('jb_ts') || '0', 10);
+        if (lsRaw && Date.now() < lsStamp) {
+          u = JSON.parse(lsRaw);
+          /* Espelha no sessionStorage para próximas leituras */
+          sessionStorage.setItem('jb_user', lsRaw);
+          sessionStorage.setItem('jb_ts',   String(lsStamp));
+        }
+      }
     } catch(e) {}
 
     if (!u && !isSafe) { location.replace('portal.html?_acesso=negado'); return; }
