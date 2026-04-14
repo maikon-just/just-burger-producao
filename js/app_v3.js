@@ -1123,6 +1123,8 @@ function _aplicarModoLeituraStep2() {
   // S._modoConferenciaLider já é true — openS2Modal verifica antes de abrir o modal de edição
   // Aguarda o DOM do step2 estar pronto para aplicar estilos visuais
   const _aplicar = () => {
+    // Verifica se ainda estamos no modo conferência (evita race condition com timeouts pendentes)
+    if (!S._modoConferenciaLider) return;
     const cards = document.querySelectorAll('.s2-card, .s1-card, .task-card');
     cards.forEach(card => {
       // Adiciona classe para estilo visual de somente leitura
@@ -1500,6 +1502,12 @@ async function selectColaborador(nome) {
   S.colaborador=nome; S.s1={}; S.s2={};
   S.producaoIniciada=false;
   _atendRegIds={};
+  // Se não veio via _liderConferir, garante que o modo conferência está limpo
+  // (evita que flag residual bloqueie o botão Finalizar Turno para o colaborador)
+  if (!S._modoConferenciaLider) {
+    S._confCards = {};
+    S._turnoAutorizadoLider = false;
+  }
   const isAtend=ATEND_COLABS.includes(nome.toUpperCase());
   showLoading(true);
   try {
