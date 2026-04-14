@@ -44,10 +44,16 @@ const JbAuth = (() => {
   /* ── Salva sessão ── */
   function save(userObj) {
     const payload = Object.assign({}, userObj, { _sig: _sig(userObj) });
-    sessionStorage.setItem(KEY, JSON.stringify(payload));
-    sessionStorage.setItem(KEY_STAMP, String(Date.now() + TTL_MS));
-    // Limpa flag de logout anterior
-    try { localStorage.removeItem(KEY_OUT); } catch(e) {}
+    const json    = JSON.stringify(payload);
+    const stamp   = String(Date.now() + TTL_MS);
+    sessionStorage.setItem(KEY, json);
+    sessionStorage.setItem(KEY_STAMP, stamp);
+    // Salva também no localStorage para que repos externos consigam ler
+    try {
+      localStorage.setItem(KEY, json);
+      localStorage.setItem(KEY_STAMP, stamp);
+      localStorage.removeItem(KEY_OUT); // limpa flag de logout anterior
+    } catch(e) {}
   }
 
   /* ── Lê e valida sessão ── */
@@ -84,8 +90,9 @@ const JbAuth = (() => {
 
   /* ── Renova TTL (chamada a cada interação do usuário) ── */
   function renew() {
-    const raw = sessionStorage.getItem(KEY);
-    if (raw) sessionStorage.setItem(KEY_STAMP, String(Date.now() + TTL_MS));
+    const stamp = String(Date.now() + TTL_MS);
+    if (sessionStorage.getItem(KEY)) sessionStorage.setItem(KEY_STAMP, stamp);
+    try { if (localStorage.getItem(KEY)) localStorage.setItem(KEY_STAMP, stamp); } catch(e) {}
   }
 
   /* ── Limpa sessão local ── */
@@ -94,12 +101,18 @@ const JbAuth = (() => {
     sessionStorage.removeItem(KEY_STAMP);
     sessionStorage.removeItem('cfg_ok');
     sessionStorage.removeItem('cfg_papel');
+    // Limpa também localStorage (sessão compartilhada com repos externos)
+    try { localStorage.removeItem(KEY); localStorage.removeItem(KEY_STAMP); } catch(e) {}
   }
 
   /* ── Logout total ── */
   function logout(redirectUrl) {
-    // Marca logout no localStorage → invalida outras abas/páginas
-    try { localStorage.setItem(KEY_OUT, '1'); } catch(e) {}
+    // Marca logout no localStorage → invalida outras abas/páginas e repos externos
+    try {
+      localStorage.setItem(KEY_OUT, '1');
+      localStorage.removeItem(KEY);
+      localStorage.removeItem(KEY_STAMP);
+    } catch(e) {}
     _wipe();
 
     // Bloqueia botão "Voltar": empurra estado neutro e escuta popstate
