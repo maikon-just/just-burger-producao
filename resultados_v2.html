@@ -833,69 +833,51 @@ async function loadResultados() {
 
   const turno = document.getElementById('res-turno').value || 'dia';
   const data  = document.getElementById('res-data').value  || _hoje();
-  // dia_semana derivado da data (não mais de botão separado)
   const [_y,_m,_d] = data.split('-').map(Number);
   const dia = DIA_JS_MAP[new Date(_y, _m-1, _d).getDay()];
-  // Sincroniza hidden input
   const diaEl = document.getElementById('res-dia');
   if (diaEl) diaEl.value = dia;
 
   try {
-    const [pendencias, sessoes, conferencias] = await Promise.all([
+    const [pendencias, sessoes] = await Promise.all([
       fbGetAll('pendencias'),
       fbGetAll('sessoes'),
-      fbGetAll('conferencias').catch(()=>[]),
     ]);
 
-    // Filtra por data e turno — pendências ativas (não vistoriadas)
+    /* ── Pendências ativas do turno/data ── */
     let pends = pendencias.filter(p =>
       p.data === data && p.turno === turno && !(p.vistoriado == 1)
     );
-
-    // Se não achar nada no turno selecionado, mostra todos os turnos do dia
+    // Fallback: se não há pendências no turno, mostra todos os turnos do dia
     if (pends.length === 0) {
-      pends = pendencias.filter(p =>
-        p.data === data && !(p.vistoriado == 1)
-      );
+      pends = pendencias.filter(p => p.data === data && !(p.vistoriado == 1));
     }
 
-    const sess = sessoes.filter(s =>
+    /* ── Sessões finalizadas do dia ── */
+    // Para conferência: filtra apenas pelo turno selecionado
+    const sessDiaTurno = sessoes.filter(s =>
+      s.data === data && s.turno === turno &&
+      (s.status_geral === 'completo' || s.status_geral === 'parcial')
+    );
+    // Para summary: todas as sessões finalizadas do dia
+    const sessDia = sessoes.filter(s =>
       s.data === data &&
       (s.status_geral === 'completo' || s.status_geral === 'parcial')
     );
 
-    const pendAtivos = pends.filter(p => !p.vistoriado || p.vistoriado == 0);
-    const collabNomes   = [...new Set([
-      ...sess.map(s => s.colaborador_nome || s.colaborador_card).filter(Boolean),
+    /* ── Cards de CONFERÊNCIA:
+       Toda sessão finalizada no turno/data que ainda NÃO foi autorizada pelo líder.
+       Aparece independentemente de ter pendências ou não. ── */
+    const sessSemAutorizacao = sessDiaTurno.filter(s => !s.lider_autorizado);
+
+    /* ── Summary ── */
+    const pendAtivos  = pends.filter(p => !p.vistoriado || p.vistoriado == 0);
+    const collabNomes = [...new Set([
+      ...sessDia.map(s => s.colaborador_card || s.colaborador_nome).filter(Boolean),
       ...pends.map(p => p.colaborador).filter(Boolean),
     ])];
     const collabSemPend = collabNomes.filter(n => !pends.find(p => p.colaborador === n)).length;
 
-    /* ── Token para URL de conferência ── */
-    const _rawToken = localStorage.getItem('jb_user') || sessionStorage.getItem('jb_user') || '';
-    const _confToken = _rawToken ? encodeURIComponent(btoa(unescape(encodeURIComponent(_rawToken)))) : '';
-
-    /* ── Agrupa conferencias (tarefas 100%) por colaborador, filtrando pelo turno/data ──
-       Só mostra colaboradores que ainda NÃO tiveram lider_autorizado na sessão correspondente */
-    const confDiaTurno = conferencias.filter(c =>
-      c.data === data && c.turno === turno
-    );
-
-    // Descobre quais colaboradores já foram autorizados pelo líder neste dia/turno
-    const sessAutorizadas = sessoes.filter(s =>
-      s.data === data && s.turno === turno && s.lider_autorizado === true
-    ).map(s => s.colaborador_card || s.colaborador_nome || '');
-
-    // Agrupa por colaborador — exclui quem já foi autorizado
-    const confPorColab = {};
-    confDiaTurno.forEach(c => {
-      const nome = c.colaborador || '?';
-      if (sessAutorizadas.includes(nome)) return; // já conferido → não mostra
-      if (!confPorColab[nome]) confPorColab[nome] = [];
-      confPorColab[nome].push(c);
-    });
-
-    /* Summary */
     if (summBar) {
       summBar.innerHTML = `
         <div class="sum-card sc-blue"><span class="sum-val">${collabNomes.length}</span><span class="sum-lbl">Colaboradores</span></div>
@@ -904,42 +886,49 @@ async function loadResultados() {
         <div class="sum-card sc-red"><span class="sum-val">${pendAtivos.length}</span><span class="sum-lbl">Aguard. Ciência</span></div>`;
     }
 
-    /* ── Monta cards de conferência (um por colaborador, mesmo estilo de collab-card) ── */
-    function _urlConf(nome) {
-      // Pega a sessão finalizada do colaborador para passar o sessid
-      const sessColab = sessoes.find(s =>
-        (s.colaborador_card === nome || s.colaborador_nome === nome) &&
-        s.data === data && s.turno === turno &&
-        (s.status_geral === 'completo' || s.status_geral === 'parcial')
-      ) || {};
+    /* ── Token para URL de conferência ── */
+    const _rawToken  = localStorage.getItem('jb_user') || sessionStorage.getItem('jb_user') || '';
+    const _confToken = _rawToken ? encodeURIComponent(btoa(unescape(encodeURIComponent(_rawToken)))) : '';
+
+    /* ── Monta URL de conferência para um colaborador ── */
+    function _urlConf(sess) {
       const params = new URLSearchParams({
-        _conf_colab:  nome,
-        _conf_sessid: sessColab.id || '',
-        _conf_turno:  turno,
-        _conf_dia:    dia,
-        _conf_data:   data,
+        _conf_colab:  sess.colaborador_card || sess.colaborador_nome || '',
+        _conf_sessid: sess.id || '',
+        _conf_turno:  sess.turno || turno,
+        _conf_dia:    sess.dia_semana || dia,
+        _conf_data:   sess.data || data,
       });
       return `${APP_PRODUCAO_URL}${_confToken ? '?_jbs='+_confToken+'&' : '?'}${params.toString()}`;
     }
 
-    function _renderCardConferencia(nome, itens) {
-      const em      = COLLAB_EMOJI_MAP[nome] || _emojiFor(nome);
-      const url     = _urlConf(nome);
-      const sessCol = sessoes.find(s =>
-        (s.colaborador_card === nome || s.colaborador_nome === nome) &&
-        s.data === data && s.turno === turno &&
-        (s.status_geral === 'completo' || s.status_geral === 'parcial')
-      ) || {};
-      const jaConf  = !!sessCol.lider_conferiu;
-      const total   = itens.length;
+    /* ── Renderiza card de conferência (baseado na sessão) ── */
+    function _renderCardConferencia(sess) {
+      const nome     = sess.colaborador_card || sess.colaborador_nome || '?';
+      const em       = COLLAB_EMOJI_MAP[nome] || _emojiFor(nome);
+      const url      = _urlConf(sess);
+      const jaConf   = !!sess.lider_conferiu;
+      const completo = sess.status_geral === 'completo';
+      const total    = sess.tarefas_concluidas != null ? sess.tarefas_concluidas : '?';
+      const totalT   = sess.total_tarefas != null ? sess.total_tarefas : '';
 
+      // Badge de status do turno (completo ou parcial)
+      const statusBadge = completo
+        ? `<span class="pill" style="background:#dcfce7;color:#15803d;border:1.5px solid #86efac;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px">✅ 100% Concluído</span>`
+        : `<span class="pill" style="background:#fff7ed;color:#c2410c;border:1.5px solid #fdba74;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px">⚠️ Parcial</span>`;
+
+      // Badge de estado da conferência
       const confBadge = jaConf
         ? `<span class="pill" style="background:#ede9fe;color:#6d28d9;border:1.5px solid #c4b5fd;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px">👁️ Em conferência</span>`
-        : `<span class="pill" style="background:#dcfce7;color:#15803d;border:1.5px solid #86efac;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px">✅ ${total} tarefa(s) 100%</span>`;
+        : `<span class="pill" style="background:#fef9c3;color:#a16207;border:1.5px solid #fde047;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px">⏳ Aguardando</span>`;
+
+      const rodapeTexto = completo
+        ? `✅ ${totalT ? total+'/'+totalT : total} tarefa(s) concluída(s) — toque para conferir`
+        : `⚠️ Turno parcial — toque para conferir e autorizar`;
 
       return `
       <div class="collab-card" id="rcc-conf-${_slug(nome)}"
-           style="border:2px solid #2563eb;cursor:pointer"
+           style="border:2px solid #2563eb;cursor:pointer;margin-bottom:10px"
            onclick="window.location.href='${url}'">
         <div class="collab-card-header" style="background:linear-gradient(135deg,#eff6ff,#dbeafe)">
           <div class="collab-avatar">${em}</div>
@@ -948,23 +937,28 @@ async function loadResultados() {
             <div class="collab-meta" style="color:#3b82f6;font-weight:700">🎖️ Conferência do Líder</div>
           </div>
           <div class="pills-row" style="margin-right:8px;flex-direction:column;align-items:flex-end;gap:4px">
+            ${statusBadge}
             ${confBadge}
           </div>
           <i class="fas fa-chevron-right" style="color:#2563eb;font-size:15px;flex-shrink:0"></i>
         </div>
         <div style="padding:10px 16px 12px;border-top:1px solid #bfdbfe;background:#f0f7ff">
           <span style="font-size:12px;color:#2563eb;font-weight:700">
-            👆 Toque para conferir as ${total} tarefa(s) finalizadas 100%
+            👆 ${rodapeTexto}
           </span>
         </div>
       </div>`;
     }
 
-    const htmlCardsConf = Object.keys(confPorColab).sort()
-      .map(nome => _renderCardConferencia(nome, confPorColab[nome]))
+    /* ── Ordena sessões por nome e monta HTML dos cards de conferência ── */
+    const sessSemAutorizacaoOrdenadas = [...sessSemAutorizacao]
+      .sort((a,b) => (a.colaborador_card||'').localeCompare(b.colaborador_card||''));
+
+    const htmlCardsConf = sessSemAutorizacaoOrdenadas
+      .map(sess => _renderCardConferencia(sess))
       .join('');
 
-    /* ── Monta cards de pendência ── */
+    /* ── Monta cards de pendência (lógica existente, inalterada) ── */
     const porColab = {};
     pends.forEach(p => {
       const nome = p.colaborador || '?';
@@ -973,13 +967,13 @@ async function loadResultados() {
     });
 
     const htmlCardsPend = Object.keys(porColab).sort().map(nome => {
-      const itens     = porColab[nome];
-      const nParcial  = itens.filter(i => i.status === 'parcial').length;
-      const nNao      = itens.filter(i => i.status === 'nao_finalizado').length;
-      const nCiente   = itens.filter(i => i.vistoriado == 1).length;
-      const todoCiente= nCiente === itens.length;
-      const slug      = _slug(nome);
-      const em        = COLLAB_EMOJI_MAP[nome] || _emojiFor(nome);
+      const itens      = porColab[nome];
+      const nParcial   = itens.filter(i => i.status === 'parcial').length;
+      const nNao       = itens.filter(i => i.status === 'nao_finalizado').length;
+      const nCiente    = itens.filter(i => i.vistoriado == 1).length;
+      const todoCiente = nCiente === itens.length;
+      const slug       = _slug(nome);
+      const em         = COLLAB_EMOJI_MAP[nome] || _emojiFor(nome);
 
       return `
       <div class="collab-card${todoCiente ? ' all-ciente' : ''}" id="rcc-${slug}">
@@ -1007,9 +1001,8 @@ async function loadResultados() {
     const temPend = htmlCardsPend.length > 0;
 
     if (!temConf && !temPend) {
-      // Nada a mostrar
-      container.innerHTML = sess.length
-        ? `<div class="empty-state"><div class="es-icon">✅</div><strong>Tudo finalizado e conferido!</strong><small>Nenhuma pendência e nenhuma conferência pendente.</small></div>`
+      container.innerHTML = sessDiaTurno.length
+        ? `<div class="empty-state"><div class="es-icon">🎖️</div><strong>Todas as conferências concluídas!</strong><small>${sessDiaTurno.length} turno(s) conferido(s) e autorizado(s) pelo líder.</small></div>`
         : `<div class="empty-state"><div class="es-icon">📭</div><strong>Nenhum dado encontrado</strong><small>Aguarde os colaboradores finalizarem o turno ou selecione outro filtro.</small></div>`;
       return;
     }
@@ -1022,7 +1015,7 @@ async function loadResultados() {
                     letter-spacing:.06em;margin-bottom:8px;padding:0 2px;
                     display:flex;align-items:center;gap:6px">
           <i class="fas fa-clipboard-check"></i>
-          Conferência do Líder — ${Object.keys(confPorColab).length} colaborador(es) aguardando
+          Conferência do Líder — ${sessSemAutorizacao.length} turno(s) aguardando
         </div>
         ${htmlCardsConf}`;
     }
@@ -1044,15 +1037,13 @@ async function loadResultados() {
                </div>`;
     }
 
-    if (temPend) {
-      html += htmlCardsPend;
-    }
+    if (temPend) html += htmlCardsPend;
 
     html += '</div>';
     container.innerHTML = html;
 
   } catch(e) {
-    console.error(e);
+    console.error('loadResultados erro:', e);
     container.innerHTML = `<div class="error-state">❌ Erro ao carregar: ${e.message}</div>`;
   }
 }
