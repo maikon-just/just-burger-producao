@@ -430,11 +430,20 @@ body:not(.has-bottom-nav) .tasks-footer { bottom:0; }
   font-size:11px; font-weight:800; gap:4px;
   border-top:none; margin-top:0;
 }
-.csb-100      { background:#dcfce7; color:#15803d; border:2px solid #86efac; border-top:none; }
-.csb-parcial  { background:#fff7ed; color:#c2410c; border:2px solid #fdba74; border-top:none; }
-.csb-andamento{ background:#dbeafe; color:#1d4ed8; border:2px solid #93c5fd; border-top:none; }
-.csb-falta-nj { background:#fee2e2; color:#dc2626; border:2px solid #fca5a5; border-top:none; }
-.csb-falta-j  { background:#fef3c7; color:#d97706; border:2px solid #fde68a; border-top:none; }
+.csb-100       { background:#dcfce7; color:#15803d; border:2px solid #86efac; border-top:none; }
+.csb-parcial   { background:#fff7ed; color:#c2410c; border:2px solid #fdba74; border-top:none; }
+.csb-andamento { background:#dbeafe; color:#1d4ed8; border:2px solid #93c5fd; border-top:none; }
+.csb-falta-nj  { background:#fee2e2; color:#dc2626; border:2px solid #fca5a5; border-top:none; }
+.csb-falta-j   { background:#fef3c7; color:#d97706; border:2px solid #fde68a; border-top:none; }
+/* Badges de conferência do líder */
+.csb-lider-conf{ background:#ede9fe; color:#6d28d9; border:2px solid #c4b5fd; border-top:none; }
+.csb-lider-ok  { background:#d1fae5; color:#065f46; border:2px solid #6ee7b7; border-top:none;
+                 font-size:12px; font-weight:900; letter-spacing:.01em; }
+/* Card autorizado pelo líder: borda dourada */
+.collab-card.collab-lider-ok { border:2px solid #EAB308 !important; box-shadow:0 0 0 3px rgba(234,179,8,.25) !important; }
+/* Task cards em modo conferência do líder: anel azul sutil para indicar clicável */
+.task-card.card-conf-lider { outline:2px solid #93c5fd; outline-offset:1px; }
+.task-card.card-conf-lider:active { opacity:0.8; }
 /* Cards com falta ficam com opacidade reduzida via classe no wrap */
 .collab-card-wrap.wrap-falta .collab-card  { opacity:.6; filter:grayscale(.45); }
 .collab-card-wrap.wrap-falta .collab-status-badge { opacity:.75; }
