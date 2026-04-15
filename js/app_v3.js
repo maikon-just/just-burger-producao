@@ -587,9 +587,21 @@ function _renderUserBar() {
 }
 
 function _sairDoPortal() {
+  // Limpa sessão
   sessionStorage.removeItem('jb_user');
   JB_SESSION = null;
-  window.location.href = 'portal.html';
+
+  // Cancela service worker ativo para garantir que portal.html seja servido fresco
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+      regs.forEach(function(r) { r.unregister(); });
+    }).catch(function(){});
+  }
+
+  // Monta URL absoluta do portal para funcionar tanto no PWA quanto no browser
+  var base = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
+  // Usa replace() para não empilhar histórico (melhor experiência no PWA)
+  window.location.replace(base + 'portal.html');
 }
 
 function _aplicarRestricoesDom() {
@@ -3722,7 +3734,21 @@ function _doPrintPreview() {
     + '</style>'
     + '</head><body>' + html + '</body></html>';
 
-  /* Tenta usar o iframe dedicado */
+  /* Fecha o modal de preview */
+  var closePreviewModal = function () {
+    var overlay = document.getElementById('modal-print-preview');
+    if (overlay) overlay.classList.add('hidden');
+  };
+
+  /* Detecta mobile/tablet (Android, iOS) — iframe.print() não funciona neles */
+  var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  if (isMobile) {
+    /* Mobile: usa fallback direto (window.print() na página principal) */
+    _doPrintFallback(html, closePreviewModal);
+    return;
+  }
+
+  /* Desktop: tenta usar o iframe dedicado */
   var frame = document.getElementById('jb-print-frame');
 
   /* Se não existe no DOM, cria dinamicamente */
@@ -3733,12 +3759,6 @@ function _doPrintPreview() {
       + 'width:1px;height:1px;border:none;visibility:hidden;';
     document.body.appendChild(frame);
   }
-
-  /* Fecha o modal de preview */
-  var closePreviewModal = function () {
-    var overlay = document.getElementById('modal-print-preview');
-    if (overlay) overlay.classList.add('hidden');
-  };
 
   /* Handler do evento load do iframe */
   var onFrameLoad = function () {
