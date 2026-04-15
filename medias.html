@@ -106,6 +106,7 @@
     .nc-dia-lbl{display:flex;align-items:center;gap:5px;background:#f8f9fc;border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;cursor:pointer;font-size:12px;font-weight:700;transition:all .15s;user-select:none;}
     .nc-dia-lbl:has(input:checked){background:#ede9fe;border-color:#7c3aed;color:#7c3aed;}
     .nc-dia-lbl input{accent-color:#7c3aed;width:14px;height:14px;cursor:pointer;}
+    .tipo-card-ativo{border-color:var(--yellow) !important;background:#fffbea !important;}
     @media(max-width:600px){.filter-bar{flex-direction:column;align-items:flex-start}.colab-sel{max-width:100%;width:100%}.form-row{grid-template-columns:1fr}.row-actions{flex-wrap:wrap}}
   </style>
 </head>
@@ -209,6 +210,7 @@
     <button class="btn-nova" onclick="abrirModalNova()"><i class="fas fa-plus"></i> Nova Tarefa</button>
     <button class="btn-nova" onclick="abrirModalRenomear()" style="background:#64748b"><i class="fas fa-user-edit"></i> Renomear Colab.</button>
     <button class="btn-save-all" onclick="salvarTodos()"><i class="fas fa-save"></i> Salvar Tudo</button>
+    <button class="btn-nova" onclick="abrirModalDuplicatas()" style="background:#dc2626"><i class="fas fa-clone"></i> Limpar Duplicatas</button>
   </div>
 </div>
 
@@ -281,9 +283,41 @@
         <label style="margin-top:4px;font-size:11px;cursor:pointer"><input type="checkbox" id="nt-cat-chk" onchange="toggleNovaCategoria()"/> Nova categoria</label>
       </div>
       <div class="form-group"><label>Item / Tarefa *</label><input type="text" id="nt-item" placeholder="Nome do item"/></div>
-      <div class="form-row">
+
+      <!-- Seletor de tipo de card -->
+      <div class="form-group">
+        <label>Tipo de Card *</label>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px" id="nt-tipo-grid">
+          <label id="tipo-lbl-quantidade" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border:2px solid #dde1ed;border-radius:10px;cursor:pointer;text-align:center;transition:all .15s;user-select:none">
+            <input type="radio" name="nt-tipo" value="quantidade" style="display:none" checked onchange="_onTipoCardChange()"/>
+            <span style="font-size:20px">🔢</span>
+            <span style="font-size:11px;font-weight:700">Quantidade</span>
+            <span style="font-size:10px;color:#6b7280">Produção com qtd</span>
+          </label>
+          <label id="tipo-lbl-checklist" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border:2px solid #dde1ed;border-radius:10px;cursor:pointer;text-align:center;transition:all .15s;user-select:none">
+            <input type="radio" name="nt-tipo" value="checklist" style="display:none" onchange="_onTipoCardChange()"/>
+            <span style="font-size:20px">✅</span>
+            <span style="font-size:11px;font-weight:700">Checklist</span>
+            <span style="font-size:10px;color:#6b7280">Só executar/marcar</span>
+          </label>
+          <label id="tipo-lbl-texto_livre" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border:2px solid #dde1ed;border-radius:10px;cursor:pointer;text-align:center;transition:all .15s;user-select:none">
+            <input type="radio" name="nt-tipo" value="texto_livre" style="display:none" onchange="_onTipoCardChange()"/>
+            <span style="font-size:20px">📝</span>
+            <span style="font-size:11px;font-weight:700">Texto Livre</span>
+            <span style="font-size:10px;color:#6b7280">Dois campos de texto</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Campos de quantidade (só para tipo Quantidade) -->
+      <div id="nt-qty-row" class="form-row">
         <div class="form-group"><label>Qtd Padrão</label><input type="number" id="nt-qty" value="0" min="0"/></div>
-        <div class="form-group"><label>Unidade</label><select id="nt-unidade"><option value="un">un</option><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="ml">ml</option><option value="pct">pct</option><option value="cx">cx</option><option value="band">band</option><option value="porção">porção</option><option value="km">🚐 km (Motorista)</option><option value="checklist">checklist</option></select></div>
+        <div class="form-group"><label>Unidade</label><select id="nt-unidade"><option value="un">un</option><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="ml">ml</option><option value="pct">pct</option><option value="cx">cx</option><option value="band">band</option><option value="porção">porção</option><option value="km">🚐 km (Motorista)</option></select></div>
+      </div>
+      <!-- Rótulos dos campos de texto (só para tipo Texto Livre) -->
+      <div id="nt-texto-row" style="display:none">
+        <div class="form-group"><label>Rótulo do Campo 1 <span style="font-size:10px;color:#6b7280;font-weight:400">(opcional)</span></label><input type="text" id="nt-texto-label1" placeholder="Ex: Observação, Ingredientes, Descrição..."/></div>
+        <div class="form-group"><label>Rótulo do Campo 2 <span style="font-size:10px;color:#6b7280;font-weight:400">(opcional)</span></label><input type="text" id="nt-texto-label2" placeholder="Ex: Quantidade usada, Destino, Observação 2..."/></div>
       </div>
       <div class="form-group"><label>Ordem</label><input type="number" id="nt-ordem" value="99" min="1"/></div>
     </div>
@@ -436,6 +470,28 @@
       <button class="btn-confirm" style="background:#0891b2" id="btn-confirmar-na" onclick="salvarNovaArea()">
         <i class="fas fa-layer-group"></i> Criar Área
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DUPLICATAS -->
+<div class="modal-overlay hidden" id="modal-duplicatas">
+  <div class="modal-box" style="max-width:640px">
+    <div class="modal-hdr"><h3>🔍 Verificar e Limpar Duplicatas</h3><button class="modal-close" onclick="fecharModalDuplicatas()">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:#6b7280;margin-bottom:14px">
+        Tarefas com mesmo <strong>colaborador + item + turno + dia</strong> cadastradas mais de uma vez.<br>
+        Marque as que quer <strong style="color:#dc2626">excluir</strong> e clique em <em>Excluir Marcadas</em>.
+      </p>
+      <div id="dup-lista" style="max-height:420px;overflow-y:auto;display:flex;flex-direction:column;gap:10px"></div>
+      <p id="dup-vazio" style="text-align:center;color:#16a34a;font-weight:700;font-size:14px;display:none">✅ Nenhuma duplicata encontrada!</p>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between">
+      <span id="dup-cnt" style="font-size:12px;color:#6b7280"></span>
+      <div style="display:flex;gap:8px">
+        <button class="btn-cancel" onclick="fecharModalDuplicatas()">Fechar</button>
+        <button class="btn-confirm" style="background:#dc2626" id="btn-excluir-dup" onclick="excluirDuplicatasMarcadas()"><i class="fas fa-trash"></i> Excluir Marcadas</button>
+      </div>
     </div>
   </div>
 </div>
@@ -777,6 +833,21 @@ function _toggleTodosDiasRep(){
   document.querySelectorAll('#rep-dias-grid input[type=checkbox]').forEach(c=>{ if(c.id!=='rep-todos-dias') c.checked=all; });
 }
 
+/* Atualiza visual dos labels de tipo de card e mostra/esconde campos corretos */
+function _onTipoCardChange(){
+  const tipo=document.querySelector('input[name="nt-tipo"]:checked')?.value||'quantidade';
+  // Atualiza borda visual
+  ['quantidade','checklist','texto_livre'].forEach(t=>{
+    const lbl=document.getElementById('tipo-lbl-'+t);
+    if(lbl) lbl.classList.toggle('tipo-card-ativo', t===tipo);
+  });
+  // Mostra/esconde campos de quantidade e texto
+  const qtyRow=document.getElementById('nt-qty-row');
+  const txtRow=document.getElementById('nt-texto-row');
+  if(qtyRow) qtyRow.style.display=(tipo==='quantidade')?'':'none';
+  if(txtRow) txtRow.style.display=(tipo==='texto_livre')?'':'none';
+}
+
 async function abrirModalNova(){
   document.getElementById('nt-turno').value=M.turno;
   document.getElementById('nt-item').value='';document.getElementById('nt-qty').value=0;
@@ -785,6 +856,12 @@ async function abrirModalNova(){
   document.getElementById('nt-cat-chk').checked=false;
   document.getElementById('nt-cat-nova').style.display='none';document.getElementById('nt-cat-nova').value='';
   document.getElementById('nt-cat').style.display='block';
+  // Reseta tipo de card para Quantidade
+  const tipoQtd=document.querySelector('input[name="nt-tipo"][value="quantidade"]');
+  if(tipoQtd){ tipoQtd.checked=true; _onTipoCardChange(); }
+  // Limpa rótulos de texto livre
+  const l1=document.getElementById('nt-texto-label1');if(l1)l1.value='';
+  const l2=document.getElementById('nt-texto-label2');if(l2)l2.value='';
   // Desmarca todos os dias e pré-marca o dia atual (se não for 'todos')
   document.querySelectorAll('#nt-dias-grid input[type=checkbox]').forEach(c=>c.checked=false);
   const diaAtual=M.dia!=='todos'?M.dia:null;
@@ -821,16 +898,31 @@ async function salvarNovaTarefa(){
   let ok=0,err=0;
   try{
     const turno=document.getElementById('nt-turno').value;
-    const qty=Number(document.getElementById('nt-qty').value)||0;
-    const unidade=document.getElementById('nt-unidade').value||'un';
+    const tipo=document.querySelector('input[name="nt-tipo"]:checked')?.value||'quantidade';
+    // Define unidade conforme tipo
+    let qty=0, unidade='un';
+    let texto_label1='', texto_label2='';
+    if(tipo==='checklist'){
+      unidade='checklist'; qty=0;
+    } else if(tipo==='texto_livre'){
+      unidade='texto_livre'; qty=0;
+      texto_label1=(document.getElementById('nt-texto-label1')?.value||'').trim();
+      texto_label2=(document.getElementById('nt-texto-label2')?.value||'').trim();
+    } else {
+      qty=Number(document.getElementById('nt-qty').value)||0;
+      unidade=document.getElementById('nt-unidade').value||'un';
+    }
     const ordem=Number(document.getElementById('nt-ordem').value)||99;
     // Cria uma entrada por dia selecionado
     for(const dia of dias){
       try{
-        await _fbPost('tarefas',{
-          turno, dia_semana:dia, colaborador:colab, departamento:depto,
-          categoria:cat||'Geral', item, quantidade_padrao:qty, unidade, ordem
-        });
+        const payload={turno, dia_semana:dia, colaborador:colab, departamento:depto,
+          categoria:cat||'Geral', item, quantidade_padrao:qty, unidade, ordem};
+        if(tipo==='texto_livre'){
+          payload.texto_label1=texto_label1||'Campo 1';
+          payload.texto_label2=texto_label2||'Campo 2';
+        }
+        await _fbPost('tarefas', payload);
         ok++;
       }catch{err++;}
     }
@@ -1132,6 +1224,127 @@ function _autoFillDepto(){
 
 let _tmt;
 function showToastM(msg){const el=document.getElementById('toast-med');el.textContent=msg;el.classList.add('show');clearTimeout(_tmt);_tmt=setTimeout(()=>el.classList.remove('show'),2500);}
+
+/* ════════════════════════════════════════════
+   DETECTAR E LIMPAR DUPLICATAS
+   Duplicata = mesmo colaborador + item + turno + dia_semana
+════════════════════════════════════════════ */
+function _detectarDuplicatas(lista){
+  // Agrupa por chave composta
+  const grupos={};
+  lista.forEach(t=>{
+    const chave=[
+      (t.colaborador||'').trim().toUpperCase(),
+      (t.item||'').trim().toUpperCase(),
+      (t.turno||'').trim(),
+      (t.dia_semana||'').trim()
+    ].join('||');
+    if(!grupos[chave]) grupos[chave]=[];
+    grupos[chave].push(t);
+  });
+  // Retorna apenas grupos com mais de 1 item
+  return Object.values(grupos).filter(g=>g.length>1);
+}
+
+function abrirModalDuplicatas(){
+  // Carrega todos os dados frescos do Firebase antes de analisar
+  const lista=document.getElementById('dup-lista');
+  const vazio=document.getElementById('dup-vazio');
+  const cnt=document.getElementById('dup-cnt');
+  lista.innerHTML='<div style="text-align:center;padding:20px;color:#6b7280"><i class="fas fa-spinner fa-spin" style="font-size:22px"></i><p style="margin-top:8px">Analisando dados...</p></div>';
+  vazio.style.display='none';
+  document.getElementById('modal-duplicatas').classList.remove('hidden');
+
+  _fbGetAll('tarefas').then(todos=>{
+    M.todos=todos;
+    const grupos=_detectarDuplicatas(todos);
+    if(!grupos.length){
+      lista.innerHTML='';
+      vazio.style.display='block';
+      cnt.textContent='Nenhuma duplicata encontrada';
+      document.getElementById('btn-excluir-dup').style.display='none';
+      return;
+    }
+    document.getElementById('btn-excluir-dup').style.display='';
+    const totalDup=grupos.reduce((s,g)=>s+g.length-1,0); // quantas podem ser excluídas
+    cnt.textContent=`${grupos.length} grupo(s) com duplicatas — ${totalDup} item(s) excluível(is)`;
+
+    lista.innerHTML=grupos.map((grp,gi)=>{
+      const ref=grp[0];
+      const diaLabel=DIAS_LABEL[ref.dia_semana]||ref.dia_semana||'?';
+      const turnoLabel=ref.turno==='dia'?'☀️ Dia':'🌙 Noite';
+      // Ordena: mantém o mais antigo primeiro (created_at menor = original)
+      const ordenados=[...grp].sort((a,b)=>(a.created_at||0)-(b.created_at||0));
+      return `
+      <div style="background:#fff8f8;border:1.5px solid #fca5a5;border-radius:10px;padding:12px 14px">
+        <div style="font-size:12px;font-weight:800;color:#dc2626;margin-bottom:6px">
+          ⚠️ ${grp.length}x duplicada &nbsp;·&nbsp; ${ref.colaborador} &nbsp;·&nbsp; ${turnoLabel} ${diaLabel}
+        </div>
+        <div style="font-size:13px;font-weight:700;color:#1a1d2e;margin-bottom:8px">"${ref.item}"</div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          ${ordenados.map((t,i)=>{
+            const data=t.created_at?new Date(t.created_at).toLocaleString('pt-BR'):'sem data';
+            const isOriginal=i===0;
+            return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 8px;border-radius:7px;background:${isOriginal?'#f0fdf4':'#fff'};border:1.5px solid ${isOriginal?'#bbf7d0':'#e5e7eb'}">
+              <input type="checkbox" class="dup-chk" data-id="${t.id}" style="width:16px;height:16px;accent-color:#dc2626;cursor:pointer" ${isOriginal?'disabled':''}>
+              <span style="font-size:11px;flex:1">
+                ${isOriginal?'<strong style="color:#16a34a">✅ MANTER (mais antigo)</strong>':'<span style="color:#dc2626">Duplicata</span>'}
+                &nbsp;·&nbsp; Qtd: <strong>${t.quantidade_padrao||0} ${t.unidade||''}</strong>
+                &nbsp;·&nbsp; <span style="color:#9ca3af">criado: ${data}</span>
+              </span>
+            </label>`;
+          }).join('')}
+        </div>
+        <button onclick="_marcarTodasDupGrupo(${gi})" style="margin-top:8px;font-size:11px;color:#dc2626;background:none;border:1px solid #fca5a5;border-radius:6px;padding:4px 10px;cursor:pointer;font-family:inherit;font-weight:700">
+          Marcar todas as duplicatas deste grupo
+        </button>
+      </div>`;
+    }).join('');
+
+    // Guarda os grupos no window para uso posterior
+    window._dupGrupos=grupos;
+  }).catch(e=>{
+    lista.innerHTML=`<p style="color:#dc2626">Erro: ${e.message}</p>`;
+  });
+}
+
+function _marcarTodasDupGrupo(gi){
+  // Marca todos os checkboxes do grupo (exceto o primeiro = original)
+  const todas=document.querySelectorAll('.dup-chk:not(:disabled)');
+  const grupos=window._dupGrupos||[];
+  if(!grupos[gi]) return;
+  const ids=new Set(grupos[gi].slice(1).map(t=>t.id));
+  todas.forEach(c=>{ if(ids.has(c.dataset.id)) c.checked=true; });
+}
+
+function fecharModalDuplicatas(){
+  document.getElementById('modal-duplicatas').classList.add('hidden');
+  window._dupGrupos=null;
+}
+
+async function excluirDuplicatasMarcadas(){
+  const marcados=[...document.querySelectorAll('.dup-chk:checked')];
+  if(!marcados.length){showToastM('⚠️ Nenhum item marcado!');return;}
+  const ids=marcados.map(c=>c.dataset.id);
+  if(!confirm(`Excluir ${ids.length} tarefa(s) duplicada(s)?\n\nEsta ação não pode ser desfeita.`)) return;
+  const btn=document.getElementById('btn-excluir-dup');
+  btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
+  let ok=0,err=0;
+  for(const id of ids){
+    try{
+      await _fbDelete('tarefas',id);
+      M.todos=M.todos.filter(x=>x.id!==id);
+      M.tarefas=M.tarefas.filter(x=>x.id!==id);
+      ok++;
+    }catch{err++;}
+  }
+  btn.disabled=false;btn.innerHTML='<i class="fas fa-trash"></i> Excluir Marcadas';
+  showToastM(err===0?`✅ ${ok} duplicata(s) excluída(s)!`:`⚠️ ${ok} ok, ${err} com erro`);
+  if(ok>0){
+    fecharModalDuplicatas();
+    setTimeout(()=>carregar(),400);
+  }
+}
 </script>
 
 <!-- ══ BOTTOM NAV ══ -->
