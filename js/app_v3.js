@@ -1,4 +1,4 @@
-/* ═════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════
    JUST BURGER 🍔 — app_v3.js
    Controle de Produção — Firebase Realtime Database (compat)
    Versão: 2026-04-13 — Botão Sair Global + iframe print
@@ -180,7 +180,8 @@ function _invalidarCache() {
 /* ══ CHECKLIST DETECTOR ══════════════════════════════════ */
 function isChecklist(t) {
   if (!t) return false;
-  if (isKm(t)) return false; // KM não é checklist
+  if (isKm(t)) return false;          // KM não é checklist
+  if (isTextoLivre(t)) return false;  // Texto Livre não é checklist
   const u  = (t.unidade||'').toLowerCase().trim();
   const uN = u.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   const listN = UNIDADES_CHECKLIST.map(x=>x.normalize('NFD').replace(/[\u0300-\u036f]/g,''));
@@ -195,6 +196,12 @@ function isChecklist(t) {
 function isKm(t) {
   if (!t) return false;
   return (t.unidade||'').toLowerCase().trim() === 'km';
+}
+
+/* ══ TEXTO LIVRE DETECTOR ════════════════════════════════ */
+function isTextoLivre(t) {
+  if (!t) return false;
+  return (t.unidade||'').toLowerCase().trim() === 'texto_livre';
 }
 
 /* ══ FLUXO KM — ESTADO ══════════════════════════════════ */
@@ -396,6 +403,89 @@ function _abrirModalKmVisualizacao(id) {
       </div>
     </div>`;
   ov.style.display = 'flex';
+}
+
+/* ══ TEXTO LIVRE — FLUXO ════════════════════════════════ */
+let _tlTarefaId = null;
+
+function _abrirModalTextoLivre(id) {
+  const t = S.tarefas.find(x=>x.id===id); if (!t) return;
+  _tlTarefaId = id;
+
+  // Configura header com cor e categoria da tarefa
+  const cc = getCatColor(t.categoria);
+  const hdr = document.getElementById('mtl-header');
+  const catEl = document.getElementById('mtl-cat');
+  const titleEl = document.getElementById('mtl-title');
+  if (hdr) hdr.style.background = cc || 'linear-gradient(135deg,#7c3aed,#a78bfa)';
+  if (catEl) catEl.textContent = t.categoria || 'Tarefa';
+  if (titleEl) titleEl.textContent = t.item || '';
+
+  // Configura rótulos dos campos
+  const lbl1 = document.getElementById('mtl-label1');
+  const lbl2 = document.getElementById('mtl-label2');
+  if (lbl1) lbl1.textContent = t.texto_label1 || 'Campo 1';
+  if (lbl2) lbl2.textContent = t.texto_label2 || 'Campo 2';
+
+  const d2 = S.s2[id] || {};
+  const jaIniciado = S.s1[id]?.confirmed === true;
+  const jaFinalizado = d2.status === 'total';
+
+  // Define qual step mostrar
+  const stepIniciar = document.getElementById('mtl-step-iniciar');
+  const stepTextos  = document.getElementById('mtl-step-textos');
+
+  if (jaIniciado || jaFinalizado) {
+    // Já iniciou: mostra campos com valor salvo
+    if (stepIniciar) stepIniciar.style.display = 'none';
+    if (stepTextos)  stepTextos.style.display  = '';
+    const c1 = document.getElementById('mtl-campo1');
+    const c2 = document.getElementById('mtl-campo2');
+    if (c1) c1.value = d2.texto1 || '';
+    if (c2) c2.value = d2.texto2 || '';
+  } else {
+    // Ainda não iniciou
+    if (stepIniciar) stepIniciar.style.display = '';
+    if (stepTextos)  stepTextos.style.display  = 'none';
+  }
+
+  document.getElementById('modal-texto-livre').classList.remove('hidden');
+}
+
+function _confirmTextoLivreIniciar() {
+  const id = _tlTarefaId; if (!id) return;
+  // Marca como iniciado no s1
+  S.s1[id] = { confirmed: true, estoque: 0, programada: 0 };
+  // Mostra os campos de texto
+  const stepIniciar = document.getElementById('mtl-step-iniciar');
+  const stepTextos  = document.getElementById('mtl-step-textos');
+  if (stepIniciar) stepIniciar.style.display = 'none';
+  if (stepTextos)  stepTextos.style.display  = '';
+  // Limpa os campos
+  const c1 = document.getElementById('mtl-campo1');
+  const c2 = document.getElementById('mtl-campo2');
+  if (c1) { c1.value = ''; setTimeout(()=>c1.focus(), 80); }
+  if (c2) c2.value = '';
+  renderStep1();
+  showToast('▶️ Tarefa iniciada! Preencha os campos e finalize.');
+}
+
+function _confirmTextoLivreFinalizar() {
+  const id = _tlTarefaId; if (!id) return;
+  const c1 = document.getElementById('mtl-campo1');
+  const c2 = document.getElementById('mtl-campo2');
+  const texto1 = (c1 ? c1.value : '').trim();
+  const texto2 = (c2 ? c2.value : '').trim();
+  if (!texto1 && !texto2) {
+    showToast('⚠️ Preencha pelo menos um campo antes de finalizar!');
+    c1 && c1.focus();
+    return;
+  }
+  // Salva no S.s2 com status total
+  S.s2[id] = { produzida: 1, status: 'total', motivo: '', texto1, texto2 };
+  closeModal('modal-texto-livre');
+  renderStep2();
+  showToast('✅ Tarefa de texto finalizada!');
 }
 
 /* ══ INIT ════════════════════════════════════════════════ */
@@ -626,7 +716,15 @@ function showScreen(id) {
   const el = document.getElementById(id);
   if (el) { el.classList.remove('hidden'); el.scrollTop=0; }
 }
-function goBack(to) { showScreen(to); }
+function goBack(to) {
+  // Ao voltar para a tela de setor, recarrega o grid com dados frescos do Firebase
+  // para refletir transferências de tarefas feitas no medias.html
+  if (to === 'screen-setor' && _deptAtual) {
+    _mostrarTelaSetor(_deptAtual);
+  } else {
+    showScreen(to);
+  }
+}
 
 function goToWelcome() {
   if (_thanksIv) { clearInterval(_thanksIv); _thanksIv=null; }
@@ -1950,16 +2048,20 @@ function renderStep1() {
     const ce=getCatEmoji(t.categoria);
     const ck=isChecklist(t);
     const km=isKm(t);
+    const tl=isTextoLivre(t);
     const conf=S.s1[t.id];
     const isConf=_tarefaConfirmada(t);
     const qtdPadrao = Number(t.quantidade_padrao)||0;
-    const isExcCard = !ck && !km && qtdPadrao === 0;
+    const isExcCard = !ck && !km && !tl && qtdPadrao === 0;
     let infoLine;
     if (km) {
-      // Card especial para KM (motorista)
       infoLine = isConf
         ? `<div class="task-qty-display" style="color:#1d4ed8;font-weight:800">🚐 KM Inicial: ${conf.km_inicial} km</div>`
         : '<div class="task-qty-display" style="color:#1d4ed8;font-weight:700">🚐 Toque para registrar KM inicial</div>';
+    } else if (tl) {
+      infoLine = isConf
+        ? '<div class="task-qty-display" style="color:#7c3aed;font-weight:800">📝 Iniciada — toque para preencher</div>'
+        : '<div class="task-qty-display" style="color:#7c3aed;font-weight:700">📝 Toque para iniciar</div>';
     } else if (ck) {
       infoLine = isConf
         ? '<div class="task-qty-display" style="color:#16a34a;font-weight:800">✓ Confirmada</div>'
@@ -1973,10 +2075,10 @@ function renderStep1() {
         ? `<div class="task-qty-display"><strong>${fmt(conf.programada)}</strong> ${t.unidade||''} a produzir</div>`
         : `<div class="task-qty-display">Padrão: <strong>${fmt(qtdPadrao)}</strong> ${t.unidade||''} em estoque</div>`;
     }
-    const headerBg = km ? 'linear-gradient(135deg,#1d4ed8,#3b82f6)' : cc;
+    const headerBg = km ? 'linear-gradient(135deg,#1d4ed8,#3b82f6)' : tl ? 'linear-gradient(135deg,#7c3aed,#a78bfa)' : cc;
     return `<div class="task-card s1-card${isConf?' task-confirmed':''}" id="s1c-${t.id}" onclick="openS1Modal('${t.id}')">
       <div class="task-card-header" style="background:${headerBg}">
-        <span class="cat-label">${km?'🚐':ce} ${t.categoria||'Geral'}</span>
+        <span class="cat-label">${km?'🚐':tl?'📝':ce} ${t.categoria||'Geral'}</span>
         ${isConf?'<span class="task-check-badge">✅</span>':''}
       </div>
       <div class="task-card-body">
@@ -2014,6 +2116,8 @@ function openS1Modal(id) {
 
   // Tarefa KM: abre o modal especial de KM ao invés do modal padrão
   if (isKm(t)) { _abrirModalKmInicio(id); return; }
+  // Tarefa Texto Livre: abre o modal de texto livre
+  if (isTextoLivre(t)) { _abrirModalTextoLivre(id); return; }
 
   const padrao = Number(t.quantidade_padrao)||0;
   const ck     = isChecklist(t);
@@ -2151,6 +2255,7 @@ function renderStep2() {
     const ce=getCatEmoji(t.categoria);
     const ck=isChecklist(t);
     const km=isKm(t);
+    const tl=isTextoLivre(t);
     const d1=S.s1[t.id]||{};
     const d2=S.s2[t.id]||{};
     const status=d2.status||'';
@@ -2160,7 +2265,6 @@ function renderStep2() {
     const isConf=!!status;
     let infoLine2;
     if (km) {
-      // Card KM — mostra saída e retorno registrados
       if (isConf && status==='total') {
         const kmIni  = d1.km_inicial !== undefined ? d1.km_inicial : '—';
         const kmFim  = d2.km_final   !== undefined ? d2.km_final   : '—';
@@ -2174,6 +2278,16 @@ function renderStep2() {
       } else {
         infoLine2='<div class="task-qty-display" style="color:#f59e0b;font-weight:700">⏳ Registre o KM inicial</div>';
       }
+    } else if (tl) {
+      // Card Texto Livre — mostra preview do que foi digitado
+      if (isConf && status==='total') {
+        const t1 = d2.texto1 ? `<div style="font-size:11px;color:#1a1d2e;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d2.texto1.slice(0,40)}${d2.texto1.length>40?'…':''}</div>` : '';
+        infoLine2=`<div class="task-qty-display" style="color:#7c3aed;font-weight:800">✅ Preenchido${t1}</div>`;
+      } else if (d1.confirmed) {
+        infoLine2='<div class="task-qty-display" style="color:#7c3aed;font-weight:700">📝 Iniciada — toque para preencher</div>';
+      } else {
+        infoLine2='<div class="task-qty-display" style="color:#f59e0b;font-weight:700">⏳ Toque para iniciar</div>';
+      }
     } else if (ck) {
       infoLine2=isConf
         ?(status==='total'?'<div class="task-qty-display" style="color:#16a34a;font-weight:800">✅ Realizada</div>'
@@ -2184,10 +2298,12 @@ function renderStep2() {
         ?`<div class="task-qty-display"><strong>${fmt(d2.produzida)}</strong>/${fmt(prog)} ${t.unidade||''}</div>`
         :`<div class="task-qty-display">Prog: ${fmt(prog)} ${t.unidade||''}</div>`;
     }
-    const headerBg = km ? (isConf && status==='total' ? 'linear-gradient(135deg,#15803d,#22c55e)' : 'linear-gradient(135deg,#1d4ed8,#3b82f6)') : cc;
+    const headerBg = km
+      ? (isConf && status==='total' ? 'linear-gradient(135deg,#15803d,#22c55e)' : 'linear-gradient(135deg,#1d4ed8,#3b82f6)')
+      : tl ? 'linear-gradient(135deg,#7c3aed,#a78bfa)' : cc;
     return `<div class="task-card s2-card ${stClass}" id="s2c-${t.id}" onclick="openS2Modal('${t.id}')">
       <div class="task-card-header" style="background:${headerBg}">
-        <span class="cat-label">${km?'🚐':ce} ${t.categoria||'Geral'}</span>
+        <span class="cat-label">${km?'🚐':tl?'📝':ce} ${t.categoria||'Geral'}</span>
         ${isConf?`<span class="task-check-badge">${stBadge}</span>`:''}
       </div>
       <div class="task-card-body">
@@ -2238,6 +2354,11 @@ function openS2Modal(id) {
     } else {
       _abrirModalKmRetorno(id);
     }
+    return;
+  }
+  // Tarefa Texto Livre: abre modal de texto (editar ou visualizar)
+  if (isTextoLivre(t)) {
+    _abrirModalTextoLivre(id);
     return;
   }
   _s2Id=id; _s2Status=null; _s2Motivo='';
