@@ -139,7 +139,8 @@ function _isColaborador() {
 }
 function _isColaboradorRestrito() {
   // Inclui 'atendente' com nome_card vinculado
-  return JB_SESSION && (JB_SESSION.papel === 'colaborador' || JB_SESSION.papel === 'atendente') && !!JB_SESSION.nome_card;
+  // Usa trim() para evitar que espaços em branco no nome_card façam o teste falhar
+  return JB_SESSION && (JB_SESSION.papel === 'colaborador' || JB_SESSION.papel === 'atendente') && !!(JB_SESSION.nome_card || '').trim();
 }
 function _isLider() {
   return JB_SESSION && (JB_SESSION.papel === 'lider' || JB_SESSION.papel === 'admin');
@@ -587,20 +588,25 @@ function _renderUserBar() {
 }
 
 function _sairDoPortal() {
-  // Limpa sessão
-  sessionStorage.removeItem('jb_user');
   JB_SESSION = null;
 
-  // Cancela service worker ativo para garantir que portal.html seja servido fresco
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(function(regs) {
-      regs.forEach(function(r) { r.unregister(); });
-    }).catch(function(){});
+  // Usa JbAuth.logout() se disponível — limpa sessionStorage, localStorage e seta flag jb_out
+  if (typeof JbAuth !== 'undefined') {
+    JbAuth.logout('portal.html');
+    return;
   }
+
+  // Fallback manual: limpa tudo
+  sessionStorage.removeItem('jb_user');
+  sessionStorage.removeItem('jb_ts');
+  try {
+    localStorage.setItem('jb_out', '1');
+    localStorage.removeItem('jb_user');
+    localStorage.removeItem('jb_ts');
+  } catch(e) {}
 
   // Monta URL absoluta do portal para funcionar tanto no PWA quanto no browser
   var base = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
-  // Usa replace() para não empilhar histórico (melhor experiência no PWA)
   window.location.replace(base + 'portal.html');
 }
 
@@ -629,14 +635,16 @@ function _iniciarFluxoColaborador() {
   const sess = JB_SESSION;
   initWorkDate();
 
-  const turnoForce = sess.turno_preferido;
+  // Normaliza nome_card removendo espaços extras
+  const nomeCard   = (sess.nome_card || '').trim();
+  const turnoForce = (sess.turno_preferido || '').trim();
 
   if (turnoForce === 'dia' || turnoForce === 'noite') {
     S.turno = turnoForce;
     const [_y,_m,_d] = (S.dataTrabalho||today()).split('-').map(Number);
     S.dia = DIA_JS_MAP[new Date(_y,_m-1,_d).getDay()];
     _invalidarCache();
-    selectColaborador(sess.nome_card);
+    selectColaborador(nomeCard);
   } else {
     _mostrarSomenteEscolhaTurno();
   }
@@ -742,7 +750,7 @@ function goToWelcome() {
   S.turno=null; S.dia=null; S.colaborador=null;
   S.tarefas=[]; S.s1={}; S.s2={};
   S.producaoIniciada=false;
-  if (_isColaboradorRestrito() && JB_SESSION.turno_preferido) {
+  if (_isColaboradorRestrito() && (JB_SESSION.turno_preferido || '').trim()) {
     _iniciarFluxoColaborador();
     return;
   }
@@ -824,7 +832,7 @@ function selectTurno(turno) {
   S.dia=DIA_JS_MAP[new Date(_y,_m-1,_d).getDay()];
 
   if (_isColaboradorRestrito()) {
-    selectColaborador(JB_SESSION.nome_card);
+    selectColaborador((JB_SESSION.nome_card||'').trim());
     return;
   }
   _irParaDept();
@@ -984,7 +992,7 @@ function _abrirSetorCards(dept) {
     // Se já está logado como atendente ou colaborador com card de atendimento, não pede senha
     const isAtendentLogado = JB_SESSION && (
       JB_SESSION.papel === 'atendente' ||
-      (JB_SESSION.nome_card && ATEND_COLABS.some(c=>c.toUpperCase()===JB_SESSION.nome_card.toUpperCase()))
+      ((JB_SESSION.nome_card||'').trim() && ATEND_COLABS.some(c=>c.toUpperCase()===(JB_SESSION.nome_card||'').trim().toUpperCase()))
     );
     if (isAtendentLogado || _isLider()) {
       _mostrarTelaSetor(dept);
@@ -1044,9 +1052,9 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
       map[t.colaborador]=(map[t.colaborador]||0)+1;
   });
   let nomes=Object.keys(map).sort();
-  if (_isColaboradorRestrito() && JB_SESSION.nome_card) {
-    const card = JB_SESSION.nome_card.toUpperCase();
-    nomes = nomes.filter(n => n.toUpperCase() === card);
+  if (_isColaboradorRestrito() && (JB_SESSION.nome_card||'').trim()) {
+    const card = (JB_SESSION.nome_card||'').trim().toUpperCase();
+    nomes = nomes.filter(n => n.trim().toUpperCase() === card);
     if (!nomes.length) {
       grid.innerHTML='<div style="padding:40px;text-align:center"><div style="font-size:40px">😊</div><p style="font-weight:700;margin-top:8px">Sem tarefas para hoje!</p></div>';
       return;
@@ -1191,8 +1199,8 @@ function _clickColab(nome,acao) {
   const pw=COLLAB_PASSWORDS[nome.toUpperCase()];
 
   // Se o usuário já está logado com este card específico, não pede senha
-  const _esteCard = JB_SESSION && JB_SESSION.nome_card &&
-    JB_SESSION.nome_card.toUpperCase() === nome.toUpperCase();
+  const _esteCard = JB_SESSION && (JB_SESSION.nome_card||'').trim() &&
+    (JB_SESSION.nome_card||'').trim().toUpperCase() === nome.trim().toUpperCase();
 
   if (acao==='__reabrir__') {
     const confirmarReabrir=()=>{
@@ -3740,15 +3748,7 @@ function _doPrintPreview() {
     if (overlay) overlay.classList.add('hidden');
   };
 
-  /* Detecta mobile/tablet (Android, iOS) — iframe.print() não funciona neles */
-  var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-  if (isMobile) {
-    /* Mobile: usa fallback direto (window.print() na página principal) */
-    _doPrintFallback(html, closePreviewModal);
-    return;
-  }
-
-  /* Desktop: tenta usar o iframe dedicado */
+  /* Tenta usar o iframe dedicado */
   var frame = document.getElementById('jb-print-frame');
 
   /* Se não existe no DOM, cria dinamicamente */
