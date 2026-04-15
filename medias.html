@@ -314,10 +314,12 @@
         <div class="form-group"><label>Qtd Padrão</label><input type="number" id="nt-qty" value="0" min="0"/></div>
         <div class="form-group"><label>Unidade</label><select id="nt-unidade"><option value="un">un</option><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="ml">ml</option><option value="pct">pct</option><option value="cx">cx</option><option value="band">band</option><option value="porção">porção</option><option value="km">🚐 km (Motorista)</option></select></div>
       </div>
-      <!-- Rótulos dos campos de texto (só para tipo Texto Livre) -->
+      <!-- Texto Livre: aviso informativo (sem campos de rótulo — o colaborador escreve diretamente no card) -->
       <div id="nt-texto-row" style="display:none">
-        <div class="form-group"><label>Rótulo do Campo 1 <span style="font-size:10px;color:#6b7280;font-weight:400">(opcional)</span></label><input type="text" id="nt-texto-label1" placeholder="Ex: Observação, Ingredientes, Descrição..."/></div>
-        <div class="form-group"><label>Rótulo do Campo 2 <span style="font-size:10px;color:#6b7280;font-weight:400">(opcional)</span></label><input type="text" id="nt-texto-label2" placeholder="Ex: Quantidade usada, Destino, Observação 2..."/></div>
+        <div style="background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:10px;padding:10px 14px;font-size:12px;color:#6b7280">
+          📝 O colaborador verá dois campos de texto no card e poderá escrever livremente.<br>
+          <span style="color:#7c3aed;font-weight:700">Não é necessário configurar nada mais aqui.</span>
+        </div>
       </div>
       <div class="form-group"><label>Ordem</label><input type="number" id="nt-ordem" value="99" min="1"/></div>
     </div>
@@ -620,15 +622,20 @@ function renderTabela(){
       return (a.ordem||0)-(b.ordem||0);
     }).map(t=>{
       const isKmCard = (t.unidade||'').toLowerCase().trim()==='km';
+      const isTextoLivre = (t.unidade||'').toLowerCase().trim()==='texto_livre';
+      const isChecklist = (t.unidade||'').toLowerCase().trim()==='checklist';
       return `
       <tr id="row-${t.id}">
         <td style="text-align:center"><input type="checkbox" class="row-chk" data-id="${t.id}" style="width:15px;height:15px;accent-color:#dc2626;cursor:pointer" onchange="_onChkChange()"/></td>
-        <td><span class="cat-chip" style="${isKmCard?'background:rgba(29,78,216,0.12);color:#1d4ed8':''}">${t.categoria||'Geral'}</span></td>
+        <td><span class="cat-chip" style="${isKmCard?'background:rgba(29,78,216,0.12);color:#1d4ed8':isTextoLivre?'background:rgba(124,58,237,0.1);color:#7c3aed':''}">${t.categoria||'Geral'}</span></td>
         ${M.dia==='todos'?`<td style="text-align:center;font-size:11px;font-weight:700;color:#6b7280">${DIAS_LABEL[t.dia_semana]||t.dia_semana||'—'}</td>`:''}
         ${multiTurno?`<td style="text-align:center;font-size:11px;font-weight:700;color:${t.turno==='dia'?'#b45309':'#4f46e5'}">${t.turno==='dia'?'☀️':'🌙'}</td>`:''}
         <td><textarea class="item-name-inp" id="ni-${t.id}" placeholder="Nome da tarefa" rows="1" oninput="_autoResize(this);markDirty('${t.id}')">${(t.item||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea></td>
         <td>${isKmCard
           ? `<div style="text-align:center;font-size:12px;color:#1d4ed8;font-weight:700;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:8px;padding:6px 10px">🚐 KM Motorista<br><span style="font-size:10px;color:#6b7280">Registro de Hodômetro</span></div>
+             <input type="hidden" id="qi-${t.id}" value="0"/>`
+          : isTextoLivre
+          ? `<div style="text-align:center;font-size:12px;color:#7c3aed;font-weight:700;background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:8px;padding:6px 10px">📝 Texto Livre<br><span style="font-size:10px;color:#9ca3af">Campos preenchidos no card</span></div>
              <input type="hidden" id="qi-${t.id}" value="0"/>`
           : `<div class="qty-ctrl">
           <button class="qty-btn minus" onclick="adjQty('${t.id}',-10)">−10</button>
@@ -637,7 +644,7 @@ function renderTabela(){
           <button class="qty-btn plus"  onclick="adjQty('${t.id}',1)">+</button>
           <button class="qty-btn plus"  onclick="adjQty('${t.id}',10)">+10</button>
         </div>`}</td>
-        <td style="text-align:center"><span class="unit-lbl" style="${isKmCard?'color:#1d4ed8;font-weight:800':''}">${t.unidade||''}</span></td>
+        <td style="text-align:center"><span class="unit-lbl" style="${isKmCard?'color:#1d4ed8;font-weight:800':isTextoLivre?'color:#7c3aed;font-weight:800':''}">${isTextoLivre?'📝':t.unidade||''}</span></td>
         <td><div class="row-actions">
           <button class="btn-save-row" id="sbtn-${t.id}" onclick="salvarItem('${t.id}')"><i class="fas fa-save"></i> Salvar</button>
           <button class="btn-trocar" onclick="abrirModalTrocar('${t.id}','${(t.item||'').replace(/'/g,"\\'")}')"><i class="fas fa-exchange-alt"></i> Trocar</button>
@@ -859,9 +866,7 @@ async function abrirModalNova(){
   // Reseta tipo de card para Quantidade
   const tipoQtd=document.querySelector('input[name="nt-tipo"][value="quantidade"]');
   if(tipoQtd){ tipoQtd.checked=true; _onTipoCardChange(); }
-  // Limpa rótulos de texto livre
-  const l1=document.getElementById('nt-texto-label1');if(l1)l1.value='';
-  const l2=document.getElementById('nt-texto-label2');if(l2)l2.value='';
+  // (sem rótulos a limpar — campos de texto são preenchidos pelo colaborador no card)
   // Desmarca todos os dias e pré-marca o dia atual (se não for 'todos')
   document.querySelectorAll('#nt-dias-grid input[type=checkbox]').forEach(c=>c.checked=false);
   const diaAtual=M.dia!=='todos'?M.dia:null;
@@ -901,13 +906,10 @@ async function salvarNovaTarefa(){
     const tipo=document.querySelector('input[name="nt-tipo"]:checked')?.value||'quantidade';
     // Define unidade conforme tipo
     let qty=0, unidade='un';
-    let texto_label1='', texto_label2='';
     if(tipo==='checklist'){
       unidade='checklist'; qty=0;
     } else if(tipo==='texto_livre'){
       unidade='texto_livre'; qty=0;
-      texto_label1=(document.getElementById('nt-texto-label1')?.value||'').trim();
-      texto_label2=(document.getElementById('nt-texto-label2')?.value||'').trim();
     } else {
       qty=Number(document.getElementById('nt-qty').value)||0;
       unidade=document.getElementById('nt-unidade').value||'un';
@@ -916,18 +918,28 @@ async function salvarNovaTarefa(){
     // Cria uma entrada por dia selecionado
     for(const dia of dias){
       try{
-        const payload={turno, dia_semana:dia, colaborador:colab, departamento:depto,
-          categoria:cat||'Geral', item, quantidade_padrao:qty, unidade, ordem};
-        if(tipo==='texto_livre'){
-          payload.texto_label1=texto_label1||'Campo 1';
-          payload.texto_label2=texto_label2||'Campo 2';
-        }
-        await _fbPost('tarefas', payload);
+        await _fbPost('tarefas',{turno, dia_semana:dia, colaborador:colab, departamento:depto,
+          categoria:cat||'Geral', item, quantidade_padrao:qty, unidade, ordem});
         ok++;
       }catch{err++;}
     }
     showToastM(err===0?`✅ Tarefa criada em ${ok} dia(s)!`:`⚠️ ${ok} ok, ${err} com erro`);
-    if(ok>0){fecharModalNova();carregar();}
+    if(ok>0){
+      fecharModalNova();
+      // Limpa seleção de colaborador para garantir que a nova tarefa apareça na lista
+      const selColab=document.getElementById('sel-colab');
+      if(selColab) selColab.value='';
+      // Muda filtro para o turno e primeiro dia criado, para garantir que a tarefa apareça
+      M.turno=turno;
+      document.getElementById('btn-dia').classList.toggle('active',turno==='dia');
+      document.getElementById('btn-noite').classList.toggle('active',turno==='noite');
+      // Se criou em apenas 1 dia, filtra por ele; senão vai para 'todos'
+      if(dias.length===1){
+        setDia(dias[0]);
+      } else {
+        setDia('todos');
+      }
+    }
   }catch(e){showToastM('❌ Erro: '+e.message);}
   finally{btn.disabled=false;btn.innerHTML='<i class="fas fa-save"></i> Criar Tarefa';}
 }
