@@ -1,4 +1,4 @@
-/* ══════════════════════════════════════════════════════════
+/* ═════════════════════════════════════════════════════════
    JUST BURGER 🍔 — app_v3.js
    Controle de Produção — Firebase Realtime Database (compat)
    Versão: 2026-04-13 — Botão Sair Global + iframe print
