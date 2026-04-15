@@ -1,4 +1,4 @@
-/* ════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════
    JUST BURGER 🍔 — app_v3.js
    Controle de Produção — Firebase Realtime Database (compat)
    Versão: 2026-04-13 — Botão Sair Global + iframe print
@@ -590,9 +590,14 @@ function _renderUserBar() {
 function _sairDoPortal() {
   JB_SESSION = null;
 
+  // Monta URL absoluta do portal para funcionar tanto no PWA quanto no browser
+  var base = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
+  var portalUrl = base + 'portal.html';
+
   // Usa JbAuth.logout() se disponível — limpa sessionStorage, localStorage e seta flag jb_out
+  // Passa URL absoluta para garantir redirect correto em PWA e GitHub Pages
   if (typeof JbAuth !== 'undefined') {
-    JbAuth.logout('portal.html');
+    JbAuth.logout(portalUrl);
     return;
   }
 
@@ -605,9 +610,7 @@ function _sairDoPortal() {
     localStorage.removeItem('jb_ts');
   } catch(e) {}
 
-  // Monta URL absoluta do portal para funcionar tanto no PWA quanto no browser
-  var base = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
-  window.location.replace(base + 'portal.html');
+  window.location.replace(portalUrl);
 }
 
 function _aplicarRestricoesDom() {
@@ -1847,6 +1850,8 @@ async function _gerenciarFalta(nome,tipo,acao) {
 
 /* ══ SELECIONAR COLABORADOR ══════════════════════════════ */
 async function selectColaborador(nome) {
+  // Normaliza: remove espaços e garante MAIÚSCULAS para bater com o Firebase
+  nome = (nome || '').trim();
   if (_thanksIv) { clearInterval(_thanksIv); _thanksIv=null; }
   S.colaborador=nome; S.s1={}; S.s2={};
   S.producaoIniciada=false;
@@ -1863,16 +1868,28 @@ async function selectColaborador(nome) {
     const todasTarefas=await _fbGetAll('tarefas');
     _cache.tarefas=todasTarefas;
     const _dtTrab2=S.dataTrabalho||today();
+    const nomeUp = nome.toUpperCase();
     S.tarefas=todasTarefas
       .filter(t=>
-        t.turno===S.turno && t.colaborador===nome &&
+        t.turno===S.turno && (t.colaborador||'').trim().toUpperCase()===nomeUp &&
         (t.data_especifica
           ? t.data_especifica===_dtTrab2
           : t.dia_semana===S.dia
         )
       )
       .sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-    if (!S.tarefas.length) { showToast('😕 Sem tarefas para este colaborador'); return; }
+    if (!S.tarefas.length) {
+      // Para colaborador restrito: mostra informação de diagnóstico e volta para welcome
+      if (_isColaboradorRestrito()) {
+        const diaLabel = S.dia || '?';
+        const turnoLabel = S.turno === 'dia' ? 'Dia' : (S.turno === 'noite' ? 'Noite' : S.turno || '?');
+        showToast(`😕 Sem tarefas para ${nome} — Turno ${turnoLabel} / ${diaLabel}`);
+        showScreen('screen-welcome');
+      } else {
+        showToast('😕 Sem tarefas para este colaborador');
+      }
+      return;
+    }
 
     const dt=S.dataTrabalho||today();
     const todasSessoes=_cache.sessoes||await _fbGetAll('sessoes');
