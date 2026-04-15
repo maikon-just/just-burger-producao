@@ -1,4 +1,4 @@
-/* ════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════
    JUST BURGER 🍔 — app_v3.js
    Controle de Produção — Firebase Realtime Database (compat)
    Versão: 2026-04-13 — Botão Sair Global + iframe print
@@ -868,11 +868,22 @@ function selectDia(dia) {
 
 /* ══ DEPARTAMENTO ════════════════════════════════════════ */
 function _resolverDeptTarefas(tarefas) {
-  const deptPorColab = {};
+  // Conta frequência de cada departamento por colaborador (ignora vazio)
+  const freq = {};
   tarefas.forEach(t => {
-    if (t.departamento && t.colaborador)
-      deptPorColab[(t.colaborador).toUpperCase()] = t.departamento.toUpperCase().trim();
+    if (!t.departamento || !t.colaborador) return;
+    const key = (t.colaborador).toUpperCase();
+    const dept = t.departamento.toUpperCase().trim();
+    if (!dept) return;
+    if (!freq[key]) freq[key] = {};
+    freq[key][dept] = (freq[key][dept] || 0) + 1;
   });
+  // Para cada colaborador, pega o departamento mais frequente (maioria ganha)
+  const deptPorColab = {};
+  Object.entries(freq).forEach(([colab, conts]) => {
+    deptPorColab[colab] = Object.entries(conts).sort((a,b) => b[1]-a[1])[0][0];
+  });
+  // Preenche tarefas sem departamento usando o mais frequente do colaborador
   tarefas.forEach(t => {
     if (!t.departamento && t.colaborador) {
       const d = deptPorColab[(t.colaborador).toUpperCase()];
@@ -883,8 +894,12 @@ function _resolverDeptTarefas(tarefas) {
 }
 
 function _getDept(nome, tarefaDept) {
-  if (tarefaDept) return tarefaDept;
-  const fromMap = COLLAB_DEPT[(nome||'').toUpperCase()];
+  // Prioridade 1: departamento salvo na própria tarefa (Firebase)
+  if (tarefaDept) return tarefaDept.toUpperCase().trim();
+  // Prioridade 2: mapa estático (apenas para colaboradores legados sem dept salvo)
+  // ATENÇÃO: só usar para nomes EXATOS — não para prefixos que podem bater com novos colaboradores
+  const nomeUp = (nome||'').toUpperCase().trim();
+  const fromMap = COLLAB_DEPT[nomeUp];
   if (fromMap) return fromMap;
   return '__NONE__';
 }
@@ -1056,8 +1071,24 @@ function _preencherGridSetor(grid,dept,todasTarefas,todasSessoes) {
   });
   let nomes=Object.keys(map).sort();
   if (_isColaboradorRestrito() && (JB_SESSION.nome_card||'').trim()) {
-    const card = (JB_SESSION.nome_card||'').trim().toUpperCase();
-    nomes = nomes.filter(n => n.trim().toUpperCase() === card);
+    const card       = (JB_SESSION.nome_card||'').trim().toUpperCase();
+    const usernameUp = (JB_SESSION.username||'').trim().toUpperCase();
+
+    // Tentativa 1: match exato por nome_card
+    let nomesRestr = nomes.filter(n => n.trim().toUpperCase() === card);
+
+    // Tentativa 2: match exato por username (ex: rhuan1 → RHUAN1)
+    if (!nomesRestr.length && usernameUp && usernameUp !== card) {
+      nomesRestr = nomes.filter(n => n.trim().toUpperCase() === usernameUp);
+    }
+
+    // Tentativa 3: nome_card é prefixo de um colaborador único (ex: RHUAN → RHUAN1)
+    if (!nomesRestr.length) {
+      const porPrefixo = nomes.filter(n => n.trim().toUpperCase().startsWith(card) && n.trim().toUpperCase() !== card);
+      if (porPrefixo.length === 1) nomesRestr = porPrefixo;
+    }
+
+    nomes = nomesRestr;
     if (!nomes.length) {
       grid.innerHTML='<div style="padding:40px;text-align:center"><div style="font-size:40px">😊</div><p style="font-weight:700;margin-top:8px">Sem tarefas para hoje!</p></div>';
       return;
@@ -1869,21 +1900,71 @@ async function selectColaborador(nome) {
     _cache.tarefas=todasTarefas;
     const _dtTrab2=S.dataTrabalho||today();
     const nomeUp = nome.toUpperCase();
-    S.tarefas=todasTarefas
-      .filter(t=>
-        t.turno===S.turno && (t.colaborador||'').trim().toUpperCase()===nomeUp &&
-        (t.data_especifica
-          ? t.data_especifica===_dtTrab2
-          : t.dia_semana===S.dia
-        )
+
+    // ── Função auxiliar de filtro por dia ──
+    const _filtroDia = t =>
+      t.data_especifica ? t.data_especifica === _dtTrab2 : t.dia_semana === S.dia;
+
+    // ── Tentativa 1: match exato (nome_card === colaborador) ──
+    S.tarefas = todasTarefas
+      .filter(t =>
+        t.turno === S.turno &&
+        (t.colaborador || '').trim().toUpperCase() === nomeUp &&
+        _filtroDia(t)
       )
-      .sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+      .sort((a,b) => (a.ordem||0) - (b.ordem||0));
+
+    // ── Tentativa 2 (fallback): se não achou, tenta pelo username da sessão ──
+    // Cobre o caso onde nome_card='RHUAN' mas tarefas têm colaborador='Rhuan1'
+    if (!S.tarefas.length && _isColaboradorRestrito() && JB_SESSION) {
+      const usernameUp = (JB_SESSION.username || '').trim().toUpperCase();
+      if (usernameUp && usernameUp !== nomeUp) {
+        const tentativa2 = todasTarefas
+          .filter(t =>
+            t.turno === S.turno &&
+            (t.colaborador || '').trim().toUpperCase() === usernameUp &&
+            _filtroDia(t)
+          )
+          .sort((a,b) => (a.ordem||0) - (b.ordem||0));
+        if (tentativa2.length) {
+          // Achou pelo username — usa esse nome daqui pra frente
+          nome = usernameUp;
+          S.colaborador = nome;
+          S.tarefas = tentativa2;
+        }
+      }
+    }
+
+    // ── Tentativa 3 (fallback final): busca colaborador cujo nome começa com nome_card ──
+    // Cobre variações como nome_card='RHUAN' → colaborador='RHUAN1', 'RHUAN2', etc.
+    // Só aplica se houver exatamente 1 colaborador diferente que comece com o prefixo
+    if (!S.tarefas.length && _isColaboradorRestrito()) {
+      const candidatos = [...new Set(
+        todasTarefas
+          .filter(t => t.turno === S.turno && _filtroDia(t))
+          .map(t => (t.colaborador || '').trim().toUpperCase())
+          .filter(c => c.startsWith(nomeUp) && c !== nomeUp)
+      )];
+      if (candidatos.length === 1) {
+        const nomeAlt = candidatos[0];
+        const tentativa3 = todasTarefas
+          .filter(t =>
+            t.turno === S.turno &&
+            (t.colaborador || '').trim().toUpperCase() === nomeAlt &&
+            _filtroDia(t)
+          )
+          .sort((a,b) => (a.ordem||0) - (b.ordem||0));
+        if (tentativa3.length) {
+          nome = nomeAlt;
+          S.colaborador = nome;
+          S.tarefas = tentativa3;
+        }
+      }
+    }
+
     if (!S.tarefas.length) {
-      // Para colaborador restrito: mostra informação de diagnóstico e volta para welcome
       if (_isColaboradorRestrito()) {
-        const diaLabel = S.dia || '?';
-        const turnoLabel = S.turno === 'dia' ? 'Dia' : (S.turno === 'noite' ? 'Noite' : S.turno || '?');
-        showToast(`😕 Sem tarefas para ${nome} — Turno ${turnoLabel} / ${diaLabel}`);
+        showToast('😕 Sem tarefas para hoje neste turno');
         showScreen('screen-welcome');
       } else {
         showToast('😕 Sem tarefas para este colaborador');
@@ -3538,6 +3619,7 @@ async function openModalNewTask() {
   ['te-item','te-cat','te-qty','te-unit','te-ordem'].forEach(id=>{ const el=document.getElementById(id); if (el) el.value=''; });
   const tet=document.getElementById('te-turno'); if (tet) tet.value=(document.getElementById('tar-filter-turno')||{}).value||'dia';
   const ted=document.getElementById('te-dia');   if (ted) ted.value=(document.getElementById('tar-filter-dia')||{}).value||'segunda';
+  const tedpt=document.getElementById('te-depto'); if (tedpt) tedpt.value='';
   await _populateTeColab('');
   document.getElementById('modal-task-edit').classList.remove('hidden');
 }
@@ -3554,6 +3636,9 @@ async function openModalEditTask(id) {
     document.getElementById('te-ordem').value=t.ordem||'';
     document.getElementById('te-turno').value=t.turno||'dia';
     document.getElementById('te-dia').value=t.dia_semana||'segunda';
+    // Preenche departamento da tarefa (campo novo no modal)
+    const tedpt=document.getElementById('te-depto');
+    if (tedpt) tedpt.value=(t.departamento||'').toUpperCase().trim();
     await _populateTeColab(t.colaborador||'');
     document.getElementById('modal-task-edit').classList.remove('hidden');
   } catch(e) { showToast('❌ Erro ao carregar tarefa'); }
@@ -3604,11 +3689,39 @@ async function _populateTeColab(selected) {
   if (selected) sel.value = selected;
 }
 
+// Auto-preenche departamento ao mudar colaborador no modal do líder
+function _teAutoFillDepto() {
+  const colabEl = document.getElementById('te-colab');
+  const deptoEl = document.getElementById('te-depto');
+  if (!colabEl || !deptoEl) return;
+  const nomeUp = (colabEl.value || '').trim().toUpperCase();
+  if (!nomeUp) return;
+  // Busca o departamento mais frequente deste colaborador nas tarefas em cache
+  const tarefas = _cache.tarefas || [];
+  const depts = tarefas
+    .filter(t => (t.colaborador||'').trim().toUpperCase() === nomeUp && t.departamento)
+    .map(t => t.departamento.toUpperCase().trim());
+  if (depts.length) {
+    // Pega o mais frequente
+    const freq = {};
+    depts.forEach(d => freq[d] = (freq[d]||0)+1);
+    const maisFreq = Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0];
+    if ([...deptoEl.options].some(o => o.value === maisFreq)) deptoEl.value = maisFreq;
+  } else {
+    // Fallback: mapa estático somente para nomes exatos
+    const fromMap = COLLAB_DEPT[nomeUp];
+    if (fromMap && [...deptoEl.options].some(o => o.value === fromMap)) deptoEl.value = fromMap;
+  }
+}
+
 async function saveTaskEdit() {
   const id=document.getElementById('te-id').value;
   let colab=(document.getElementById('te-colab').value||'').trim().toUpperCase();
+  const deptoEl=document.getElementById('te-depto');
+  const depto=(deptoEl ? deptoEl.value : '').trim().toUpperCase();
   const body={
     colaborador:colab,
+    departamento:depto||undefined,
     turno:document.getElementById('te-turno').value,
     dia_semana:document.getElementById('te-dia').value,
     categoria:document.getElementById('te-cat').value.trim(),
@@ -3617,7 +3730,10 @@ async function saveTaskEdit() {
     unidade:document.getElementById('te-unit').value.trim(),
     ordem:Number(document.getElementById('te-ordem').value)||99,
   };
+  // Remove departamento undefined para não sobrescrever com null
+  if (!body.departamento) delete body.departamento;
   if (!colab) { showToast('⚠️ Selecione o colaborador!'); return; }
+  if (!depto) { showToast('⚠️ Selecione o departamento!'); return; }
   if (!body.item) { showToast('⚠️ Informe o nome do item!'); return; }
   const btn=document.querySelector('#modal-task-edit .btn-modal-confirm');
   if (btn) { btn.disabled=true; btn.textContent='Salvando...'; }
