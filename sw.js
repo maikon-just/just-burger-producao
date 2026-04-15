@@ -1,4 +1,4 @@
-/* ══════════════════════════════════════════════════════════
+/* ═════════════════════════════════════════════════════════
    Just Burger 🍔 — Service Worker
    ⚠️  A cada novo deploy, troque o número abaixo (ex: v4, v5...)
        Isso força todos os browsers a baixar tudo de novo.
