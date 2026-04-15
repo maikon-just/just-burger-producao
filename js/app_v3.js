@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════
    JUST BURGER 🍔 — app_v3.js
    Controle de Produção — Firebase Realtime Database (compat)
    Versão: 2026-04-13 — Botão Sair Global + iframe print
@@ -427,47 +427,44 @@ function _abrirModalTextoLivre(id) {
   if (lbl1) lbl1.textContent = t.texto_label1 || 'Campo 1';
   if (lbl2) lbl2.textContent = t.texto_label2 || 'Campo 2';
 
+  const d1 = S.s1[id] || {};
   const d2 = S.s2[id] || {};
-  const jaIniciado = S.s1[id]?.confirmed === true;
-  const jaFinalizado = d2.status === 'total';
+  const jaIniciada = !!d1.confirmed;
 
-  // Define qual step mostrar
+  // Etapa 1: botão Iniciar (se ainda não iniciada)
+  // Etapa 2: campos de texto + Finalizar (se já iniciada)
   const stepIniciar = document.getElementById('mtl-step-iniciar');
   const stepTextos  = document.getElementById('mtl-step-textos');
+  if (stepIniciar) stepIniciar.style.display = jaIniciada ? 'none' : '';
+  if (stepTextos)  stepTextos.style.display  = jaIniciada ? ''     : 'none';
 
-  if (jaIniciado || jaFinalizado) {
-    // Já iniciou: mostra campos com valor salvo
-    if (stepIniciar) stepIniciar.style.display = 'none';
-    if (stepTextos)  stepTextos.style.display  = '';
-    const c1 = document.getElementById('mtl-campo1');
-    const c2 = document.getElementById('mtl-campo2');
-    if (c1) c1.value = d2.texto1 || '';
-    if (c2) c2.value = d2.texto2 || '';
-  } else {
-    // Ainda não iniciou
-    if (stepIniciar) stepIniciar.style.display = '';
-    if (stepTextos)  stepTextos.style.display  = 'none';
-  }
+  // Preenche com valor já salvo (se houver)
+  const c1 = document.getElementById('mtl-campo1');
+  const c2 = document.getElementById('mtl-campo2');
+  if (c1) c1.value = d2.texto1 || '';
+  if (c2) c2.value = d2.texto2 || '';
 
   document.getElementById('modal-texto-livre').classList.remove('hidden');
+  if (jaIniciada) setTimeout(()=>{ if(c1 && !c1.value) c1.focus(); }, 80);
 }
 
 function _confirmTextoLivreIniciar() {
   const id = _tlTarefaId; if (!id) return;
-  // Marca como iniciado no s1
-  S.s1[id] = { confirmed: true, estoque: 0, programada: 0 };
-  // Mostra os campos de texto
+  // Marca a tarefa como iniciada no s1
+  S.s1[id] = { estoque: 0, programada: 0, confirmed: true };
+  // Muda para a etapa de textos
   const stepIniciar = document.getElementById('mtl-step-iniciar');
   const stepTextos  = document.getElementById('mtl-step-textos');
   if (stepIniciar) stepIniciar.style.display = 'none';
   if (stepTextos)  stepTextos.style.display  = '';
-  // Limpa os campos
-  const c1 = document.getElementById('mtl-campo1');
-  const c2 = document.getElementById('mtl-campo2');
-  if (c1) { c1.value = ''; setTimeout(()=>c1.focus(), 80); }
-  if (c2) c2.value = '';
+  // Foca no campo 1
+  setTimeout(()=>{
+    const c1 = document.getElementById('mtl-campo1');
+    if (c1) { c1.value = ''; c1.focus(); }
+    const c2 = document.getElementById('mtl-campo2');
+    if (c2) c2.value = '';
+  }, 80);
   renderStep1();
-  showToast('▶️ Tarefa iniciada! Preencha os campos e finalize.');
 }
 
 function _confirmTextoLivreFinalizar() {
@@ -2003,7 +2000,13 @@ async function _carregarRegistrosAtendimento(nome) {
 
 function _prepararModoAtendimento() {
   S.producaoIniciada=true;
-  S.tarefas.forEach(t=>{ if (!S.s1[t.id]) S.s1[t.id]={estoque:0,programada:1,confirmed:true}; });
+  S.tarefas.forEach(t=>{
+    if (!S.s1[t.id]) {
+      // Texto Livre e KM requerem ação manual — não confirmar automaticamente
+      if (isKm(t) || isTextoLivre(t)) S.s1[t.id]={estoque:0,programada:0,confirmed:false};
+      else S.s1[t.id]={estoque:0,programada:1,confirmed:true};
+    }
+  });
   const banner=document.getElementById('prod-banner');
   if (banner) banner.classList.add('hidden');
 }
@@ -2208,9 +2211,10 @@ async function iniciarProducao() {
   S.producaoIniciada=true;
   S.tarefas.forEach(t=>{
     if (!S.s1[t.id]) {
-      // Tarefa KM: não marca como confirmed automaticamente — requer registro manual
-      if (isKm(t)) S.s1[t.id]={estoque:0,programada:0,confirmed:false};
-      else          S.s1[t.id]={estoque:0,programada:t.quantidade_padrao||0,confirmed:true};
+      // Tarefa KM e Texto Livre: não marcam como confirmed automaticamente — requerem ação manual
+      if (isKm(t))         S.s1[t.id]={estoque:0,programada:0,confirmed:false};
+      else if (isTextoLivre(t)) S.s1[t.id]={estoque:0,programada:0,confirmed:false};
+      else                  S.s1[t.id]={estoque:0,programada:t.quantidade_padrao||0,confirmed:true};
     }
   });
   const dt=S.dataTrabalho||today();
