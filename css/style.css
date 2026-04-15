@@ -43,6 +43,10 @@
 body:not(.has-bottom-nav) #btn-sair-global {
   bottom: 16px;
 }
+/* Na tela de produção sem bottom-nav: sobe acima do tasks-footer */
+body:not(.has-bottom-nav).has-prod-footer #btn-sair-global {
+  bottom: 140px;
+}
 /* Nunca aparece na impressão */
 @media print {
   #btn-sair-global { display: none !important; }
