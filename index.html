@@ -1301,6 +1301,53 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════
+     MODAL — TEXTO LIVRE (Etapa 1 e 2)
+══════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-texto-livre">
+  <div class="modal-box modal-compact">
+    <button class="modal-close" onclick="closeModal('modal-texto-livre')">✕</button>
+    <div class="modal-header-colored" id="mtl-header" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">
+      <span class="modal-cat-badge" id="mtl-cat" style="background:rgba(255,255,255,.22);color:#fff">Categoria</span>
+      <h3 class="modal-title" id="mtl-title">Tarefa</h3>
+    </div>
+    <div class="modal-body modal-body-compact">
+      <!-- Etapa 1: apenas botão iniciar -->
+      <div id="mtl-step-iniciar">
+        <p style="font-size:13px;color:#6b7280;text-align:center;margin-bottom:16px">Toque em <strong>Iniciar</strong> para começar esta tarefa.</p>
+        <button onclick="_confirmTextoLivreIniciar()"
+          style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
+          ▶️ Iniciar Tarefa
+        </button>
+      </div>
+      <!-- Etapa 2: campos de texto + finalizar -->
+      <div id="mtl-step-textos" style="display:none">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div>
+            <label id="mtl-label1" style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Campo 1</label>
+            <textarea id="mtl-campo1" rows="3" placeholder="Digite aqui..."
+              style="width:100%;padding:12px 14px;border:2px solid #ddd6fe;border-radius:12px;font-size:14px;font-family:inherit;outline:none;background:#faf5ff;color:#1a1d2e;box-sizing:border-box;resize:vertical;line-height:1.5"
+              oninput="this.style.borderColor='#7c3aed'"></textarea>
+          </div>
+          <div>
+            <label id="mtl-label2" style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Campo 2</label>
+            <textarea id="mtl-campo2" rows="3" placeholder="Digite aqui..."
+              style="width:100%;padding:12px 14px;border:2px solid #ddd6fe;border-radius:12px;font-size:14px;font-family:inherit;outline:none;background:#faf5ff;color:#1a1d2e;box-sizing:border-box;resize:vertical;line-height:1.5"
+              oninput="this.style.borderColor='#7c3aed'"></textarea>
+          </div>
+        </div>
+        <button onclick="_confirmTextoLivreFinalizar()"
+          style="width:100%;margin-top:16px;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
+          ✅ Finalizar Tarefa
+        </button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="closeModal('modal-texto-livre')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Scripts — ordem importa! -->
 <script src="js/versao.js?v=20260414-02"></script>
 <script src="js/data.js?v=20260414-02"></script>
