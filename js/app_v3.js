@@ -712,6 +712,8 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
   const el = document.getElementById(id);
   if (el) { el.classList.remove('hidden'); el.scrollTop=0; }
+  // Marca body quando o footer de produção está visível (para posicionar btn-sair-global acima dele)
+  document.body.classList.toggle('has-prod-footer', id === 'screen-step1');
 }
 function goBack(to) {
   // Ao voltar para a tela de setor, recarrega o grid com dados frescos do Firebase
