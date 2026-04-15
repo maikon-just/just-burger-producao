@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="css/style.css?v=20260413-01"/>
 
   <!--
-    ═════════════════════════════════════════════════════
+    ══════════════════════════════════════════════════════
     CORREÇÃO DE IMPRESSÃO DEFINITIVA
     Problema: app.js usa #print-area via style.display='block'
               e chama window.print(); no mobile o print é
@@ -813,8 +813,17 @@
       <input type="hidden" id="te-id"/>
       <div class="filter-group" style="width:100%">
         <label>👤 Colaborador</label>
-        <select id="te-colab" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit">
+        <select id="te-colab" onchange="_teAutoFillDepto()" style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;font-family:inherit">
           <option value="">— Selecione —</option>
+        </select>
+      </div>
+      <div class="filter-group" style="width:100%">
+        <label>🏭 Departamento</label>
+        <select id="te-depto" style="width:100%;padding:8px;border-radius:8px;border:2px solid #e8590c;font-family:inherit;font-weight:700">
+          <option value="">— Selecione —</option>
+          <option value="PRODUCAO">🏭 Produção</option>
+          <option value="OPERACAO">⚙️ Operação</option>
+          <option value="ATENDIMENTO">🎯 Atendimento</option>
         </select>
       </div>
       <div class="filter-group" style="width:100%">
@@ -1352,7 +1361,7 @@
 <script src="js/versao.js?v=20260415-02"></script>
 <script src="js/data.js?v=20260415-02"></script>
 <script src="js/firebase_v2.js?v=20260415-02"></script>
-<script src="js/app_v3.js?v=20260415-04"></script>
+<script src="js/app_v3.js?v=20260415-06"></script>
 
 <!-- Service Worker: força atualização automática a cada deploy -->
 <script>
