@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <title>Upload Completo de Relatórios — Just Burger</title>
+
+  <!-- Firebase compat -->
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
+  <!-- SheetJS -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
+  <!-- Firebase helper -->
+  <script src="js/firebase_v2.js?v=20260414"></script>
+  <!-- Auth Guard central -->
+  <script src="js/auth-guard.js?v=20260414"></script>
+  <!-- ══ GUARD IMEDIATO — executa antes de qualquer renderização ══ -->
+  <script>
+  (function(){
+    const PAPEIS_OK  = ['admin','lider','uploader','financeiro','aux_financeiro'];
+    const SAFE_HOSTS = ['localhost','127.0.0.1','gitpod','preview','genspark'];
+    const isSafe     = SAFE_HOSTS.some(s => (location.hostname||'').includes(s)) || location.protocol === 'blob:';
+
+    /* Tenta restaurar sessão via ?_jbs= passado pelo hub */
+    try {
+      const params = new URLSearchParams(location.search);
+      const token  = params.get('_jbs');
+      if (token) {
+        const json = decodeURIComponent(escape(atob(decodeURIComponent(token))));
+        const sess = JSON.parse(json);
+        if (sess && sess.username && sess.papel) {
+          if (typeof JbAuth !== 'undefined') { JbAuth.save(sess); }
+          else { sessionStorage.setItem('jb_user', JSON.stringify(sess)); }
+        }
+        params.delete('_jbs'); params.delete('_cb');
+        history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params.toString() : ''));
+      }
+    } catch(e) {}
+
+    /* Lê sessão */
+    let u = null;
+    try {
+      if (typeof JbAuth !== 'undefined') { u = JbAuth.read(); }
+      else { u = JSON.parse(sessionStorage.getItem('jb_user') || 'null'); }
+    } catch(e) {}
+
+    if (!u && !isSafe) { location.replace('portal.html?_acesso=negado'); return; }
+    if (u && !PAPEIS_OK.includes(u.papel)) {
+      if (typeof JbAuth !== 'undefined') { JbAuth.logout('portal.html?_acesso=negado'); }
+      else { sessionStorage.clear(); location.replace('portal.html?_acesso=negado'); }
+      return;
+    }
+    if (u && typeof JbAuth !== 'undefined') { JbAuth.renew(); }
+  })();
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --brand:   #e8590c;
+      --brand2:  #ff7b2f;
+      --dark:    #0f0f1a;
+      --dark2:   #161625;
+      --glass:   rgba(255,255,255,.06);
+      --border:  rgba(255,255,255,.1);
+      --text:    #f0f0f5;
+      --muted:   rgba(255,255,255,.42);
+      --success: #22c55e;
+      --warn:    #f59e0b;
+      --danger:  #ef4444;
+      --upload:  #6366f1;
+    }
+
+    body {
+      font-family: 'Nunito', 'Segoe UI', sans-serif;
+      background: var(--dark); color: var(--text);
+      min-height: 100vh; padding-bottom: 80px;
+    }
+
+    .bg-glow {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 60% 40% at 15% 20%, rgba(99,102,241,.12) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 35% at 85% 75%, rgba(232,89,12,.1) 0%, transparent 70%);
+    }
+
+    .page-wrap { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 0 16px; }
+
+    /* ── Header ── */
+    .page-header {
+      display: flex; align-items: center; gap: 14px;
+      padding: 20px 0 18px; border-bottom: 1px solid var(--border); margin-bottom: 24px;
+    }
+    .btn-back {
+      background: var(--glass); border: 1px solid var(--border);
+      color: var(--text); width: 40px; height: 40px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 16px; flex-shrink: 0; transition: all .2s; text-decoration: none;
+    }
+    .btn-back:hover { background: rgba(255,255,255,.12); }
+    .header-info { flex: 1; }
+    .header-title { font-size: 20px; font-weight: 900; line-height: 1.2; }
+    .header-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .user-pill {
+      display: flex; align-items: center; gap: 7px;
+      background: var(--glass); border: 1px solid var(--border);
+      padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; color: var(--muted);
+    }
+    .user-pill i { color: var(--upload); }
+
+    /* ── Card ── */
+    .card { background: var(--glass); border: 1.5px solid var(--border); border-radius: 20px; padding: 22px; margin-bottom: 20px; }
+    .card-title {
+      font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
+      color: var(--muted); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+    }
+    .card-title i { color: var(--upload); font-size: 15px; }
+
+    /* ── Upload zone ── */
+    .upload-zone {
+      border: 2px dashed rgba(99,102,241,.45); border-radius: 16px; padding: 36px 20px;
+      text-align: center; cursor: pointer; transition: all .25s;
+      background: rgba(99,102,241,.04); position: relative;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--upload); background: rgba(99,102,241,.10); transform: scale(1.01);
+    }
+    .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+    .upload-icon { font-size: 40px; margin-bottom: 12px; opacity: .7; }
+    .upload-main-text { font-size: 15px; font-weight: 800; margin-bottom: 6px; }
+    .upload-sub-text  { font-size: 12px; color: var(--muted); }
+    .upload-formats   { display: flex; gap: 6px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+    .fmt-chip {
+      background: rgba(99,102,241,.15); border: 1px solid rgba(99,102,241,.3);
+      color: #a5b4fc; font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 20px;
+    }
+
+    /* ── Form row ── */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 18px; }
+    @media(max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+    .field-group { display: flex; flex-direction: column; gap: 6px; }
+    .field-label { font-size: 12px; font-weight: 700; color: var(--muted); }
+    .field-input, .field-select {
+      background: rgba(255,255,255,.05); border: 1.5px solid var(--border);
+      color: var(--text); padding: 10px 14px; border-radius: 12px;
+      font-family: inherit; font-size: 14px; font-weight: 600; transition: border-color .2s; width: 100%;
+    }
+    .field-input:focus, .field-select:focus { outline: none; border-color: var(--upload); }
+    .field-select option { background: #1e1e35; }
+
+    /* ── Preview ── */
+    #preview-wrap { margin-top: 18px; display: none; }
+    .preview-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .preview-title { font-size: 13px; font-weight: 800; color: var(--upload); }
+    .preview-meta  { font-size: 11px; color: var(--muted); }
+    .preview-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); max-height: 240px; }
+    .preview-table { border-collapse: collapse; width: 100%; font-size: 11px; min-width: 500px; }
+    .preview-table th {
+      background: rgba(99,102,241,.18); color: #a5b4fc; padding: 8px 10px;
+      text-align: left; font-weight: 800; position: sticky; top: 0; white-space: nowrap;
+      border-bottom: 1px solid rgba(99,102,241,.25);
+    }
+    .preview-table td { padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,.05); white-space: nowrap; color: rgba(255,255,255,.82); }
+    .preview-table tr:hover td { background: rgba(99,102,241,.07); }
+
+    /* ── Botão enviar ── */
+    .btn-submit {
+      width: 100%; margin-top: 18px;
+      background: linear-gradient(135deg, var(--upload), #818cf8);
+      border: none; color: #fff; padding: 14px; border-radius: 14px;
+      font-family: inherit; font-size: 15px; font-weight: 900;
+      cursor: pointer; transition: all .25s;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .btn-submit:hover    { filter: brightness(1.1); transform: translateY(-2px); }
+    .btn-submit:disabled { opacity: .4; cursor: not-allowed; transform: none; filter: none; }
+
+    /* ── Progresso ── */
+    .progress-bar-wrap { display: none; margin-top: 14px; background: rgba(255,255,255,.08); border-radius: 10px; height: 8px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--upload), #818cf8); border-radius: 10px; width: 0%; transition: width .4s ease; }
+    .progress-text     { font-size: 11px; color: var(--muted); text-align: center; margin-top: 6px; display: none; }
+
+    /* ── Lista ── */
+    .list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .list-count  { background: rgba(99,102,241,.18); color: #a5b4fc; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; }
+    .file-filters { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .filter-btn {
+      background: var(--glass); border: 1px solid var(--border); color: var(--muted);
+      padding: 6px 14px; border-radius: 20px; font-family: inherit;
+      font-size: 12px; font-weight: 700; cursor: pointer; transition: all .2s;
+    }
+    .filter-btn.active, .filter-btn:hover { background: rgba(99,102,241,.18); border-color: rgba(99,102,241,.4); color: #a5b4fc; }
+    .file-list { display: flex; flex-direction: column; gap: 10px; }
+    .file-item {
+      background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 14px;
+      padding: 14px 16px; display: flex; align-items: center; gap: 14px; transition: all .2s;
+    }
+    .file-item:hover { border-color: rgba(99,102,241,.3); background: rgba(99,102,241,.05); }
+    .file-type-badge { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .badge-xlsx { background: rgba(34,197,94,.15); }
+    .badge-csv  { background: rgba(99,102,241,.15); }
+    .badge-xls  { background: rgba(234,179,8,.15); }
+    .file-info  { flex: 1; min-width: 0; }
+    .file-name  { font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-meta  { display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+    .file-meta-item { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+    .file-meta-item i { font-size: 9px; }
+    .file-tipo-chip { font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; }
+    .tipo-motoboys   { background: rgba(234,179,8,.15);  color: #fbbf24; border: 1px solid rgba(234,179,8,.25); }
+    .tipo-financeiro { background: rgba(34,197,94,.15);  color: #86efac; border: 1px solid rgba(34,197,94,.25); }
+    .tipo-geral      { background: rgba(99,102,241,.15); color: #a5b4fc; border: 1px solid rgba(99,102,241,.25); }
+    .file-actions    { display: flex; gap: 8px; flex-shrink: 0; }
+    .btn-icon { width: 34px; height: 34px; border-radius: 10px; border: none; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all .2s; }
+    .btn-view { background: rgba(99,102,241,.15); color: #a5b4fc; }
+    .btn-view:hover { background: rgba(99,102,241,.3); }
+    .btn-del  { background: rgba(239,68,68,.12); color: #f87171; }
+    .btn-del:hover { background: rgba(239,68,68,.25); }
+
+    /* ── Empty state ── */
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+    .empty-state-icon { font-size: 38px; margin-bottom: 10px; opacity: .5; }
+    .empty-state-text { font-size: 14px; font-weight: 700; }
+    .empty-state-sub  { font-size: 12px; margin-top: 6px; opacity: .7; }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: rgba(15,15,26,.96); color: #fff; border: 1px solid rgba(255,255,255,.12);
+      padding: 12px 22px; border-radius: 30px; font-size: 14px; font-weight: 700;
+      opacity: 0; transition: all .3s; z-index: 9999; pointer-events: none; white-space: nowrap; max-width: 92vw;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── Modal preview ── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,.75); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+      opacity: 0; pointer-events: none; transition: opacity .3s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-box {
+      background: #1a1a2e; border: 1.5px solid var(--border); border-radius: 20px;
+      width: 100%; max-width: 780px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;
+    }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .modal-title  { font-size: 15px; font-weight: 800; }
+    .btn-modal-close {
+      background: var(--glass); border: 1px solid var(--border); color: var(--text);
+      width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 14px;
+      display: flex; align-items: center; justify-content: center; transition: all .2s;
+    }
+    .btn-modal-close:hover { background: rgba(255,255,255,.12); }
+    .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+    .modal-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+
+    /* ── Confirm delete ── */
+    .confirm-overlay {
+      position: fixed; inset: 0; z-index: 600; background: rgba(0,0,0,.6); backdrop-filter: blur(3px);
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+      opacity: 0; pointer-events: none; transition: opacity .25s;
+    }
+    .confirm-overlay.open { opacity: 1; pointer-events: all; }
+    .confirm-box { background: #1a1a2e; border: 1.5px solid rgba(239,68,68,.35); border-radius: 20px; padding: 28px 24px; max-width: 360px; width: 100%; text-align: center; }
+    .confirm-icon  { font-size: 36px; margin-bottom: 12px; }
+    .confirm-title { font-size: 17px; font-weight: 900; margin-bottom: 8px; }
+    .confirm-sub   { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .confirm-btns  { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-cancel, .btn-confirm-del { flex: 1; padding: 12px; border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer; border: none; transition: all .2s; }
+    .btn-cancel      { background: var(--glass); border: 1px solid var(--border); color: var(--text); }
+    .btn-confirm-del { background: var(--danger); color: #fff; }
+    .btn-cancel:hover      { background: rgba(255,255,255,.1); }
+    .btn-confirm-del:hover { filter: brightness(1.1); }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin-icon { display: inline-block; animation: spin 1s linear infinite; }
+    @media print { body { display: none; } }
+  </style>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+<div id="toast"></div>
+
+<!-- ══ MODAL PREVIEW ══ -->
+<div class="modal-overlay" id="modal-preview">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">Prévia do Relatório</span>
+      <button class="btn-modal-close" onclick="_fecharModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="modal-meta" style="margin-bottom:14px;font-size:12px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap;"></div>
+      <div class="modal-table-wrap" id="modal-table-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CONFIRM DELETE ══ -->
+<div class="confirm-overlay" id="confirm-del">
+  <div class="confirm-box">
+    <div class="confirm-icon">🗑️</div>
+    <div class="confirm-title">Excluir relatório?</div>
+    <div class="confirm-sub" id="confirm-sub">Esta ação não pode ser desfeita.</div>
+    <div class="confirm-btns">
+      <button class="btn-cancel" onclick="_cancelarDel()">Cancelar</button>
+      <button class="btn-confirm-del" onclick="_confirmarDel()"><i class="fas fa-trash"></i> Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CONTEÚDO ══ -->
+<div class="page-wrap">
+  <header class="page-header">
+    <a href="portal.html" class="btn-back" title="Voltar ao portal"><i class="fas fa-chevron-left"></i></a>
+    <div class="header-info">
+      <div class="header-title">📂 Upload de Relatórios</div>
+      <div class="header-sub">Envio diário • Motoboys & Financeiro</div>
+    </div>
+    <div class="user-pill"><i class="fas fa-user-circle"></i><span id="user-nome-pill">—</span></div>
+  </header>
+
+  <section class="card">
+    <div class="card-title"><i class="fas fa-cloud-upload-alt"></i> Enviar Relatório do Dia</div>
+    <div class="upload-zone" id="drop-zone"
+         ondragover="_onDragOver(event)" ondragleave="_onDragLeave(event)" ondrop="_onDrop(event)">
+      <input type="file" id="file-input" accept=".xlsx,.xls,.csv" onchange="_onFileSelect(event)"/>
+      <div class="upload-icon">📊</div>
+      <div class="upload-main-text">Clique ou arraste o arquivo aqui</div>
+      <div class="upload-sub-text">Relatório diário de pagamento/performance</div>
+      <div class="upload-formats">
+        <span class="fmt-chip">XLSX</span>
+        <span class="fmt-chip">XLS</span>
+        <span class="fmt-chip">CSV</span>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field-group">
+        <label class="field-label" for="input-data"><i class="fas fa-calendar" style="margin-right:5px;"></i>Data de Referência</label>
+        <input type="date" id="input-data" class="field-input"/>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="input-tipo"><i class="fas fa-tag" style="margin-right:5px;"></i>Tipo do Relatório</label>
+        <select id="input-tipo" class="field-select">
+          <option value="motoboys">🛵 Motoboys</option>
+          <option value="financeiro">💰 Financeiro</option>
+          <option value="geral">📊 Geral</option>
+        </select>
+      </div>
+    </div>
+    <div id="preview-wrap">
+      <div class="preview-header">
+        <span class="preview-title" id="preview-title">📋 Prévia — 0 colunas</span>
+        <span class="preview-meta"  id="preview-meta">0 linhas</span>
+      </div>
+      <div class="preview-table-wrap"><table class="preview-table" id="preview-table"></table></div>
+    </div>
+    <div class="progress-bar-wrap" id="progress-wrap"><div class="progress-bar-fill" id="progress-fill"></div></div>
+    <div class="progress-text" id="progress-text"></div>
+    <button class="btn-submit" id="btn-submit" onclick="_enviarRelatorio()" disabled>
+      <i class="fas fa-upload"></i> Enviar Relatório
+    </button>
+  </section>
+
+  <section class="card">
+    <div class="card-title"><i class="fas fa-folder-open"></i> Relatórios Enviados</div>
+    <div class="list-header">
+      <div class="file-filters" id="file-filters">
+        <button class="filter-btn active" onclick="_filtrarLista('todos',this)">Todos</button>
+        <button class="filter-btn" onclick="_filtrarLista('motoboys',this)">🛵 Motoboys</button>
+        <button class="filter-btn" onclick="_filtrarLista('financeiro',this)">💰 Financeiro</button>
+        <button class="filter-btn" onclick="_filtrarLista('geral',this)">📊 Geral</button>
+      </div>
+      <span class="list-count" id="list-count">0</span>
+    </div>
+    <div class="file-list" id="file-list">
+      <div class="empty-state"><div class="empty-state-icon">📁</div><div class="empty-state-text">Carregando...</div></div>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   JUST BURGER 🍔 — uploads.html  v2026-04-14
+   Upload de Relatórios Diários
+═══════════════════════════════════════════════════ */
+
+/* ── Logout listener (outras abas) ── */
+try {
+  window.addEventListener('storage', e => {
+    if (e.key === 'jb_out' && e.newValue === '1') {
+      sessionStorage.clear();
+      location.replace('portal.html');
+    }
+  });
+} catch(e) {}
+
+/* ── Estado ── */
+let _parsedData = null, _parsedCols = [], _parsedRows = [], _selectedFile = null;
+let _todosRelat = [], _filtroAtual = 'todos', _delId = null, _toastTimer;
+
+/* ── Toast ── */
+function _toast(msg, dur = 3200) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), dur);
+}
+
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('input-data').value = new Date().toISOString().slice(0,10);
+  try {
+    const u = JSON.parse(sessionStorage.getItem('jb_user') || '{}');
+    document.getElementById('user-nome-pill').textContent = u.nome || u.username || '—';
+  } catch(e) {}
+  _carregarLista();
+});
+
+/* ── Arquivo ── */
+function _onFileSelect(e) { const f = e.target.files[0]; if(f) _processarArquivo(f); }
+function _onDragOver(e)   { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
+function _onDragLeave()   { document.getElementById('drop-zone').classList.remove('drag-over'); }
+function _onDrop(e)       { e.preventDefault(); document.getElementById('drop-zone').classList.remove('drag-over'); const f = e.dataTransfer.files[0]; if(f) _processarArquivo(f); }
+
+function _processarArquivo(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['xlsx','xls','csv'].includes(ext)) { _toast('⚠️ Formato não suportado. Use xlsx, xls ou csv.'); return; }
+  _selectedFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb   = ext === 'csv' ? XLSX.read(e.target.result,{type:'string',raw:false}) : XLSX.read(e.target.result,{type:'array'});
+      const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval:''});
+      if (!json.length) { _toast('⚠️ Planilha vazia ou não reconhecida.'); return; }
+      _parsedCols = Object.keys(json[0]); _parsedRows = json;
+      _parsedData = { colunas: _parsedCols, linhas: json };
+      _renderPreview();
+      document.getElementById('btn-submit').disabled = false;
+      _toast('✅ Arquivo lido: ' + json.length + ' linhas');
+    } catch(err) { console.error(err); _toast('❌ Erro ao ler o arquivo. Verifique o formato.'); }
+  };
+  ext === 'csv' ? reader.readAsText(file,'UTF-8') : reader.readAsArrayBuffer(file);
+}
+
+function _renderPreview() {
+  if (!_parsedRows.length) return;
+  document.getElementById('preview-wrap').style.display = 'block';
+  document.getElementById('preview-title').textContent = '📋 Prévia — ' + _parsedCols.length + ' colunas';
+  document.getElementById('preview-meta').textContent  = _parsedRows.length + ' linhas de dados';
+  const amostras = _parsedRows.slice(0,6);
+  document.getElementById('preview-table').innerHTML =
+    '<thead><tr>' + _parsedCols.map(c=>`<th>${String(c).substring(0,22)}</th>`).join('') + '</tr></thead>' +
+    '<tbody>' + amostras.map(row=>'<tr>'+_parsedCols.map(c=>`<td>${String(row[c]??'').substring(0,30)}</td>`).join('')+'</tr>').join('') + '</tbody>';
+}
+
+
+function _safeHtml(v){
+  return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function _pickDateValue(row){
+  return row['Data da venda'] || row['Data'] || row['Data da Venda'] || row['Data do pedido'] || row['Dia'] || '';
+}
+function _excelDateToISO(value){
+  if (value == null || value === '') return null;
+  if (value instanceof Date && !isNaN(value)) {
+    const y = value.getFullYear();
+    const m = String(value.getMonth()+1).padStart(2,'0');
+    const d = String(value.getDate()).padStart(2,'0');
+    return `${y}-${m}-${d}`;
+  }
+  if (typeof value === 'number' && isFinite(value)) {
+    const epoch = new Date(Math.round((value - 25569) * 86400 * 1000));
+    if (!isNaN(epoch)) {
+      const y = epoch.getFullYear();
+      const m = String(epoch.getMonth()+1).padStart(2,'0');
+      const d = String(epoch.getDate()).padStart(2,'0');
+      return `${y}-${m}-${d}`;
+    }
+  }
+  const s = String(value).trim();
+  let m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{2})-(\d{2})-(\d{4})/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  const d = new Date(s);
+  if (isNaN(d)) return null;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function _computeCoverageMeta(rows){
+  const isoDates = [];
+  rows.forEach(row => {
+    const iso = _excelDateToISO(_pickDateValue(row));
+    if (iso) isoDates.push(iso);
+  });
+  if (!isoDates.length) {
+    return { possui_datas: false, resumo: 'Sem coluna de data identificável no arquivo.', datas_unicas: 0, mes_completo: false };
+  }
+  const unique = [...new Set(isoDates)].sort();
+  const first = unique[0];
+  const last = unique[unique.length - 1];
+  const months = [...new Set(unique.map(v => v.slice(0,7)))];
+  const meta = {
+    possui_datas: true,
+    primeira_data: first,
+    ultima_data: last,
+    datas_unicas: unique.length,
+    meses_detectados: months,
+    mes_unico: months.length === 1,
+    mes_completo: false,
+    dias_faltantes: [],
+    resumo: `Período identificado: ${first} até ${last}.`
+  };
+  if (months.length === 1) {
+    const [y,m] = months[0].split('-').map(Number);
+    const lastDay = new Date(y, m, 0).getDate();
+    const expected = Array.from({length:lastDay}, (_,i) => `${y}-${String(m).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`);
+    meta.dias_faltantes = expected.filter(d => !unique.includes(d));
+    meta.dias_esperados = lastDay;
+    meta.mes_detectado = months[0];
+    meta.mes_completo = meta.dias_faltantes.length === 0;
+    meta.resumo = meta.mes_completo
+      ? `Mês ${months[0]} validado com ${lastDay} dia(s) presentes.`
+      : `Mês ${months[0]} incompleto: faltam ${meta.dias_faltantes.length} dia(s).`;
+  } else {
+    meta.resumo = `Arquivo com múltiplos meses (${months.join(', ')}). Retroalimentação liberada.`;
+  }
+  return meta;
+}
+function _chunkRows(rows, size){
+  const out = [];
+  for (let i = 0; i < rows.length; i += size) out.push(rows.slice(i, i + size));
+  return out;
+}
+async function _salvarChunks(reportId, rows){
+  const chunks = _chunkRows(rows, 400);
+  const basePath = `relatorios_chunks/${reportId}`;
+  for (let i = 0; i < chunks.length; i++) {
+    await fbDB_v2.ref(`${basePath}/${String(i).padStart(4,'0')}`).set({
+      chunk_index: i,
+      rows: chunks[i],
+      total_rows: chunks[i].length,
+      created_at: Date.now()
+    });
+  }
+  return { basePath, chunkCount: chunks.length };
+}
+async function _lerPreviewRelatorio(r, limit=500){
+  let dados = {};
+  try { dados = JSON.parse(r.dados_json || '{}'); } catch(e) { dados = {}; }
+  let colunas = Array.isArray(dados.colunas) ? dados.colunas : [];
+  let linhas = Array.isArray(dados.linhas) ? dados.linhas.slice(0, limit) : [];
+  if ((!linhas.length || r.chunked) && r.chunks_path) {
+    try {
+      const snap = await fbDB_v2.ref(r.chunks_path).once('value');
+      const val = snap.val() || {};
+      const lista = Object.values(val).sort((a,b)=>(a.chunk_index||0)-(b.chunk_index||0));
+      linhas = lista.flatMap(c => Array.isArray(c.rows) ? c.rows : []).slice(0, limit);
+      if (!colunas.length && linhas.length) colunas = Object.keys(linhas[0]);
+    } catch(err) {
+      console.error('Falha ao ler chunks', err);
+    }
+  }
+  return { dados, colunas, linhas };
+}
+
+/* ── Enviar ── */
+
+async function _enviarRelatorio() {
+  if (!_parsedData || !_selectedFile) { _toast('⚠️ Selecione um arquivo primeiro'); return; }
+  const dataRef = document.getElementById('input-data').value;
+  const tipo    = document.getElementById('input-tipo').value;
+  if (!dataRef) { _toast('⚠️ Informe a data de referência'); return; }
+
+  let usuario = 'desconhecido';
+  try { const u = JSON.parse(sessionStorage.getItem('jb_user')||'{}'); usuario = u.username||u.nome||'desconhecido'; } catch(e){}
+
+  const btn   = document.getElementById('btn-submit');
+  const pWrap = document.getElementById('progress-wrap');
+  const pFill = document.getElementById('progress-fill');
+  const pText = document.getElementById('progress-text');
+
+  btn.disabled = true; btn.innerHTML = '<span class="spin-icon">⏳</span> Enviando...';
+  pWrap.style.display = 'block'; pText.style.display = 'block';
+  pFill.style.width = '12%'; pText.textContent = 'Validando planilha...';
+
+  try {
+    const coverage = _computeCoverageMeta(_parsedRows);
+    pFill.style.width = '28%'; pText.textContent = 'Verificando duplicatas...';
+    const existentes = await _buscarRelatorios({ tipo, data_referencia: dataRef });
+    for (const ex of existentes) {
+      if (ex.status !== 'deletado') await fbv2_patch('relatorios_diarios', ex.id, { status: 'substituido' });
+    }
+
+    pFill.style.width = '44%'; pText.textContent = 'Criando registro principal...';
+    const previewRows = _parsedRows.slice(0, 120);
+    const record = {
+      data_referencia: dataRef,
+      nome_arquivo: _selectedFile.name,
+      enviado_por: usuario,
+      timestamp_upload: Date.now(),
+      tipo,
+      status: 'ativo',
+      total_linhas: _parsedRows.length,
+      capture_mode: 'chunked_v2',
+      chunked: true,
+      periodo_validacao: coverage,
+      dados_json: JSON.stringify({
+        colunas: _parsedCols,
+        linhas: previewRows,
+        total_original: _parsedRows.length,
+        coverage
+      })
+    };
+    const created = await fbv2_post('relatorios_diarios', record);
+
+    pFill.style.width = '68%'; pText.textContent = 'Gravando 100% das linhas em blocos...';
+    const chunkInfo = await _salvarChunks(created.id, _parsedRows);
+
+    pFill.style.width = '86%'; pText.textContent = 'Fechando metadados e validação...';
+    await fbv2_patch('relatorios_diarios', created.id, {
+      chunks_path: chunkInfo.basePath,
+      total_chunks: chunkInfo.chunkCount,
+      total_linhas: _parsedRows.length,
+      periodo_validacao: coverage,
+      mes_detectado: coverage.mes_detectado || null,
+      mes_completo: !!coverage.mes_completo,
+      primeira_data_arquivo: coverage.primeira_data || null,
+      ultima_data_arquivo: coverage.ultima_data || null,
+      dias_faltantes: coverage.dias_faltantes || []
+    });
+
+    pFill.style.width = '100%';
+    pText.textContent = coverage.mes_unico
+      ? (coverage.mes_completo ? 'Concluído! Mês completo validado ✅' : 'Concluído! Upload salvo com alerta de mês incompleto ⚠️')
+      : 'Concluído! Retroalimentação salva ✅';
+    _toast(`✅ Upload completo: ${_parsedRows.length} linhas gravadas em ${chunkInfo.chunkCount} bloco(s).`);
+
+    setTimeout(() => {
+      pWrap.style.display = 'none'; pText.style.display = 'none'; pFill.style.width = '0%';
+      document.getElementById('preview-wrap').style.display = 'none';
+      document.getElementById('file-input').value = '';
+      _parsedData = null; _parsedCols = []; _parsedRows = []; _selectedFile = null;
+      btn.innerHTML = '<i class="fas fa-upload"></i> Enviar Relatório'; btn.disabled = true;
+      _carregarLista();
+    }, 1400);
+  } catch(err) {
+    console.error(err);
+    _toast('❌ Erro ao enviar. Verifique a conexão e tente novamente.');
+    pFill.style.width='0%'; pText.textContent=''; pWrap.style.display='none'; pText.style.display='none';
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-upload"></i> Enviar Relatório';
+  }
+}
+
+/* ── Busca ── */
+
+async function _buscarRelatorios({ tipo, data_referencia } = {}) {
+  try {
+    const lista = await fbv2_getAll('relatorios_diarios');
+    return lista.filter(r => {
+      if (r.status === 'deletado') return false;
+      if (tipo && r.tipo !== tipo) return false;
+      if (data_referencia && r.data_referencia !== data_referencia) return false;
+      return true;
+    });
+  } catch(e) { return []; }
+}
+
+/* ── Lista ── */
+async function _carregarLista() {
+  const listEl = document.getElementById('file-list');
+  listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon spin-icon">⏳</div><div class="empty-state-text">Carregando...</div></div>';
+  try {
+    const todos = await fbv2_getAll('relatorios_diarios');
+    _todosRelat = todos.filter(r=>r.status!=='deletado').sort((a,b)=>(b.timestamp_upload||0)-(a.timestamp_upload||0));
+    _renderLista();
+  } catch(e) {
+    listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">Erro ao carregar</div></div>';
+  }
+}
+
+function _filtrarLista(tipo, btn) {
+  _filtroAtual = tipo;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  _renderLista();
+}
+
+function _formatarData(iso) {
+  if (!iso) return '—';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function _renderLista() {
+  const listEl  = document.getElementById('file-list');
+  const countEl = document.getElementById('list-count');
+  const lista   = _filtroAtual === 'todos' ? _todosRelat : _todosRelat.filter(r=>r.tipo===_filtroAtual);
+  countEl.textContent = lista.length;
+
+  if (!lista.length) {
+    listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-text">Nenhum relatório encontrado</div><div class="empty-state-sub">Envie o primeiro relatório acima</div></div>';
+    return;
+  }
+
+  listEl.innerHTML = lista.map(r => {
+    const ext    = (r.nome_arquivo||'xlsx').split('.').pop().toLowerCase();
+    const icone  = ext==='csv'?'📝':ext==='xls'?'📗':'📊';
+    const bdgCls = ext==='csv'?'badge-csv':ext==='xls'?'badge-xls':'badge-xlsx';
+    const tipoCls = {motoboys:'tipo-motoboys',financeiro:'tipo-financeiro',geral:'tipo-geral'}[r.tipo]||'tipo-geral';
+    const tipoLabel = {motoboys:'🛵 Motoboys',financeiro:'💰 Financeiro',geral:'📊 Geral'}[r.tipo]||r.tipo;
+    const subst = r.status==='substituido' ? '<span style="font-size:10px;color:#f59e0b;margin-left:6px;">⚠️ Substituído</span>' : '';
+    return `<div class="file-item" id="fi-${r.id}">
+      <div class="file-type-badge ${bdgCls}">${icone}</div>
+      <div class="file-info">
+        <div class="file-name">${r.nome_arquivo||'Sem nome'}${subst}</div>
+        <div class="file-meta">
+          <span class="file-meta-item"><i class="fas fa-calendar"></i> ${_formatarData(r.data_referencia)}</span>
+          <span class="file-meta-item"><i class="fas fa-user"></i> ${r.enviado_por||'—'}</span>
+          <span class="file-meta-item"><i class="fas fa-table"></i> ${r.total_linhas||0} linhas</span>
+          <span class="file-tipo-chip ${tipoCls}">${tipoLabel}</span>
+        </div>
+        <div class="file-meta" style="margin-top:3px;">
+          <span class="file-meta-item"><i class="fas fa-clock"></i> ${r.timestamp_upload?new Date(r.timestamp_upload).toLocaleString('pt-BR'):'—'}</span>
+        </div>
+      </div>
+      <div class="file-actions">
+        <button class="btn-icon btn-view" title="Visualizar" onclick="_verRelatorio('${r.id}')"><i class="fas fa-eye"></i></button>
+        <button class="btn-icon btn-del" title="Excluir" onclick="_pedirDel('${r.id}','${(r.nome_arquivo||'').replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── Visualizar ── */
+
+async function _verRelatorio(id) {
+  const r = _todosRelat.find(x=>x.id===id);
+  if (!r) { _toast('⚠️ Relatório não encontrado'); return; }
+  const { dados, colunas, linhas } = await _lerPreviewRelatorio(r, 500);
+  const coverage = r.periodo_validacao || dados.coverage || {};
+  const coverageMsg = coverage && coverage.resumo ? coverage.resumo : 'Prévia carregada.';
+  document.getElementById('modal-title').textContent = '📊 ' + (r.nome_arquivo || 'Relatório');
+  document.getElementById('modal-meta').innerHTML = `
+    <span><i class="fas fa-calendar" style="margin-right:5px;"></i>${_formatarData(r.data_referencia)}</span>
+    <span><i class="fas fa-user" style="margin-right:5px;"></i>${_safeHtml(r.enviado_por||'—')}</span>
+    <span><i class="fas fa-table" style="margin-right:5px;"></i>${r.total_linhas||linhas.length} linhas</span>
+    <span><i class="fas fa-layer-group" style="margin-right:5px;"></i>${r.total_chunks||0} blocos</span>
+    <span><i class="fas fa-clock" style="margin-right:5px;"></i>${r.timestamp_upload?new Date(r.timestamp_upload).toLocaleString('pt-BR'):'—'}</span>
+    <span style="color:${coverage.mes_completo ? '#22c55e' : '#f59e0b'}"><i class="fas fa-check-circle" style="margin-right:5px;"></i>${_safeHtml(coverageMsg)}</span>`;
+  document.getElementById('modal-table-wrap').innerHTML = !colunas.length
+    ? '<p style="padding:20px;color:var(--muted);text-align:center;">Dados não disponíveis.</p>'
+    : '<table class="preview-table" style="min-width:100%;"><thead><tr>' + colunas.map(c=>`<th>${_safeHtml(String(c).substring(0,28))}</th>`).join('') + '</tr></thead><tbody>' + linhas.map(row=>'<tr>'+colunas.map(c=>`<td>${_safeHtml(String(row[c]??'').substring(0,48))}</td>`).join('')+'</tr>').join('') + '</tbody></table>' + `<div style="padding:10px 2px;color:var(--muted);font-size:11px;">Exibindo prévia de ${linhas.length} linha(s). O banco mantém 100% do arquivo para leitura pelos dashboards.</div>`;
+  document.getElementById('modal-preview').classList.add('open');
+}
+function _fecharModal() { document.getElementById('modal-preview').classList.remove('open'); }
+
+
+/* ── Excluir ── */
+function _pedirDel(id, nome) {
+  _delId = id;
+  document.getElementById('confirm-sub').textContent = `Arquivo: "${nome}"\nEsta ação não pode ser desfeita.`;
+  document.getElementById('confirm-del').classList.add('open');
+}
+function _cancelarDel() { _delId=null; document.getElementById('confirm-del').classList.remove('open'); }
+async function _confirmarDel() {
+  if (!_delId) return;
+  document.getElementById('confirm-del').classList.remove('open');
+  try {
+    await fbv2_patch('relatorios_diarios', _delId, { status:'deletado' });
+    _toast('🗑️ Relatório excluído');
+    _todosRelat = _todosRelat.filter(r=>r.id!==_delId);
+    _renderLista();
+  } catch(e) { _toast('❌ Erro ao excluir. Tente novamente.'); }
+  _delId = null;
+}
+
+document.getElementById('modal-preview').addEventListener('click', function(e) { if(e.target===this) _fecharModal(); });
+document.getElementById('confirm-del').addEventListener('click', function(e) { if(e.target===this) _cancelarDel(); });
+</script>
+</body>
+</html>
