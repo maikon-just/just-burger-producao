@@ -235,6 +235,112 @@
 </div>
 
 <!-- ══════════════════════════════════════════
+     TELA — ESCOLHA COLABORADOR (Tarefas / Ranking)
+══════════════════════════════════════════ -->
+<div id="screen-colab-choice" class="screen hidden">
+  <style>
+    #screen-colab-choice {
+      background: linear-gradient(160deg,#1a1d2e 0%,#2d3158 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 20px;
+      gap: 0;
+    }
+    .colab-choice-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .colab-choice-header .cc-emoji { font-size: 52px; margin-bottom: 10px; filter: drop-shadow(0 4px 12px rgba(0,0,0,.4)); }
+    .colab-choice-header .cc-name  { font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 4px; }
+    .colab-choice-header .cc-sub   { font-size: 13px; color: rgba(255,255,255,.6); font-weight: 600; }
+    .colab-choice-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 100%;
+      max-width: 380px;
+    }
+    .cc-card {
+      background: rgba(255,255,255,.07);
+      border: 2px solid rgba(255,255,255,.14);
+      border-radius: 20px;
+      padding: 24px 22px;
+      cursor: pointer;
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      text-align: left;
+    }
+    .cc-card:hover, .cc-card:active {
+      background: rgba(255,255,255,.13);
+      border-color: rgba(255,255,255,.3);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(0,0,0,.3);
+    }
+    .cc-card.primary {
+      background: linear-gradient(135deg,#e6a800,#f59e0b);
+      border-color: transparent;
+    }
+    .cc-card.primary:hover { background: linear-gradient(135deg,#cc9500,#e6a800); }
+    .cc-card-icon { font-size: 36px; flex-shrink: 0; }
+    .cc-card-info { flex: 1; }
+    .cc-card-title { font-size: 17px; font-weight: 900; color: #fff; margin-bottom: 4px; }
+    .cc-card.primary .cc-card-title { color: #fff; }
+    .cc-card-desc  { font-size: 12px; color: rgba(255,255,255,.7); font-weight: 600; line-height: 1.4; }
+    .cc-card.primary .cc-card-desc { color: rgba(255,255,255,.85); }
+    .cc-card-arrow { font-size: 18px; color: rgba(255,255,255,.5); flex-shrink: 0; }
+    .cc-sair-btn {
+      margin-top: 24px;
+      background: none;
+      border: 1px solid rgba(255,255,255,.2);
+      color: rgba(255,255,255,.5);
+      padding: 10px 24px;
+      border-radius: 999px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: .2s;
+    }
+    .cc-sair-btn:hover { color: rgba(255,255,255,.8); border-color: rgba(255,255,255,.4); }
+  </style>
+
+  <div class="colab-choice-header">
+    <div class="cc-emoji" id="cc-emoji">👷</div>
+    <div class="cc-name" id="cc-name">—</div>
+    <div class="cc-sub" id="cc-sub">O que deseja fazer?</div>
+  </div>
+
+  <div class="colab-choice-cards">
+    <div class="cc-card primary" onclick="_colabChoiceExecutar()">
+      <div class="cc-card-icon">📋</div>
+      <div class="cc-card-info">
+        <div class="cc-card-title">Executar Tarefas</div>
+        <div class="cc-card-desc">Abrir meu card de produção e registrar as tarefas do turno</div>
+      </div>
+      <div class="cc-card-arrow">→</div>
+    </div>
+
+    <div class="cc-card" onclick="_colabChoiceRanking()">
+      <div class="cc-card-icon">🏆</div>
+      <div class="cc-card-info">
+        <div class="cc-card-title">Ver Ranking</div>
+        <div class="cc-card-desc">Ranking do mês do meu departamento — resultados e premiação</div>
+      </div>
+      <div class="cc-card-arrow">→</div>
+    </div>
+  </div>
+
+  <button class="cc-sair-btn" onclick="_sairDoPortal()">
+    <i class="fas fa-sign-out-alt"></i> Sair
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════════
      TELA — RESULTADOS / PENDÊNCIAS (embutida)
 ══════════════════════════════════════════ -->
 <div id="screen-resultados" class="screen hidden">
