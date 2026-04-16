@@ -4,22 +4,17 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Just Burger 🍔 Dashboard</title>
-  <!-- Firebase SDK v9 compat -->
   <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <!-- Auth Guard central -->
   <script src="js/auth-guard.js?v=20260414"></script>
-  <!-- ══ GUARD IMEDIATO — executa antes de qualquer renderização ══ -->
   <script>
   (function(){
     const PAPEIS_OK  = ['admin','lider'];
     const SAFE_HOSTS = ['localhost','127.0.0.1','gitpod','preview','genspark'];
     const isSafe     = SAFE_HOSTS.some(s => (location.hostname||'').includes(s)) || location.protocol === 'blob:';
-
-    /* Restaura sessão via ?_jbs= passado pelo hub */
     try {
       const params = new URLSearchParams(location.search);
       const token  = params.get('_jbs');
@@ -34,25 +29,20 @@
         history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params.toString() : ''));
       }
     } catch(e) {}
-
-    /* Lê sessão — tenta JbAuth, sessionStorage e localStorage */
     let u = null;
     try {
       if (typeof JbAuth !== 'undefined') { u = JbAuth.read(); }
       if (!u) { u = JSON.parse(sessionStorage.getItem('jb_user') || 'null'); }
-      if (!u) { 
-        /* Tenta localStorage (sessão salva pelo hub, compartilhada entre páginas) */
+      if (!u) {
         const lsRaw   = localStorage.getItem('jb_user');
         const lsStamp = parseInt(localStorage.getItem('jb_ts') || '0', 10);
         if (lsRaw && Date.now() < lsStamp) {
           u = JSON.parse(lsRaw);
-          /* Espelha no sessionStorage para próximas leituras */
           sessionStorage.setItem('jb_user', lsRaw);
           sessionStorage.setItem('jb_ts',   String(lsStamp));
         }
       }
     } catch(e) {}
-
     if (!u && !isSafe) { location.replace('portal.html?_acesso=negado'); return; }
     if (u && !PAPEIS_OK.includes(u.papel)) {
       if (typeof JbAuth !== 'undefined') { JbAuth.logout('portal.html?_acesso=negado'); }
@@ -60,12 +50,8 @@
       return;
     }
     if (u && typeof JbAuth !== 'undefined') { JbAuth.renew(); }
-
-    /* Listener logout outras abas */
     window.addEventListener('storage', e => {
-      if (e.key === 'jb_out' && e.newValue === '1') {
-        sessionStorage.clear(); location.replace('portal.html');
-      }
+      if (e.key === 'jb_out' && e.newValue === '1') { sessionStorage.clear(); location.replace('portal.html'); }
     });
   })();
   </script>
@@ -81,6 +67,7 @@
       --purple:#7c3aed; --purple-light:#ede9fe;
       --teal:#0d9488;   --teal-light:#ccfbf1;
       --gold:#f59e0b;   --gold-light:#fef3c7;
+      --cyan:#0891b2;   --cyan-light:#cffafe;
       --font:'Nunito',sans-serif;
       --radius:14px; --radius-sm:8px; --radius-full:999px;
       --shadow:0 2px 12px rgba(0,0,0,.08);
@@ -101,8 +88,7 @@
       display:flex; align-items:center; justify-content:center;
       width:34px; height:34px; border-radius:50%;
       background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2);
-      color:#fff; text-decoration:none; font-size:15px; flex-shrink:0;
-      transition:.2s;
+      color:#fff; text-decoration:none; font-size:15px; flex-shrink:0; transition:.2s;
     }
     .top-bar a.back-btn:hover { background:rgba(255,255,255,.22); }
     .top-bar-brand { flex:1; }
@@ -119,14 +105,13 @@
     /* ── FILTRO ── */
     .filter-panel {
       background:#fff; border-bottom:1px solid var(--gray-200);
-      padding:16px 20px; display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end;
+      padding:14px 20px; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end;
     }
     .filter-group { display:flex; flex-direction:column; gap:5px; }
     .filter-label { font-size:11px; font-weight:800; color:var(--gray-600); text-transform:uppercase; letter-spacing:.5px; }
     .filter-input {
       height:38px; padding:0 12px; border:2px solid var(--gray-200); border-radius:var(--radius-sm);
-      font-family:var(--font); font-size:13px; color:var(--black); background:#fff; outline:none;
-      transition:.2s;
+      font-family:var(--font); font-size:13px; color:var(--black); background:#fff; outline:none; transition:.2s;
     }
     .filter-input:focus { border-color:var(--yellow); }
     .btn-buscar {
@@ -137,17 +122,20 @@
     }
     .btn-buscar:hover { background:#cc9500; }
     .btn-buscar:disabled { opacity:.5; cursor:not-allowed; }
-    .tgl-grp { display:flex; gap:4px; }
+    .tgl-grp { display:flex; gap:4px; flex-wrap:wrap; }
     .tgl {
-      height:38px; padding:0 14px; border:2px solid var(--gray-200); border-radius:var(--radius-sm);
+      height:38px; padding:0 12px; border:2px solid var(--gray-200); border-radius:var(--radius-sm);
       font-family:var(--font); font-size:12px; font-weight:700; cursor:pointer; background:#fff;
-      color:var(--gray-600); transition:.2s;
+      color:var(--gray-600); transition:.2s; white-space:nowrap;
     }
-    .tgl.active { background:var(--black); border-color:var(--black); color:#fff; }
-    .tgl.active.dia   { background:var(--yellow); border-color:var(--yellow); }
-    .tgl.active.noite { background:#1e293b; border-color:#1e293b; }
+    .tgl.active          { background:var(--black); border-color:var(--black); color:#fff; }
+    .tgl.active.dia      { background:var(--yellow); border-color:var(--yellow); color:#fff; }
+    .tgl.active.noite    { background:#1e293b; border-color:#1e293b; color:#fff; }
+    .tgl.active.prod     { background:var(--purple); border-color:var(--purple); color:#fff; }
+    .tgl.active.oper     { background:var(--teal); border-color:var(--teal); color:#fff; }
+    .tgl.active.aten     { background:var(--blue); border-color:var(--blue); color:#fff; }
 
-    /* ── LOADING STATE ── */
+    /* ── LOADING ── */
     #state-box {
       display:none; flex-direction:column; align-items:center; justify-content:center;
       gap:12px; padding:60px 20px; text-align:center;
@@ -166,25 +154,38 @@
     .periodo-bar span { opacity:.7; }
     .periodo-bar strong { opacity:1; }
 
-    /* ── KPI CARDS ── */
-    .kpi-grid {
-      display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
-      gap:14px; padding:20px;
+    /* ── KPI GRID — 2 LINHAS ── */
+    .kpi-section { padding:20px 20px 0; }
+    .kpi-row {
+      display:grid;
+      gap:12px;
+      margin-bottom:12px;
+    }
+    .kpi-row-1 { grid-template-columns:repeat(5,1fr); }
+    .kpi-row-2 { grid-template-columns:repeat(5,1fr); }
+    @media(max-width:1100px){
+      .kpi-row-1,.kpi-row-2 { grid-template-columns:repeat(3,1fr); }
+    }
+    @media(max-width:700px){
+      .kpi-row-1,.kpi-row-2 { grid-template-columns:repeat(2,1fr); }
     }
     .kpi-card {
-      background:#fff; border-radius:var(--radius); padding:18px 16px;
+      background:#fff; border-radius:var(--radius); padding:16px 14px;
       box-shadow:var(--shadow); border-left:4px solid var(--gray-200);
       display:flex; flex-direction:column; gap:4px;
     }
-    .kpi-card.blue   { border-color:var(--blue); }
-    .kpi-card.green  { border-color:var(--green); }
-    .kpi-card.red    { border-color:var(--red); }
-    .kpi-card.orange { border-color:var(--orange); }
-    .kpi-card.purple { border-color:var(--purple); }
-    .kpi-card.gold   { border-color:var(--gold); }
-    .kpi-card.teal   { border-color:var(--teal); }
-    .kpi-icon { font-size:22px; }
-    .kpi-val  { font-size:28px; font-weight:900; line-height:1; }
+    .kpi-card.blue    { border-color:var(--blue); }
+    .kpi-card.green   { border-color:var(--green); }
+    .kpi-card.red     { border-color:var(--red); }
+    .kpi-card.orange  { border-color:var(--orange); }
+    .kpi-card.purple  { border-color:var(--purple); }
+    .kpi-card.gold    { border-color:var(--gold); }
+    .kpi-card.teal    { border-color:var(--teal); }
+    .kpi-card.crimson { border-color:#9f1239; }
+    .kpi-card.cyan    { border-color:var(--cyan); }
+    .kpi-card.pink    { border-color:#db2777; }
+    .kpi-icon { font-size:20px; }
+    .kpi-val  { font-size:26px; font-weight:900; line-height:1; }
     .kpi-lbl  { font-size:11px; font-weight:700; color:var(--gray-600); }
     .kpi-sub  { font-size:10px; color:var(--gray-400); margin-top:2px; }
 
@@ -200,6 +201,7 @@
       border-radius:var(--radius-full); background:var(--gray-100); color:var(--gray-600);
     }
     .section-hdr .line { flex:1; height:1px; background:var(--gray-200); }
+    .section-top-spacer { padding-top:20px; }
 
     /* ── CHART CONTAINER ── */
     .chart-card {
@@ -208,7 +210,7 @@
     }
     .chart-card h3 { font-size:13px; font-weight:800; color:var(--gray-600); margin-bottom:14px; text-transform:uppercase; letter-spacing:.4px; }
     .chart-wrap { position:relative; height:320px; }
-    .chart-wrap.tall { height:420px; }
+    .chart-wrap.tall  { height:420px; }
     .chart-wrap.short { height:220px; }
     .charts-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
     @media(max-width:700px) { .charts-row { grid-template-columns:1fr; } }
@@ -217,35 +219,45 @@
     .ranking-list { display:flex; flex-direction:column; gap:10px; }
     .ranking-item {
       display:flex; align-items:center; gap:12px;
-      background:#fff; border-radius:var(--radius-sm); padding:12px 16px;
+      background:#fff; border-radius:var(--radius-sm); padding:14px 16px;
       box-shadow:var(--shadow);
     }
     .rank-pos {
-      width:28px; height:28px; border-radius:50%;
+      width:32px; height:32px; border-radius:50%;
       display:flex; align-items:center; justify-content:center;
-      font-size:13px; font-weight:900; flex-shrink:0;
+      font-size:14px; font-weight:900; flex-shrink:0;
     }
     .rank-pos.gold   { background:#fef3c7; color:#92400e; }
     .rank-pos.silver { background:#f1f5f9; color:#475569; }
     .rank-pos.bronze { background:#fef9c3; color:#78350f; }
     .rank-pos.other  { background:var(--gray-100); color:var(--gray-600); }
-    .rank-emoji { font-size:22px; flex-shrink:0; }
+    .rank-emoji { font-size:24px; flex-shrink:0; }
     .rank-info  { flex:1; min-width:0; }
-    .rank-name  { font-size:13px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rank-name  { font-size:14px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .rank-sub   { font-size:11px; color:var(--gray-400); }
     .rank-score { text-align:right; flex-shrink:0; }
-    .rank-score .score-val { font-size:20px; font-weight:900; color:var(--black); }
+    .rank-score .score-val { font-size:22px; font-weight:900; color:var(--black); }
     .rank-score .score-lbl { font-size:10px; color:var(--gray-400); font-weight:700; }
-    .rank-bar-wrap { width:100%; height:5px; background:var(--gray-100); border-radius:3px; margin-top:6px; }
-    .rank-bar      { height:5px; border-radius:3px; background:var(--green); transition:.6s; }
+    .rank-bar-wrap { width:100%; height:6px; background:var(--gray-100); border-radius:3px; margin-top:6px; }
+    .rank-bar      { height:6px; border-radius:3px; background:var(--green); transition:.6s; }
+
+    /* Ranking collapse */
+    .ranking-hidden { display:none; }
+    .btn-expand-ranking {
+      display:flex; align-items:center; justify-content:center; gap:8px;
+      width:100%; margin-top:12px; padding:12px;
+      background:var(--gray-50); border:2px dashed var(--gray-200); border-radius:var(--radius-sm);
+      font-family:var(--font); font-size:13px; font-weight:800; color:var(--gray-600);
+      cursor:pointer; transition:.2s;
+    }
+    .btn-expand-ranking:hover { background:var(--gray-100); border-color:var(--gray-400); }
 
     /* ── TROFÉU / PREMIAÇÃO ── */
-    .award-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; }
+    .award-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
     .award-card {
       background:#fff; border-radius:var(--radius); padding:20px;
       box-shadow:var(--shadow); text-align:center;
-      border-top:4px solid var(--gray-200);
-      transition:.2s;
+      border-top:4px solid var(--gray-200); transition:.2s;
     }
     .award-card:hover { box-shadow:var(--shadow-lg); transform:translateY(-2px); }
     .award-card.gold   { border-color:var(--gold); }
@@ -254,6 +266,7 @@
     .award-card.green  { border-color:var(--green); }
     .award-card.blue   { border-color:var(--blue); }
     .award-card.purple { border-color:var(--purple); }
+    .award-card.cyan   { border-color:var(--cyan); }
     .award-trophy { font-size:40px; margin-bottom:8px; }
     .award-title  { font-size:12px; font-weight:900; color:var(--gray-600); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
     .award-winner { font-size:16px; font-weight:900; color:var(--black); margin-bottom:4px; }
@@ -296,10 +309,7 @@
     .consist-pct.baixo     { color:var(--red); }
 
     /* ── EMPTY ── */
-    .empty-msg {
-      text-align:center; padding:30px; font-size:13px;
-      color:var(--gray-400); font-weight:700;
-    }
+    .empty-msg { text-align:center; padding:30px; font-size:13px; color:var(--gray-400); font-weight:700; }
 
     /* ── TOAST ── */
     #toast {
@@ -342,9 +352,6 @@
     .pw-back { font-size:12px; color:var(--gray-400); text-decoration:none; font-weight:700; }
     .pw-back:hover { color:var(--black); }
 
-    /* ── FALTA KPI ── */
-    .kpi-card.crimson { border-color:#9f1239; }
-
     /* ── FILTROS MOTIVO ── */
     .motivo-filtros {
       display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; align-items:center;
@@ -356,13 +363,9 @@
       cursor:pointer; color:var(--gray-600); transition:.15s;
     }
     .btn-mf.active { background:var(--black); border-color:var(--black); color:#fff; }
-    .btn-mf.ft  { border-color:#dc2626; }
     .btn-mf.ft.active  { background:#dc2626; border-color:#dc2626; }
-    .btn-mf.eq  { border-color:#ea580c; }
     .btn-mf.eq.active  { background:#ea580c; border-color:#ea580c; }
-    .btn-mf.ins { border-color:#d97706; }
     .btn-mf.ins.active { background:#d97706; border-color:#d97706; }
-    .btn-mf.out { border-color:#7c3aed; }
     .btn-mf.out.active { background:#7c3aed; border-color:#7c3aed; }
 
     /* ── BOTÃO EXPORTAR PDF ── */
@@ -370,8 +373,7 @@
       display:inline-flex; align-items:center; gap:8px;
       padding:10px 22px; background:#dc2626; color:#fff;
       border:none; border-radius:var(--radius-sm); font-family:var(--font);
-      font-size:13px; font-weight:800; cursor:pointer; transition:.2s;
-      text-decoration:none;
+      font-size:13px; font-weight:800; cursor:pointer; transition:.2s; text-decoration:none;
     }
     .btn-pdf:hover { background:#b91c1c; }
     .btn-pdf:disabled { opacity:.5; cursor:not-allowed; }
@@ -390,17 +392,19 @@
       .top-bar, .filter-panel, .periodo-bar, #state-box, .pdf-bar,
       #pw-overlay, #toast, .no-print { display:none !important; }
       .section { padding:0 0 16px !important; }
-      .kpi-grid { grid-template-columns: repeat(4,1fr) !important; gap:8px !important; padding:8px 0 !important; }
-      .kpi-card  { padding:10px 12px !important; }
-      .kpi-val   { font-size:20px !important; }
-      .chart-card { box-shadow:none !important; border:1px solid #e2e6f0 !important; break-inside:avoid; page-break-inside:avoid; }
+      .kpi-row-1,.kpi-row-2 { grid-template-columns:repeat(5,1fr) !important; gap:8px !important; }
+      .kpi-card { padding:10px 12px !important; }
+      .kpi-val  { font-size:20px !important; }
+      .chart-card { box-shadow:none !important; border:1px solid #e2e6f0 !important; break-inside:avoid; }
       .chart-wrap { height:200px !important; }
       .chart-wrap.tall { height:260px !important; }
       .chart-wrap.short { height:160px !important; }
       .charts-row { grid-template-columns:1fr 1fr !important; }
-      .award-grid { grid-template-columns:repeat(3,1fr) !important; }
+      .award-grid { grid-template-columns:repeat(4,1fr) !important; }
       .consist-grid { grid-template-columns:repeat(3,1fr) !important; }
       .ranking-item { padding:8px 10px !important; }
+      .ranking-hidden { display:flex !important; }
+      .btn-expand-ranking { display:none !important; }
       .motivo-filtros { display:none !important; }
       h2 { font-size:13px !important; }
       h3 { font-size:11px !important; }
@@ -428,7 +432,6 @@
   </div>
 </div>
 
-<!-- TOAST -->
 <div id="toast"></div>
 
 <!-- TOP BAR -->
@@ -436,7 +439,7 @@
   <a href="index.html" class="back-btn" title="Voltar"><i class="fas fa-arrow-left"></i></a>
   <div class="top-bar-brand">
     <div class="logo">🍔 Just Burger</div>
-    <div class="sub">Dashboard de Produtividade</div>
+    <div class="sub" id="dash-subtitle">Dashboard de Produtividade</div>
   </div>
   <div class="top-bar-links">
     <a href="resultados_v2.html"><i class="fas fa-chart-bar"></i> Resultados</a>
@@ -446,7 +449,8 @@
 </div>
 
 <!-- FILTROS -->
-<div class="filter-panel">
+<div class="filter-panel no-print">
+  <!-- Datas -->
   <div class="filter-group">
     <span class="filter-label">📅 Data Início</span>
     <div style="position:relative;cursor:pointer"
@@ -461,14 +465,29 @@
       <input type="date" id="f-ate" class="filter-input" style="cursor:pointer"/>
     </div>
   </div>
+
+  <!-- Turno -->
   <div class="filter-group">
     <span class="filter-label">⏰ Turno</span>
     <div class="tgl-grp">
-      <button class="tgl active" id="tgl-todos" onclick="setTurno('todos')">Todos</button>
-      <button class="tgl dia"    id="tgl-dia"   onclick="setTurno('dia')">☀️ Dia</button>
-      <button class="tgl noite"  id="tgl-noite" onclick="setTurno('noite')">🌙 Noite</button>
+      <button class="tgl active" id="tgl-todos"  onclick="setTurno('todos')">Todos</button>
+      <button class="tgl dia"    id="tgl-dia"    onclick="setTurno('dia')">☀️ Dia</button>
+      <button class="tgl noite"  id="tgl-noite"  onclick="setTurno('noite')">🌙 Noite</button>
     </div>
   </div>
+
+  <!-- Setor -->
+  <div class="filter-group">
+    <span class="filter-label">🏭 Setor</span>
+    <div class="tgl-grp">
+      <button class="tgl active"   id="tgl-setor-todos" onclick="setSetor('todos')">Todos</button>
+      <button class="tgl prod"     id="tgl-setor-prod"  onclick="setSetor('PRODUCAO')">🏭 Produção</button>
+      <button class="tgl oper"     id="tgl-setor-oper"  onclick="setSetor('OPERACAO')">⚙️ Operação</button>
+      <button class="tgl aten"     id="tgl-setor-aten"  onclick="setSetor('ATENDIMENTO')">🎯 Atendimento</button>
+    </div>
+  </div>
+
+  <!-- Botão -->
   <div class="filter-group">
     <span class="filter-label" style="opacity:0">.</span>
     <button class="btn-buscar" id="btn-buscar" onclick="buscar()">
@@ -489,7 +508,8 @@
 <div class="periodo-bar" id="periodo-bar">
   <div>📅 Período: <strong id="lbl-periodo">—</strong></div>
   <div>⏰ Turno: <strong id="lbl-turno">—</strong></div>
-  <div>📋 Total de sessões: <strong id="lbl-sessoes">—</strong></div>
+  <div>🏭 Setor: <strong id="lbl-setor">—</strong></div>
+  <div>📋 Sessões: <strong id="lbl-sessoes">—</strong></div>
 </div>
 
 <!-- STATE BOX -->
@@ -501,23 +521,31 @@
 <!-- CONTEÚDO PRINCIPAL -->
 <div id="dash-content" style="display:none">
 
-  <!-- 1. KPIs — Cards de números e porcentagem -->
-  <div class="kpi-grid" id="kpi-grid"></div>
+  <!-- 1. KPIs — 2 linhas de 5 -->
+  <div class="kpi-section section-top-spacer">
+    <div class="kpi-row kpi-row-1" id="kpi-row-1"></div>
+    <div class="kpi-row kpi-row-2" id="kpi-row-2"></div>
+  </div>
 
-  <!-- 2. RANKING & PREMIAÇÃO — logo após os KPIs -->
-  <div class="section">
+  <!-- 2. RANKING & PREMIAÇÃO -->
+  <div class="section section-top-spacer">
     <div class="section-hdr">
       <h2>🏆 Ranking &amp; Premiação</h2>
       <div class="line"></div>
+      <div class="badge" id="badge-ranking">—</div>
     </div>
 
     <!-- Troféus automáticos -->
     <div class="award-grid" id="award-grid" style="margin-bottom:20px"></div>
 
-    <!-- Ranking geral -->
+    <!-- Ranking geral colapsável -->
     <div class="chart-card">
       <h3>🥇 Ranking Geral de Produtividade</h3>
       <div class="ranking-list" id="ranking-list"></div>
+      <button class="btn-expand-ranking no-print" id="btn-expand-ranking" onclick="toggleRanking()" style="display:none">
+        <i class="fas fa-chevron-down" id="icon-expand"></i>
+        <span id="lbl-expand">Ver todos</span>
+      </button>
     </div>
   </div>
 
@@ -552,7 +580,7 @@
     </div>
   </div>
 
-  <!-- 4. TAREFAS NÃO CONCLUÍDAS — com campo de pesquisa por colaborador -->
+  <!-- 4. TAREFAS NÃO CONCLUÍDAS -->
   <div class="section">
     <div class="section-hdr">
       <h2>⚠️ Tarefas Não Concluídas — Análise de Motivos</h2>
@@ -576,15 +604,13 @@
 
     <div class="chart-card">
       <h3>📋 Detalhamento de tarefas não concluídas por motivo</h3>
-      <!-- Filtros por motivo + pesquisa por colaborador -->
-      <div class="motivo-filtros no-print" id="motivo-filtros" style="flex-wrap:wrap;gap:8px;align-items:center">
+      <div class="motivo-filtros no-print" id="motivo-filtros">
         <span>Filtrar:</span>
         <button class="btn-mf active" id="mf-todos" onclick="filtrarMotivo('todos')">Todos</button>
         <button class="btn-mf ft"    id="mf-ft"    onclick="filtrarMotivo('ft')">⏱️ Falta de Tempo</button>
         <button class="btn-mf eq"    id="mf-eq"    onclick="filtrarMotivo('eq')">🔧 Equipamento</button>
         <button class="btn-mf ins"   id="mf-ins"   onclick="filtrarMotivo('ins')">🥩 Insumo</button>
         <button class="btn-mf out"   id="mf-out"   onclick="filtrarMotivo('out')">📝 Outro</button>
-        <!-- Campo de pesquisa por colaborador -->
         <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0">
           <i class="fas fa-search" style="color:#9ca3af;font-size:13px"></i>
           <input type="text" id="search-colab-motivo"
@@ -601,7 +627,7 @@
     </div>
   </div>
 
-  <!-- 5. CONSISTÊNCIA — DIAS TRABALHADOS -->
+  <!-- 5. CONSISTÊNCIA -->
   <div class="section">
     <div class="section-hdr">
       <h2>📅 Consistência — Dias Trabalhados</h2>
@@ -613,28 +639,40 @@
     </div>
   </div>
 
-  <!-- EVOLUÇÃO DIÁRIA — removida conforme solicitação -->
-
 </div><!-- /dash-content -->
 
 <script>
 /* ══════════════════════════════════════════════════════════
-   SENHA
+   MAPA DEPARTAMENTO POR COLABORADOR (fallback estático)
 ══════════════════════════════════════════════════════════ */
-const SENHA_LIDER = 'lider123*';
+const COLLAB_DEPT_DASH = {
+  'ANTONIEL':'ATENDIMENTO','ANTONIEL INICIO':'ATENDIMENTO','ANTONIEL FINALIZAÇÃO':'ATENDIMENTO',
+  'MARCUS':'ATENDIMENTO','MARCUS INICIO':'ATENDIMENTO','MARCUS FINALIZAÇÃO':'ATENDIMENTO',
+  'ALINE':'ATENDIMENTO','ALINE INICIO':'ATENDIMENTO','ALINE FINALIZAÇÃO':'ATENDIMENTO',
+  'DESPACHO':'ATENDIMENTO','ATENDIMENTO / DESPACHO':'ATENDIMENTO','ABC':'ATENDIMENTO',
+  'ALAN RICARDO':'OPERACAO','SAMUEL':'OPERACAO','LOHAINE':'OPERACAO',
+  'GABRIEL LEITE':'OPERACAO','FRITADEIRA':'OPERACAO',
+  'NOITE - CHAPEIRO':'OPERACAO','NOITE - MONTADOR':'OPERACAO','NOITE - FRITADEIRA':'OPERACAO',
+  'GABRIEL KHALYL':'PRODUCAO','JOÃO':'PRODUCAO','PABLO':'PRODUCAO',
+  'MATEUS':'PRODUCAO','MATEUS PRODUÇÃO':'PRODUCAO','JOSÉ BRUNO':'PRODUCAO',
+  'FABIO':'PRODUCAO','SERGIO CAMARAS':'PRODUCAO','WESLEY MOTORISTA':'PRODUCAO','FAXINA':'PRODUCAO',
+  'HENRIQUE':'PRODUCAO','PEDRO':'PRODUCAO','DAVI':'PRODUCAO','DINA':'PRODUCAO','SANDRO':'PRODUCAO',
+};
 
-/* Listener de logout de outras abas */
-if (typeof JbAuth !== 'undefined') {
-  window.addEventListener('storage', (e) => {
-    if (e.key === 'jb_out' && e.newValue === '1') {
-      sessionStorage.clear();
-      location.replace('portal.html');
-    }
-  });
+function getDeptColab(nome) {
+  if (!nome) return 'OUTROS';
+  return COLLAB_DEPT_DASH[nome.toUpperCase().trim()] || 'OUTROS';
 }
 
-/* Bypass automático: líder/admin autenticado via portal não precisa digitar senha
-   (guard já rodou no <head> acima) */
+/* ══════════════════════════════════════════════════════════
+   SENHA / BYPASS
+══════════════════════════════════════════════════════════ */
+const SENHA_LIDER = 'lider123*';
+if (typeof JbAuth !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'jb_out' && e.newValue === '1') { sessionStorage.clear(); location.replace('portal.html'); }
+  });
+}
 (function _pwBypass(){
   try {
     const raw = sessionStorage.getItem('jb_user');
@@ -647,40 +685,35 @@ if (typeof JbAuth !== 'undefined') {
     }
   } catch(e) {}
 })();
-
-function pwToggle(){
-  const i = document.getElementById('pw-input');
-  i.type = i.type === 'password' ? 'text' : 'password';
-}
+function pwToggle(){ const i=document.getElementById('pw-input'); i.type=i.type==='password'?'text':'password'; }
 function pwEnter(){
-  const v = document.getElementById('pw-input').value;
-  const err = document.getElementById('pw-err');
-  if(v === SENHA_LIDER){
-    document.getElementById('pw-overlay').style.display = 'none';
-  } else {
-    err.style.display = 'block';
-    setTimeout(()=>{ err.style.display='none'; }, 2000);
-  }
+  const v=document.getElementById('pw-input').value;
+  const err=document.getElementById('pw-err');
+  if(v===SENHA_LIDER){ document.getElementById('pw-overlay').style.display='none'; }
+  else { err.style.display='block'; setTimeout(()=>{ err.style.display='none'; },2000); }
 }
-/* Enter já tratado pelo onsubmit do form */
 
 /* ══════════════════════════════════════════════════════════
    EMOJIS
 ══════════════════════════════════════════════════════════ */
 const EMOJI = {
-  'ALAN RICARDO':'👨‍🍳','ATENDIMENTO / DESPACHO':'🛎️','DAVI':'👨‍🍳','DINA':'👩‍💼',
-  'FABIO':'👨‍🔧','FERNANDO':'🧑‍🍳','GABRIEL KHALYL':'👨‍🍳','GABRIEL LEITE':'👨‍🍳',
-  'HENRIQUE':'👨‍🍳','JOÃO':'🔪','JOSÉ BRUNO':'👨‍🍳','JHON':'👨‍🍳',
-  'LOHAINE':'👩‍🍳','LUCAS':'👨‍🍳','MATEUS':'🥫','PABLO':'🍗',
-  'PEDRO':'👨‍🍳','RHUAN':'👨‍🍳','RODRIGO':'👨‍🍳','SAMUEL':'🧊','SANDRO':'👨‍💼'
+  'ALAN RICARDO':'🔥','ATENDIMENTO / DESPACHO':'🛎️','DAVI':'🍅','DINA':'👩‍💼',
+  'FABIO':'🧀','FERNANDO':'🧑‍🍳','GABRIEL KHALYL':'🥩','GABRIEL LEITE':'🧊',
+  'HENRIQUE':'🥬','JOÃO':'🔪','JOSÉ BRUNO':'🥓','JHON':'🌶️',
+  'LOHAINE':'🍟','LUCAS':'🍳','MATEUS':'🥫','PABLO':'🍗',
+  'PEDRO':'🥤','RODRIGO':'🧀','SAMUEL':'🧊','SANDRO':'👨‍💼',
+  'WESLEY MOTORISTA':'🚚','FAXINA':'🧹','SERGIO CAMARAS':'📸',
 };
-function emoji(n){ return EMOJI[n?.toUpperCase?.()] || '👤'; }
+function emoji(n){ return EMOJI[(n||'').toUpperCase().trim()] || '👤'; }
 
 /* ══════════════════════════════════════════════════════════
    ESTADO
 ══════════════════════════════════════════════════════════ */
 let _turno = 'todos';
+let _setor = 'todos';
 let _charts = {};
+let _rankingExpanded = false;
+let _allMetricas = [];
 
 function setTurno(t){
   _turno = t;
@@ -688,13 +721,20 @@ function setTurno(t){
     document.getElementById('tgl-'+x).classList.toggle('active', x===t);
   });
 }
+function setSetor(s){
+  _setor = s;
+  ['todos','prod','oper','aten'].forEach(x => {
+    const map = {'todos':'todos','prod':'PRODUCAO','oper':'OPERACAO','aten':'ATENDIMENTO'};
+    document.getElementById('tgl-setor-'+x).classList.toggle('active', map[x]===s);
+  });
+}
 
-/* ── Datas padrão: últimos 7 dias ── */
+/* ── Datas padrão: hoje ── */
 (function initDates(){
   const hoje = new Date();
-  const ini  = new Date(hoje); ini.setDate(ini.getDate()-6);
-  document.getElementById('f-ate').value = hoje.toISOString().slice(0,10);
-  document.getElementById('f-de').value  = ini.toISOString().slice(0,10);
+  const iso  = hoje.toISOString().slice(0,10);
+  document.getElementById('f-ate').value = iso;
+  document.getElementById('f-de').value  = iso;
 })();
 
 /* ══════════════════════════════════════════════════════════
@@ -723,41 +763,13 @@ function toast(msg){
   window._fbDash = firebase.database();
 })();
 
-/* ══════════════════════════════════════════════════════════
-   FETCH VIA FIREBASE (substitui fetch paginado)
-══════════════════════════════════════════════════════════ */
 async function fetchAll(table){
   try{
     const snap = await window._fbDash.ref(table).once('value');
     const val  = snap.val();
     if(!val) return [];
     return Object.entries(val).map(([id,obj])=>({id,...obj}));
-  }catch(e){
-    console.warn(`fetchAll(${table}):`, e.message);
-    return [];
-  }
-}
-// Alias legacy (não usado, mas mantido por segurança)
-async function _fetchAllLegacy(table){
-  let rows=[], pg=1;
-  while(true){
-    try {
-      const r = await fetch(`tables/${table}?limit=500&page=${pg}`);
-      if(!r.ok){
-        if(r.status===404||r.status===422) break;
-        throw new Error(`HTTP ${r.status} ao buscar ${table}`);
-      }
-      const j = await r.json();
-      const d = Array.isArray(j.data) ? j.data : [];
-      rows = rows.concat(d);
-      if(d.length < 500) break;
-      pg++;
-    } catch(e){
-      console.warn(`fetchAll(${table}) p${pg}:`, e.message);
-      break;
-    }
-  }
-  return rows;
+  }catch(e){ console.warn(`fetchAll(${table}):`,e.message); return []; }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -766,87 +778,111 @@ async function _fetchAllLegacy(table){
 async function buscar(){
   const de  = document.getElementById('f-de').value;
   const ate = document.getElementById('f-ate').value;
-  if(!de || !ate){ toast('⚠️ Selecione as duas datas!'); return; }
-  if(de > ate){ toast('⚠️ Data início maior que fim!'); return; }
+  if(!de||!ate){ toast('⚠️ Selecione as duas datas!'); return; }
+  if(de>ate){ toast('⚠️ Data início maior que fim!'); return; }
 
   const btn = document.getElementById('btn-buscar');
-  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Carregando...';
-
+  btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Carregando...';
   setState('loading');
 
   try {
-    /* Busca paralela incluindo faltas e inconsistências do líder */
-    const [sessoes, pendencias, faltas, inconsistencias] = await Promise.all([
+    const [sessoes, pendencias, faltas, inconsistencias, tarefas] = await Promise.all([
       fetchAll('sessoes'),
       fetchAll('pendencias'),
       fetchAll('faltas'),
-      fetchAll('inconsistencias').catch(() => [])  // tolerante: se coleção não existir retorna []
+      fetchAll('inconsistencias').catch(()=>[]),
+      fetchAll('tarefas').catch(()=>[])
     ]);
 
-    /* Filtra pelo período */
-    const filtraSess = sessoes.filter(s => {
-      const ok = s.data >= de && s.data <= ate;
-      if(!ok) return false;
-      if(_turno === 'todos') return true;
-      return s.turno === _turno;
+    /* Monta mapa departamento por colaborador a partir das tarefas reais */
+    const _deptMap = {};
+    tarefas.forEach(t => {
+      if (t.colaborador && t.departamento) {
+        const k = t.colaborador.toUpperCase().trim();
+        if (!_deptMap[k]) _deptMap[k] = {};
+        const d = t.departamento.toUpperCase().trim();
+        _deptMap[k][d] = (_deptMap[k][d]||0)+1;
+      }
     });
-    const filtraPend = pendencias.filter(p => {
-      const ok = p.data >= de && p.data <= ate;
-      if(!ok) return false;
-      if(_turno === 'todos') return true;
-      return p.turno === _turno;
-    });
-    const filtraFaltas = faltas.filter(f => {
-      const ok = f.data >= de && f.data <= ate;
-      if(!ok) return false;
-      if(_turno === 'todos') return true;
-      return f.turno === _turno;
-    });
-    const filtraInconsis = (inconsistencias||[]).filter(i => {
-      const ok = i.data >= de && i.data <= ate;
-      if(!ok) return false;
-      if(_turno === 'todos') return true;
-      return i.turno === _turno;
+    /* Para cada colaborador, pega o dept mais frequente */
+    window._deptMapFinal = {};
+    Object.entries(_deptMap).forEach(([k,cnts]) => {
+      window._deptMapFinal[k] = Object.entries(cnts).sort((a,b)=>b[1]-a[1])[0][0];
     });
 
-    if(filtraSess.length === 0 && filtraFaltas.length === 0){
+    /* Função local para pegar dept do colaborador */
+    function getColabDept(nome){
+      if (!nome) return 'OUTROS';
+      const k = nome.toUpperCase().trim();
+      return window._deptMapFinal[k] || COLLAB_DEPT_DASH[k] || 'OUTROS';
+    }
+
+    /* Filtra por período + turno */
+    const filtraSess = sessoes.filter(s => {
+      if(s.data<de||s.data>ate) return false;
+      if(_turno!=='todos' && s.turno!==_turno) return false;
+      return true;
+    });
+    const filtraPend = pendencias.filter(p => {
+      if(p.data<de||p.data>ate) return false;
+      if(_turno!=='todos' && p.turno!==_turno) return false;
+      return true;
+    });
+    const filtraFaltas = faltas.filter(f => {
+      if(f.data<de||f.data>ate) return false;
+      if(_turno!=='todos' && f.turno!==_turno) return false;
+      return true;
+    });
+    const filtraInconsis = (inconsistencias||[]).filter(i => {
+      if(i.data<de||i.data>ate) return false;
+      if(_turno!=='todos' && i.turno!==_turno) return false;
+      return true;
+    });
+
+    /* Filtra por setor */
+    const setorSess  = _setor==='todos' ? filtraSess  : filtraSess.filter(s  => getColabDept(s.colaborador_card||s.colaborador_nome)===_setor);
+    const setorPend  = _setor==='todos' ? filtraPend  : filtraPend.filter(p  => getColabDept(p.colaborador)===_setor);
+    const setorFaltas= _setor==='todos' ? filtraFaltas: filtraFaltas.filter(f=> getColabDept(f.colaborador)===_setor);
+    const setorIncon = _setor==='todos' ? filtraInconsis : filtraInconsis.filter(i=> getColabDept(i.colaborador)===_setor);
+
+    if(setorSess.length===0 && setorFaltas.length===0){
       setState('empty');
-      toast('⚠️ Nenhum dado para o período. Registre turnos primeiro.');
+      toast('⚠️ Nenhum dado para esse período/setor/turno.');
       return;
     }
 
-    renderDash(filtraSess, filtraPend, filtraFaltas, de, ate, filtraInconsis);
+    renderDash(setorSess, setorPend, setorFaltas, de, ate, setorIncon, getColabDept);
 
   } catch(e){
-    console.error('Dashboard buscar error:', e);
-    toast('❌ Erro ao carregar: ' + (e.message||'Tente novamente'));
+    console.error('Dashboard buscar error:',e);
+    toast('❌ Erro ao carregar: '+(e.message||'Tente novamente'));
     setState('empty');
   } finally {
-    btn.disabled = false; btn.innerHTML = '<i class="fas fa-search"></i> Gerar Relatório';
+    btn.disabled=false; btn.innerHTML='<i class="fas fa-search"></i> Gerar Relatório';
   }
 }
 
 function setState(s){
-  const sb = document.getElementById('state-box');
-  const dc = document.getElementById('dash-content');
-  if(s === 'loading'){
+  const sb=document.getElementById('state-box');
+  const dc=document.getElementById('dash-content');
+  if(s==='loading'){
     sb.classList.add('show');
-    sb.querySelector('.state-icon').textContent = '⏳';
-    sb.querySelector('p').innerHTML = '<strong>Carregando dados...</strong><br>Isso pode levar alguns segundos.';
-    dc.style.display = 'none';
-  } else if(s === 'empty'){
+    sb.querySelector('.state-icon').textContent='⏳';
+    sb.querySelector('p').innerHTML='<strong>Carregando dados...</strong><br>Isso pode levar alguns segundos.';
+    dc.style.display='none';
+  } else if(s==='empty'){
     sb.classList.add('show');
-    sb.querySelector('.state-icon').textContent = '🔍';
-    sb.querySelector('p').innerHTML = 'Nenhum dado encontrado.<br>Tente outro período.';
-    dc.style.display = 'none';
-  } else if(s === 'data'){
+    sb.querySelector('.state-icon').textContent='🔍';
+    sb.querySelector('p').innerHTML='Nenhum dado encontrado.<br>Tente outro período.';
+    dc.style.display='none';
+  } else if(s==='data'){
     sb.classList.remove('show');
-    dc.style.display = 'block';
+    dc.style.display='block';
   }
 }
 
 /* ══════════════════════════════════════════════════════════
-   DESTRUIR CHARTS ANTIGOS
+   DESTRUIR CHARTS
 ══════════════════════════════════════════════════════════ */
 function destroyChart(id){
   if(_charts[id]){ _charts[id].destroy(); delete _charts[id]; }
@@ -855,124 +891,114 @@ function destroyChart(id){
 /* ══════════════════════════════════════════════════════════
    RENDER PRINCIPAL
 ══════════════════════════════════════════════════════════ */
-/* ── Variável global para filtro de motivo ── */
 let _allPendencias = [];
 
-function renderDash(sessoes, pendencias, faltas, de, ate, inconsistencias){
-  inconsistencias = inconsistencias || [];
+function renderDash(sessoes, pendencias, faltas, de, ate, inconsistencias, getColabDept){
+  inconsistencias = inconsistencias||[];
 
-  /* ── Período bar ── */
-  const pb = document.getElementById('periodo-bar');
+  /* Subtitle dashboard */
+  const setorLabel = _setor==='todos'?'Todos os Setores':_setor==='PRODUCAO'?'🏭 Produção':_setor==='OPERACAO'?'⚙️ Operação':'🎯 Atendimento';
+  const turnoLabel = _turno==='todos'?'Todos os Turnos':_turno==='dia'?'☀️ Dia':'🌙 Noite';
+  document.getElementById('dash-subtitle').textContent = `${setorLabel} · ${turnoLabel}`;
+
+  /* Período bar */
+  const pb=document.getElementById('periodo-bar');
   pb.classList.add('show');
-  document.getElementById('lbl-periodo').textContent =
-    fmtData(de) + ' → ' + fmtData(ate);
-  document.getElementById('lbl-turno').textContent =
-    _turno === 'todos' ? 'Todos' : (_turno === 'dia' ? '☀️ Dia' : '🌙 Noite');
+  document.getElementById('lbl-periodo').textContent = fmtData(de)+' → '+fmtData(ate);
+  document.getElementById('lbl-turno').textContent   = turnoLabel;
+  document.getElementById('lbl-setor').textContent   = setorLabel;
   document.getElementById('lbl-sessoes').textContent = sessoes.length;
 
-  /* ── Agrega por colaborador ── */
+  /* Agrega por colaborador */
   const colabs = {};
   sessoes.forEach(s => {
-    const nome = s.colaborador_card || s.colaborador_nome || 'Desconhecido';
-    if(!colabs[nome]) colabs[nome] = { sessoes:[], pend:[] };
+    const nome = s.colaborador_card||s.colaborador_nome||'Desconhecido';
+    if(!colabs[nome]) colabs[nome]={ sessoes:[], pend:[] };
     colabs[nome].sessoes.push(s);
   });
   pendencias.forEach(p => {
-    const nome = p.colaborador || 'Desconhecido';
+    const nome = p.colaborador||'Desconhecido';
     if(colabs[nome]) colabs[nome].pend.push(p);
-    // ignora pendências de colaboradores sem sessão no período
   });
 
-  /* ── Mapa de faltas por colaborador ── */
-  const faltaMap = {};
-  faltas.forEach(f=>{
-    const n = f.colaborador;
-    if(!faltaMap[n]) faltaMap[n]={ nj:0, j:0 };
-    if(f.tipo==='nao_justificada') faltaMap[n].nj++;
-    else faltaMap[n].j++;
-  });
+  /* Mapa faltas */
+  const faltaMap={};
+  faltas.forEach(f=>{ const n=f.colaborador; if(!faltaMap[n]) faltaMap[n]={nj:0,j:0}; if(f.tipo==='nao_justificada') faltaMap[n].nj++; else faltaMap[n].j++; });
 
-  /* ── Mapa de inconsistências (penalidade do líder: -20 pts cada) ── */
-  const inconsisMap = {};
-  inconsistencias.forEach(i=>{
-    const n = i.colaborador;
-    if(!inconsisMap[n]) inconsisMap[n] = 0;
-    inconsisMap[n] += (i.pontos || 20);
-  });
+  /* Mapa inconsistências */
+  const inconsisMap={};
+  inconsistencias.forEach(i=>{ const n=i.colaborador; if(!inconsisMap[n]) inconsisMap[n]=0; inconsisMap[n]+=(i.pontos||20); });
 
-  /* ── Métricas por colaborador ── */
-  const metricas = Object.entries(colabs).map(([nome, d]) => {
+  /* Métricas por colaborador */
+  _allMetricas = Object.entries(colabs).map(([nome,d]) => {
     const totalSess    = d.sessoes.length;
-    const totalTarefas = d.sessoes.reduce((a,s)=> a+(s.total_tarefas||0), 0);
-    const concluidas   = d.sessoes.reduce((a,s)=> a+(s.tarefas_concluidas||0), 0);
-    const pctConclusao = totalTarefas ? Math.round(concluidas/totalTarefas*100) : 0;
-    const naoFeitas    = d.pend.filter(p=> p.status==='nao_finalizado').length;
-    const parciais     = d.pend.filter(p=> p.status==='parcial').length;
-    const turnos100    = d.sessoes.filter(s=> s.status_geral==='completo').length;
-    const pctTurnos100 = totalSess ? Math.round(turnos100/totalSess*100) : 0;
-    const fNJ = faltaMap[nome]?.nj || 0;
-    const fJ  = faltaMap[nome]?.j  || 0;
-    /* Penalidade: falta NJ -15pts, falta J -7pts, inconsistência líder -20pts cada */
-    const penFaltas     = Math.min(80, fNJ*15 + fJ*7);
-    const penInconsis   = inconsisMap[nome] || 0;
-    const penalidade    = Math.min(100, penFaltas + penInconsis);
-    const scoreBase     = Math.round(pctConclusao*0.6 + pctTurnos100*0.4);
-    const score         = Math.max(0, scoreBase - penalidade);
-    const qtdInconsis   = inconsistencias.filter(i=>i.colaborador===nome).length;
+    const totalTarefas = d.sessoes.reduce((a,s)=>a+(s.total_tarefas||0),0);
+    const concluidas   = d.sessoes.reduce((a,s)=>a+(s.tarefas_concluidas||0),0);
+    const pctConclusao = totalTarefas?Math.round(concluidas/totalTarefas*100):0;
+    const naoFeitas    = d.pend.filter(p=>p.status==='nao_finalizado').length;
+    const parciais     = d.pend.filter(p=>p.status==='parcial').length;
+    const turnos100    = d.sessoes.filter(s=>s.status_geral==='completo').length;
+    const pctTurnos100 = totalSess?Math.round(turnos100/totalSess*100):0;
+    const fNJ=faltaMap[nome]?.nj||0, fJ=faltaMap[nome]?.j||0;
+    const penFaltas   = Math.min(80, fNJ*15+fJ*7);
+    const penInconsis = inconsisMap[nome]||0;
+    const penalidade  = Math.min(100, penFaltas+penInconsis);
+    const scoreBase   = Math.round(pctConclusao*0.6+pctTurnos100*0.4);
+    const score       = Math.max(0, scoreBase-penalidade);
+    const qtdInconsis = inconsistencias.filter(i=>i.colaborador===nome).length;
+    const dept        = getColabDept ? getColabDept(nome) : getDeptColab(nome);
     return { nome, totalSess, totalTarefas, concluidas, pctConclusao,
              naoFeitas, parciais, turnos100, pctTurnos100, score, scoreBase,
-             penalidade, penFaltas, penInconsis, qtdInconsis, fNJ, fJ, pend:d.pend };
-  }).sort((a,b)=> b.score - a.score);
+             penalidade, penFaltas, penInconsis, qtdInconsis, fNJ, fJ, pend:d.pend, dept };
+  }).sort((a,b)=>b.score-a.score);
 
-  /* ── KPIs globais ── */
-  const totalSess   = sessoes.length;
-  const totalTarefas= sessoes.reduce((a,s)=>a+(s.total_tarefas||0),0);
-  const totalConclui= sessoes.reduce((a,s)=>a+(s.tarefas_concluidas||0),0);
-  const pctGlobal   = totalTarefas ? Math.round(totalConclui/totalTarefas*100) : 0;
+  /* KPIs globais */
+  const totalSess    = sessoes.length;
+  const totalTarefas = sessoes.reduce((a,s)=>a+(s.total_tarefas||0),0);
+  const totalConclui = sessoes.reduce((a,s)=>a+(s.tarefas_concluidas||0),0);
+  const pctGlobal    = totalTarefas?Math.round(totalConclui/totalTarefas*100):0;
   const totalPend    = pendencias.length;
   const totalNaoFeit = pendencias.filter(p=>p.status==='nao_finalizado').length;
   const totalParc    = pendencias.filter(p=>p.status==='parcial').length;
-  const nColabs      = metricas.length;
+  const nColabs      = _allMetricas.length;
   const totalFaltasNJ= faltas.filter(f=>f.tipo==='nao_justificada').length;
   const totalFaltasJ = faltas.filter(f=>f.tipo==='justificada').length;
 
-  _allPendencias = pendencias;
-  _motivoFiltro  = 'todos';
-  ['todos','ft','eq','ins','out'].forEach(x=>{
-    document.getElementById('mf-'+x)?.classList.toggle('active', x==='todos');
-  });
+  /* Média de taxa de conclusão global */
+  const mediaConc = _allMetricas.length ? Math.round(_allMetricas.reduce((a,m)=>a+m.pctConclusao,0)/_allMetricas.length) : 0;
 
-  document.getElementById('badge-colab').textContent = nColabs + ' colaboradores';
+  _allPendencias=pendencias; _motivoFiltro='todos';
+  ['todos','ft','eq','ins','out'].forEach(x=>{ document.getElementById('mf-'+x)?.classList.toggle('active',x==='todos'); });
+  document.getElementById('badge-colab').textContent = nColabs+' colaboradores';
+  document.getElementById('badge-ranking').textContent = nColabs+' no ranking';
 
-  renderKPIs({ totalSess, totalTarefas, totalConclui, pctGlobal, totalPend,
-               totalNaoFeit, totalParc, nColabs, totalFaltasNJ, totalFaltasJ });
-  renderChartConclusao(metricas);
-  renderChartTurnos(metricas);
-  renderChartStatusPizza(totalConclui, totalParc, totalNaoFeit);
-  renderRanking(metricas);
-  renderAwards(metricas, faltas);
+  renderKPIs({ totalSess,totalTarefas,totalConclui,pctGlobal,totalPend,
+               totalNaoFeit,totalParc,nColabs,totalFaltasNJ,totalFaltasJ,mediaConc });
+  renderChartConclusao(_allMetricas);
+  renderChartTurnos(_allMetricas);
+  renderChartStatusPizza(totalConclui,totalParc,totalNaoFeit);
+  renderRanking(_allMetricas);
+  renderAwards(_allMetricas,faltas);
   renderMotivos(pendencias);
   renderCatPend(pendencias);
-  /* Limpa pesquisa de colaborador ao recarregar */
-  _colabSearchTerm = '';
-  const searchInput = document.getElementById('search-colab-motivo');
-  if (searchInput) searchInput.value = '';
-
-  renderMotivoTable(pendencias, 'todos');
-  renderConsistencia(metricas);
-  /* renderEvolucao — removida conforme solicitação */
-
+  _colabSearchTerm='';
+  const si=document.getElementById('search-colab-motivo'); if(si) si.value='';
+  renderMotivoTable(pendencias,'todos');
+  renderConsistencia(_allMetricas);
   document.getElementById('pdf-bar').classList.add('show');
   setState('data');
 }
 
 /* ══════════════════════════════════════════════════════════
-   KPIs
+   KPIs — 2 LINHAS
 ══════════════════════════════════════════════════════════ */
 function renderKPIs(d){
-  const g = document.getElementById('kpi-grid');
-  const estrela = d.pctGlobal >= 90 ? '🌟' : d.pctGlobal >= 75 ? '✅' : d.pctGlobal >= 50 ? '⚠️' : '❌';
-  g.innerHTML = `
+  const estrela=d.pctGlobal>=90?'🌟':d.pctGlobal>=75?'✅':d.pctGlobal>=50?'⚠️':'❌';
+  const r1=document.getElementById('kpi-row-1');
+  const r2=document.getElementById('kpi-row-2');
+
+  /* LINHA 1 — métricas de tarefas e conclusão */
+  r1.innerHTML=`
     <div class="kpi-card blue">
       <div class="kpi-icon">📋</div>
       <div class="kpi-val">${d.totalTarefas}</div>
@@ -1002,7 +1028,10 @@ function renderKPIs(d){
       <div class="kpi-val">${d.totalParc}</div>
       <div class="kpi-lbl">Parcialmente Feitas</div>
       <div class="kpi-sub">Produção incompleta</div>
-    </div>
+    </div>`;
+
+  /* LINHA 2 — pessoas, faltas, turnos, média */
+  r2.innerHTML=`
     <div class="kpi-card purple">
       <div class="kpi-icon">👥</div>
       <div class="kpi-val">${d.nColabs}</div>
@@ -1025,15 +1054,14 @@ function renderKPIs(d){
       <div class="kpi-icon">🚫</div>
       <div class="kpi-val">${d.totalFaltasNJ||0}</div>
       <div class="kpi-lbl">Faltas N/Justificadas</div>
-      <div class="kpi-sub">Peso 2× no score</div>
+      <div class="kpi-sub">Impacto no score</div>
     </div>
-    <div class="kpi-card purple">
-      <div class="kpi-icon">📋</div>
-      <div class="kpi-val">${d.totalFaltasJ||0}</div>
-      <div class="kpi-lbl">Faltas Justificadas</div>
-      <div class="kpi-sub">Peso 1× no score</div>
-    </div>
-  `;
+    <div class="kpi-card cyan">
+      <div class="kpi-icon">📊</div>
+      <div class="kpi-val">${d.mediaConc||0}%</div>
+      <div class="kpi-lbl">Média de Conclusão</div>
+      <div class="kpi-sub">Média entre colaboradores</div>
+    </div>`;
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1041,37 +1069,18 @@ function renderKPIs(d){
 ══════════════════════════════════════════════════════════ */
 function renderChartConclusao(metricas){
   destroyChart('conclusao');
-  const ctx = document.getElementById('chart-conclusao').getContext('2d');
-  const labels = metricas.map(m => m.nome);
-  const data   = metricas.map(m => m.pctConclusao);
-  const colors = data.map(v => v>=90?'#16a34a':v>=75?'#e6a800':v>=50?'#ea580c':'#dc2626');
-  _charts.conclusao = new Chart(ctx,{
+  const ctx=document.getElementById('chart-conclusao').getContext('2d');
+  const labels=metricas.map(m=>m.nome);
+  const data=metricas.map(m=>m.pctConclusao);
+  const colors=data.map(v=>v>=90?'#16a34a':v>=75?'#e6a800':v>=50?'#ea580c':'#dc2626');
+  _charts.conclusao=new Chart(ctx,{
     type:'bar',
-    data:{
-      labels,
-      datasets:[{
-        label:'Taxa de conclusão (%)',
-        data,
-        backgroundColor: colors,
-        borderRadius:6,
-        borderSkipped:false,
-      }]
-    },
+    data:{ labels, datasets:[{ label:'Taxa de conclusão (%)', data, backgroundColor:colors, borderRadius:6, borderSkipped:false }]},
     options:{
-      indexAxis:'y',
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{
-          callbacks:{
-            label: ctx => ` ${ctx.parsed.x}% de conclusão`
-          }
-        }
-      },
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:ctx=>` ${ctx.parsed.x}% de conclusão` }}},
       scales:{
-        x:{ min:0, max:100, grid:{color:'#f0f2f8'}, ticks:{
-          callback: v => v+'%', font:{family:'Nunito',weight:'700'}
-        }},
+        x:{ min:0,max:100, grid:{color:'#f0f2f8'}, ticks:{ callback:v=>v+'%', font:{family:'Nunito',weight:'700'}}},
         y:{ grid:{display:false}, ticks:{ font:{family:'Nunito',weight:'800'}, color:'#1a1d2e' }}
       }
     }
@@ -1083,20 +1092,20 @@ function renderChartConclusao(metricas){
 ══════════════════════════════════════════════════════════ */
 function renderChartTurnos(metricas){
   destroyChart('turnos');
-  const ctx = document.getElementById('chart-turnos').getContext('2d');
-  const top = metricas.slice(0,12);
-  _charts.turnos = new Chart(ctx,{
+  const ctx=document.getElementById('chart-turnos').getContext('2d');
+  const top=metricas.slice(0,12);
+  _charts.turnos=new Chart(ctx,{
     type:'bar',
     data:{
-      labels: top.map(m=>m.nome),
+      labels:top.map(m=>m.nome),
       datasets:[
-        { label:'Turnos 100%', data: top.map(m=>m.turnos100), backgroundColor:'#16a34a', borderRadius:4 },
-        { label:'Outros turnos', data: top.map(m=>m.totalSess-m.turnos100), backgroundColor:'#e2e6f0', borderRadius:4 }
+        { label:'Turnos 100%', data:top.map(m=>m.turnos100), backgroundColor:'#16a34a', borderRadius:4 },
+        { label:'Outros turnos', data:top.map(m=>m.totalSess-m.turnos100), backgroundColor:'#e2e6f0', borderRadius:4 }
       ]
     },
     options:{
       responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:'bottom', labels:{ font:{family:'Nunito',weight:'700'} }} },
+      plugins:{ legend:{ position:'bottom', labels:{ font:{family:'Nunito',weight:'700'}}}},
       scales:{
         x:{ stacked:true, grid:{display:false}, ticks:{ font:{family:'Nunito',size:10}, maxRotation:35 }},
         y:{ stacked:true, grid:{color:'#f0f2f8'}, ticks:{ font:{family:'Nunito',weight:'700'}, stepSize:1 }}
@@ -1108,55 +1117,50 @@ function renderChartTurnos(metricas){
 /* ══════════════════════════════════════════════════════════
    CHART: STATUS PIZZA
 ══════════════════════════════════════════════════════════ */
-function renderChartStatusPizza(total, parcial, nao){
+function renderChartStatusPizza(total,parcial,nao){
   destroyChart('statusPizza');
-  const ctx = document.getElementById('chart-status-pizza').getContext('2d');
-  _charts.statusPizza = new Chart(ctx,{
+  const ctx=document.getElementById('chart-status-pizza').getContext('2d');
+  _charts.statusPizza=new Chart(ctx,{
     type:'doughnut',
     data:{
       labels:['✅ Concluídas','⚠️ Parciais','❌ Não feitas'],
-      datasets:[{
-        data:[total,parcial,nao],
-        backgroundColor:['#16a34a','#e6a800','#dc2626'],
-        borderWidth:3, borderColor:'#fff',
-        hoverOffset:8
-      }]
+      datasets:[{ data:[total,parcial,nao], backgroundColor:['#16a34a','#e6a800','#dc2626'], borderWidth:3, borderColor:'#fff', hoverOffset:8 }]
     },
     options:{
       responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{ position:'bottom', labels:{ font:{family:'Nunito',weight:'700'}, padding:14 }},
-        tooltip:{ callbacks:{ label: ctx => ` ${ctx.label}: ${ctx.parsed}` }}
-      },
+      plugins:{ legend:{ position:'bottom', labels:{ font:{family:'Nunito',weight:'700'}, padding:14 }}, tooltip:{ callbacks:{ label:ctx=>` ${ctx.label}: ${ctx.parsed}` }}},
       cutout:'65%'
     }
   });
 }
 
 /* ══════════════════════════════════════════════════════════
-   RANKING
+   RANKING — colapsável (3 visíveis + expandir)
 ══════════════════════════════════════════════════════════ */
 function renderRanking(metricas){
-  const el = document.getElementById('ranking-list');
-  const maxScore = metricas[0]?.score || 100;
-  const medalhas = ['🥇','🥈','🥉'];
-  const posClass  = ['gold','silver','bronze'];
-  el.innerHTML = metricas.map((m,i) => {
-    const pct = Math.round(m.score/maxScore*100);
-    const cls  = i < 3 ? posClass[i] : 'other';
-    const stars = m.score>=90?'⭐⭐⭐':m.score>=75?'⭐⭐':m.score>=50?'⭐':'';
-    const faltaInfo = (m.fNJ||m.fJ) ?
-      ` · 🚫 ${m.fNJ} NJ${m.fJ?` · 📋 ${m.fJ} J`:''}` : '';
-    const inconsisInfo = m.qtdInconsis
-      ? ` · ⚠️ ${m.qtdInconsis} inconsist. (−${m.penInconsis}pts)` : '';
-    const penInfo = m.penalidade ? ` · Total: −${m.penalidade}pts` : '';
+  const el=document.getElementById('ranking-list');
+  const btn=document.getElementById('btn-expand-ranking');
+  const maxScore=metricas[0]?.score||100;
+  const medalhas=['🥇','🥈','🥉'];
+  const posClass=['gold','silver','bronze'];
+  _rankingExpanded=false;
+  const VISIBLE=3;
+
+  el.innerHTML=metricas.map((m,i)=>{
+    const pct=Math.round(m.score/maxScore*100);
+    const cls=i<3?posClass[i]:'other';
+    const stars=m.score>=90?'⭐⭐⭐':m.score>=75?'⭐⭐':m.score>=50?'⭐':'';
+    const faltaInfo=(m.fNJ||m.fJ)?` · 🚫 ${m.fNJ} NJ${m.fJ?` · 📋 ${m.fJ} J`:''}` : '';
+    const inconsInfo=m.qtdInconsis?` · ⚠️ ${m.qtdInconsis} inconsist. (−${m.penInconsis}pts)` : '';
+    const penInfo=m.penalidade?` · Total: −${m.penalidade}pts` : '';
+    const hidden=i>=VISIBLE?'ranking-hidden':'';
     return `
-      <div class="ranking-item">
+      <div class="ranking-item ${hidden}" data-rank="${i}">
         <div class="rank-pos ${cls}">${i<3?medalhas[i]:i+1}</div>
         <div class="rank-emoji">${emoji(m.nome)}</div>
         <div class="rank-info">
           <div class="rank-name">${m.nome} ${stars}</div>
-          <div class="rank-sub">${m.totalSess} turnos · ${m.pctConclusao}% conclusão · ${m.naoFeitas} não feitas${faltaInfo}${inconsisInfo}${penInfo}</div>
+          <div class="rank-sub">${m.totalSess} turnos · ${m.pctConclusao}% conclusão · ${m.naoFeitas} não feitas${faltaInfo}${inconsInfo}${penInfo}</div>
           <div class="rank-bar-wrap">
             <div class="rank-bar" style="width:${pct}%;background:${m.score>=80?'#16a34a':m.score>=60?'#e6a800':'#dc2626'}"></div>
           </div>
@@ -1167,81 +1171,84 @@ function renderRanking(metricas){
         </div>
       </div>`;
   }).join('');
+
+  if(metricas.length>VISIBLE){
+    btn.style.display='flex';
+    document.getElementById('lbl-expand').textContent=`Ver todos (${metricas.length-VISIBLE} restantes)`;
+    document.getElementById('icon-expand').className='fas fa-chevron-down';
+  } else {
+    btn.style.display='none';
+  }
+}
+
+function toggleRanking(){
+  _rankingExpanded=!_rankingExpanded;
+  document.querySelectorAll('.ranking-item.ranking-hidden, .ranking-item[data-rank]').forEach(el=>{
+    const i=parseInt(el.dataset.rank||'0');
+    if(i>=3) el.classList.toggle('ranking-hidden',!_rankingExpanded);
+  });
+  const lbl=document.getElementById('lbl-expand');
+  const ico=document.getElementById('icon-expand');
+  const extra=_allMetricas.length-3;
+  if(_rankingExpanded){
+    lbl.textContent='Recolher';
+    ico.className='fas fa-chevron-up';
+  } else {
+    lbl.textContent=`Ver todos (${extra} restantes)`;
+    ico.className='fas fa-chevron-down';
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
    AWARDS / PREMIAÇÃO
 ══════════════════════════════════════════════════════════ */
-function renderAwards(metricas, faltas){
-  faltas = faltas || [];
-  const el = document.getElementById('award-grid');
-  if(metricas.length === 0){ el.innerHTML='<div class="empty-msg">Sem dados para prêmios.</div>'; return; }
+function renderAwards(metricas,faltas){
+  faltas=faltas||[];
+  const el=document.getElementById('award-grid');
+  if(metricas.length===0){ el.innerHTML='<div class="empty-msg">Sem dados para prêmios.</div>'; return; }
+  const awards=[];
 
-  const awards = [];
+  /* 🏆 MVP */
+  const mvp=metricas[0];
+  awards.push({ trophy:'🏆', title:'MVP do Período', color:'gold', winner:mvp.nome, stat:`Score ${mvp.score} pts · ${mvp.pctConclusao}% conclusão`, desc:'Melhor desempenho geral ponderando conclusão de tarefas e turnos 100% completos.' });
 
-  /* 🥇 MVP — maior score geral */
-  const mvp = metricas[0];
-  awards.push({
-    trophy:'🏆', title:'MVP do Período', color:'gold',
-    winner: mvp.nome,
-    stat: `Score ${mvp.score} pts · ${mvp.pctConclusao}% conclusão`,
-    desc: 'Melhor desempenho geral ponderando conclusão de tarefas e turnos 100% completos.'
-  });
+  /* 🎯 100% Club */
+  const perfeitos=metricas.filter(m=>m.pctTurnos100===100&&m.totalSess>=2);
+  if(perfeitos.length>0) awards.push({ trophy:'🎯', title:'Clube dos 100%', color:'green', winner:perfeitos.map(m=>m.nome).join(', '), stat:`${perfeitos.length} colaborador${perfeitos.length>1?'es':''} com todos os turnos completos`, desc:'Finalizou TODOS os turnos do período com 100% das tarefas concluídas.' });
 
-  /* 🎯 100% Club — todos os turnos concluídos 100% */
-  const perfeitos = metricas.filter(m=>m.pctTurnos100===100 && m.totalSess>=2);
-  if(perfeitos.length>0){
-    awards.push({
-      trophy:'🎯', title:'Clube dos 100%', color:'green',
-      winner: perfeitos.map(m=>m.nome).join(', '),
-      stat: `${perfeitos.length} colaborador${perfeitos.length>1?'es':''} com todos os turnos completos`,
-      desc: 'Finalizou TODOS os turnos do período com 100% das tarefas concluídas.'
-    });
+  /* 🔥 Mais Presente */
+  const maisPresente=[...metricas].sort((a,b)=>b.totalSess-a.totalSess)[0];
+  awards.push({ trophy:'🔥', title:'Mais Presente', color:'blue', winner:maisPresente.nome, stat:`${maisPresente.totalSess} turno${maisPresente.totalSess!==1?'s':''} trabalhado${maisPresente.totalSess!==1?'s':''}`, desc:'Maior número de turnos registrados — comprometimento e frequência exemplares.' });
+
+  /* ⚡ Mais Produtivo */
+  const maisProd=[...metricas].sort((a,b)=>b.concluidas-a.concluidas)[0];
+  awards.push({ trophy:'⚡', title:'Mais Produtivo', color:'purple', winner:maisProd.nome, stat:`${maisProd.concluidas} tarefas concluídas no período`, desc:'Maior volume absoluto de tarefas finalizadas — alta capacidade de execução.' });
+
+  /* ⏱️ Mais Rápido (menor naoFeitas e maior pctConclusao entre 2+ sessões) */
+  const comSessoes=metricas.filter(m=>m.totalSess>=2);
+  if(comSessoes.length>0){
+    const maisRapido=[...comSessoes].sort((a,b)=>{
+      if(a.naoFeitas!==b.naoFeitas) return a.naoFeitas-b.naoFeitas;
+      return b.pctConclusao-a.pctConclusao;
+    })[0];
+    awards.push({ trophy:'⏱️', title:'Mais Rápido', color:'cyan', winner:maisRapido.nome, stat:`${maisRapido.naoFeitas} tarefas não feitas · ${maisRapido.pctConclusao}% conclusão`, desc:'Menor índice de tarefas não concluídas — execução rápida e eficiente no turno.' });
   }
 
-  /* 🔥 Mais Presente — mais turnos trabalhados */
-  const maisPresente = [...metricas].sort((a,b)=>b.totalSess-a.totalSess)[0];
-  awards.push({
-    trophy:'🔥', title:'Mais Presente', color:'blue',
-    winner: maisPresente.nome,
-    stat: `${maisPresente.totalSess} turno${maisPresente.totalSess!==1?'s':''} trabalhado${maisPresente.totalSess!==1?'s':''}`,
-    desc: 'Maior número de turnos registrados no período — comprometimento e frequência exemplares.'
-  });
-
-  /* ⚡ Mais Produtivo — maior total de tarefas concluídas */
-  const maisProd = [...metricas].sort((a,b)=>b.concluidas-a.concluidas)[0];
-  awards.push({
-    trophy:'⚡', title:'Mais Produtivo', color:'purple',
-    winner: maisProd.nome,
-    stat: `${maisProd.concluidas} tarefas concluídas no período`,
-    desc: 'Maior volume absoluto de tarefas finalizadas — alta capacidade de execução.'
-  });
-
-  /* 🌱 Melhor Recuperação — melhor nota entre quem tem mais pendências */
-  const comPend = metricas.filter(m=>m.totalPend > 0 || m.naoFeitas>0);
-  if(comPend.length>1){
-    const melhorRecup = [...comPend].sort((a,b)=>b.pctConclusao-a.pctConclusao)[0];
-    awards.push({
-      trophy:'🌱', title:'Melhor Equilíbrio', color:'silver',
-      winner: melhorRecup.nome,
-      stat: `${melhorRecup.pctConclusao}% mesmo com ${melhorRecup.naoFeitas} pendência${melhorRecup.naoFeitas!==1?'s':''}`,
-      desc: 'Manteve alta taxa de conclusão mesmo enfrentando desafios no período.'
-    });
-  }
-
-  /* 🛡️ Mais Consistente — menor variação / sem não-feitas */
-  const semNaoFeitas = metricas.filter(m=>m.naoFeitas===0 && m.totalSess>=2);
+  /* 🛡️ Mais Consistente */
+  const semNaoFeitas=metricas.filter(m=>m.naoFeitas===0&&m.totalSess>=2);
   if(semNaoFeitas.length>0){
-    const maisConsis = semNaoFeitas.sort((a,b)=>b.pctConclusao-a.pctConclusao)[0];
-    awards.push({
-      trophy:'🛡️', title:'Mais Consistente', color:'silver',
-      winner: maisConsis.nome,
-      stat: `0 tarefas não feitas · ${maisConsis.pctConclusao}% conclusão`,
-      desc: 'Nunca deixou uma tarefa sem pelo menos iniciar. Consistência é a chave!'
-    });
+    const maisConsis=semNaoFeitas.sort((a,b)=>b.pctConclusao-a.pctConclusao)[0];
+    awards.push({ trophy:'🛡️', title:'Mais Consistente', color:'silver', winner:maisConsis.nome, stat:`0 tarefas não feitas · ${maisConsis.pctConclusao}% conclusão`, desc:'Nunca deixou uma tarefa sem pelo menos iniciar. Consistência é a chave!' });
   }
 
-  el.innerHTML = awards.map(a=>`
+  /* 🌱 Melhor Equilíbrio */
+  const comPend=metricas.filter(m=>(m.totalPend>0||m.naoFeitas>0));
+  if(comPend.length>1){
+    const melhor=[...comPend].sort((a,b)=>b.pctConclusao-a.pctConclusao)[0];
+    awards.push({ trophy:'🌱', title:'Melhor Equilíbrio', color:'silver', winner:melhor.nome, stat:`${melhor.pctConclusao}% mesmo com ${melhor.naoFeitas} pendência${melhor.naoFeitas!==1?'s':''}`, desc:'Manteve alta taxa de conclusão mesmo enfrentando desafios no período.' });
+  }
+
+  el.innerHTML=awards.map(a=>`
     <div class="award-card ${a.color}">
       <div class="award-trophy">${a.trophy}</div>
       <div class="award-title">${a.title}</div>
@@ -1254,389 +1261,133 @@ function renderAwards(metricas, faltas){
 /* ══════════════════════════════════════════════════════════
    CHART: MOTIVOS
 ══════════════════════════════════════════════════════════ */
-const MOTIVO_LABELS = {
-  'falta de tempo'       : 'Falta de Tempo',
-  'falta_tempo'          : 'Falta de Tempo',
-  'faltou tempo'         : 'Falta de Tempo',
-  'sem tempo'            : 'Falta de Tempo',
-  'nao teve tempo'       : 'Falta de Tempo',
-  'não teve tempo'       : 'Falta de Tempo',
-  'tempo insuficiente'   : 'Falta de Tempo',
-  'pouco tempo'          : 'Falta de Tempo',
-  'tempo'                : 'Falta de Tempo',
-  'falta de equipamento' : 'Equipamento',
-  'equipamento quebrado' : 'Equipamento',
-  'equipamento'          : 'Equipamento',
-  'maquina'              : 'Equipamento',
-  'máquina'              : 'Equipamento',
-  'falta de insumo'      : 'Insumo/Ingrediente',
-  'falta de ingrediente' : 'Insumo/Ingrediente',
-  'sem insumo'           : 'Insumo/Ingrediente',
-  'ingrediente'          : 'Insumo/Ingrediente',
-  'insumos'              : 'Insumo/Ingrediente',
-  'insumo'               : 'Insumo/Ingrediente',
+const MOTIVO_LABELS={
+  'falta de tempo':'Falta de Tempo','falta_tempo':'Falta de Tempo','faltou tempo':'Falta de Tempo',
+  'sem tempo':'Falta de Tempo','nao teve tempo':'Falta de Tempo','não teve tempo':'Falta de Tempo',
+  'tempo insuficiente':'Falta de Tempo','pouco tempo':'Falta de Tempo','tempo':'Falta de Tempo',
+  'falta de equipamento':'Equipamento','equipamento quebrado':'Equipamento','equipamento':'Equipamento','maquina':'Equipamento','máquina':'Equipamento',
+  'falta de insumo':'Insumo/Ingrediente','falta de ingrediente':'Insumo/Ingrediente','sem insumo':'Insumo/Ingrediente','ingrediente':'Insumo/Ingrediente','insumos':'Insumo/Ingrediente','insumo':'Insumo/Ingrediente',
 };
 function normMotivo(m){
   if(!m) return 'Não informado';
-  /* Remove acentos para comparação robusta */
-  const low = m.toLowerCase().trim()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  const lowOrig = m.toLowerCase().trim();
-  /* Testa chave com e sem acento */
-  for(const [k,v] of Object.entries(MOTIVO_LABELS)){
-    const kn = k.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    if(low.includes(kn) || lowOrig.includes(k)) return v;
-  }
+  const low=m.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const lowOrig=m.toLowerCase().trim();
+  for(const [k,v] of Object.entries(MOTIVO_LABELS)){ const kn=k.normalize('NFD').replace(/[\u0300-\u036f]/g,''); if(low.includes(kn)||lowOrig.includes(k)) return v; }
   return 'Outro';
 }
-
 function renderChartMotivos(pendencias){
   destroyChart('motivos');
-  const ctx = document.getElementById('chart-motivos').getContext('2d');
-  const counts = {};
-  pendencias.forEach(p=>{
-    const m = normMotivo(p.motivo);
-    counts[m]=(counts[m]||0)+1;
-  });
-  const labels = Object.keys(counts);
-  const data   = Object.values(counts);
-  const palette = ['#dc2626','#ea580c','#e6a800','#7c3aed','#0d9488','#4b5563'];
-  _charts.motivos = new Chart(ctx,{
+  const ctx=document.getElementById('chart-motivos').getContext('2d');
+  const counts={};
+  pendencias.forEach(p=>{ const m=normMotivo(p.motivo); counts[m]=(counts[m]||0)+1; });
+  const labels=Object.keys(counts), data=Object.values(counts);
+  const palette=['#dc2626','#ea580c','#e6a800','#7c3aed','#0d9488','#4b5563'];
+  _charts.motivos=new Chart(ctx,{
     type:'bar',
-    data:{
-      labels,
-      datasets:[{
-        label:'Ocorrências',
-        data,
-        backgroundColor: labels.map((_,i)=>palette[i%palette.length]),
-        borderRadius:6, borderSkipped:false,
-      }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false} },
-      scales:{
-        x:{ grid:{display:false}, ticks:{font:{family:'Nunito',size:11}} },
-        y:{ grid:{color:'#f0f2f8'}, ticks:{font:{family:'Nunito',weight:'700'},stepSize:1} }
-      }
-    }
+    data:{ labels, datasets:[{ label:'Ocorrências', data, backgroundColor:labels.map((_,i)=>palette[i%palette.length]), borderRadius:6, borderSkipped:false }]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}}, scales:{ x:{ grid:{display:false}, ticks:{font:{family:'Nunito',size:11}}}, y:{ grid:{color:'#f0f2f8'}, ticks:{font:{family:'Nunito',weight:'700'},stepSize:1}}}}
   });
 }
-
-function renderMotivos(pendencias){
-  renderChartMotivos(pendencias);
-}
+function renderMotivos(pendencias){ renderChartMotivos(pendencias); }
 
 /* ══════════════════════════════════════════════════════════
    CHART: CATEGORIAS COM PENDÊNCIAS
 ══════════════════════════════════════════════════════════ */
 function renderCatPend(pendencias){
   destroyChart('catPend');
-  const ctx = document.getElementById('chart-cat-pend').getContext('2d');
-  const counts = {};
-  pendencias.forEach(p=>{
-    const c = (p.categoria||'Geral').replace(/^TRANSF:/,'');
-    counts[c]=(counts[c]||0)+1;
-  });
-  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  const palette = ['#2563eb','#7c3aed','#0d9488','#e6a800','#dc2626','#ea580c','#16a34a','#4b5563'];
-  _charts.catPend = new Chart(ctx,{
+  const ctx=document.getElementById('chart-cat-pend').getContext('2d');
+  const counts={};
+  pendencias.forEach(p=>{ const c=(p.categoria||'Geral').replace(/^TRANSF:/,''); counts[c]=(counts[c]||0)+1; });
+  const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const palette=['#2563eb','#7c3aed','#0d9488','#e6a800','#dc2626','#ea580c','#16a34a','#4b5563'];
+  _charts.catPend=new Chart(ctx,{
     type:'doughnut',
-    data:{
-      labels: sorted.map(([k])=>k),
-      datasets:[{
-        data: sorted.map(([,v])=>v),
-        backgroundColor: palette,
-        borderWidth:2, borderColor:'#fff', hoverOffset:6
-      }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{ position:'right', labels:{ font:{family:'Nunito',size:11}, padding:8 }},
-      },
-      cutout:'55%'
-    }
+    data:{ labels:sorted.map(([k])=>k), datasets:[{ data:sorted.map(([,v])=>v), backgroundColor:palette, borderWidth:2, borderColor:'#fff', hoverOffset:6 }]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ font:{family:'Nunito',size:11}, padding:8 }}}, cutout:'55%' }
   });
 }
 
 /* ══════════════════════════════════════════════════════════
-   TABELA DE MOTIVOS DETALHADA
+   TABELA DE MOTIVOS
 ══════════════════════════════════════════════════════════ */
-let _motivoFiltro = 'todos';
-
+let _motivoFiltro='todos';
 function filtrarMotivo(f){
-  _motivoFiltro = f;
-  ['todos','ft','eq','ins','out'].forEach(x=>{
-    document.getElementById('mf-'+x)?.classList.toggle('active', x===f);
-  });
-  /* Usa _aplicarFiltrosCombinados para manter o filtro de colaborador ativo */
+  _motivoFiltro=f;
+  ['todos','ft','eq','ins','out'].forEach(x=>{ document.getElementById('mf-'+x)?.classList.toggle('active',x===f); });
   _aplicarFiltrosCombinados();
 }
-
-function renderMotivoTable(pendencias, filtro){
-  filtro = filtro || _motivoFiltro || 'todos';
-  const wrap = document.getElementById('motivo-table-wrap');
-
-  let pends = pendencias;
-  if(filtro !== 'todos'){
-    pends = pendencias.filter(p=>{
-      const m = normMotivo(p.motivo);
-      if(filtro==='ft')  return m==='Falta de Tempo';
-      if(filtro==='eq')  return m==='Equipamento';
-      if(filtro==='ins') return m==='Insumo/Ingrediente';
-      if(filtro==='out') return m==='Outro' || m==='Não informado';
-      return true;
-    });
-  }
-
-  if(pends.length===0){
-    wrap.innerHTML='<div class="empty-msg">'+(filtro==='todos'?'Sem pendências no período. 🎉':'Nenhuma pendência com esse motivo. ✅')+'</div>';
-    return;
-  }
-
-  const ordemMotivo = {'Falta de Tempo':1,'Equipamento':2,'Insumo/Ingrediente':3,'Outro':4,'Não informado':5};
-  const pillClass = (m)=>{
-    if(m==='Falta de Tempo') return 'falta_tempo';
-    if(m==='Equipamento')    return 'equipamento';
-    if(m.includes('Insumo')) return 'insumo';
-    return 'outro';
-  };
-
-  const sorted = [...pends].sort((a,b)=>{
-    const ma = ordemMotivo[normMotivo(a.motivo)]||9;
-    const mb = ordemMotivo[normMotivo(b.motivo)]||9;
-    return ma-mb || (a.data||'').localeCompare(b.data||'');
-  });
-
-  const exibidos = sorted.slice(0,100);
-  let html = `<table class="motivo-table">
-    <thead><tr>
-      <th>Motivo</th><th>Colaborador</th><th>Item</th><th>Categoria</th><th>Data</th><th>Status</th>
-    </tr></thead><tbody>`;
-
-  exibidos.forEach(p=>{
-    const m = normMotivo(p.motivo);
-    html += `<tr>
-      <td><span class="motivo-pill ${pillClass(m)}">${m}</span></td>
-      <td style="font-weight:700">${emoji(p.colaborador)} ${p.colaborador||'—'}</td>
-      <td>${p.item||'—'}</td>
-      <td>${(p.categoria||'—').replace(/^TRANSF:/,'')}</td>
-      <td>${fmtData(p.data)}</td>
-      <td style="font-size:11px;color:${p.status==='nao_finalizado'?'#dc2626':'#ea580c'}">
-        ${p.status==='nao_finalizado'?'❌ Não feita':'⚠️ Parcial'}
-      </td>
-    </tr>`;
-  });
-
-  html += '</tbody></table>';
-  if(pends.length > 100) html += `<div class="empty-msg" style="font-size:11px;padding:12px">Exibindo 100 de ${pends.length} registros.</div>`;
-  wrap.innerHTML = html;
+function renderMotivoTable(pendencias,filtro){
+  filtro=filtro||_motivoFiltro||'todos';
+  const wrap=document.getElementById('motivo-table-wrap');
+  let pends=pendencias;
+  if(filtro!=='todos'){ pends=pendencias.filter(p=>{ const m=normMotivo(p.motivo); if(filtro==='ft') return m==='Falta de Tempo'; if(filtro==='eq') return m==='Equipamento'; if(filtro==='ins') return m==='Insumo/Ingrediente'; if(filtro==='out') return m==='Outro'||m==='Não informado'; return true; }); }
+  if(pends.length===0){ wrap.innerHTML='<div class="empty-msg">'+(filtro==='todos'?'Sem pendências no período. 🎉':'Nenhuma pendência com esse motivo. ✅')+'</div>'; return; }
+  const ordemMotivo={'Falta de Tempo':1,'Equipamento':2,'Insumo/Ingrediente':3,'Outro':4,'Não informado':5};
+  const pillClass=m=>{ if(m==='Falta de Tempo') return 'falta_tempo'; if(m==='Equipamento') return 'equipamento'; if(m.includes('Insumo')) return 'insumo'; return 'outro'; };
+  const sorted=[...pends].sort((a,b)=>{ const ma=ordemMotivo[normMotivo(a.motivo)]||9, mb=ordemMotivo[normMotivo(b.motivo)]||9; return ma-mb||(a.data||'').localeCompare(b.data||''); });
+  const exibidos=sorted.slice(0,100);
+  let html=`<table class="motivo-table"><thead><tr><th>Motivo</th><th>Colaborador</th><th>Item</th><th>Categoria</th><th>Data</th><th>Status</th></tr></thead><tbody>`;
+  exibidos.forEach(p=>{ const m=normMotivo(p.motivo); html+=`<tr><td><span class="motivo-pill ${pillClass(m)}">${m}</span></td><td style="font-weight:700">${emoji(p.colaborador)} ${p.colaborador||'—'}</td><td>${p.item||'—'}</td><td>${(p.categoria||'—').replace(/^TRANSF:/,'')}</td><td>${fmtData(p.data)}</td><td style="font-size:11px;color:${p.status==='nao_finalizado'?'#dc2626':'#ea580c'}">${p.status==='nao_finalizado'?'❌ Não feita':'⚠️ Parcial'}</td></tr>`; });
+  html+='</tbody></table>';
+  if(pends.length>100) html+=`<div class="empty-msg" style="font-size:11px;padding:12px">Exibindo 100 de ${pends.length} registros.</div>`;
+  wrap.innerHTML=html;
 }
-
-/* ══════════════════════════════════════════════════════════
-   PESQUISA POR COLABORADOR — filtro de texto em tempo real
-   Chama quando usuário digita no input #search-colab-motivo
-══════════════════════════════════════════════════════════ */
-let _colabSearchTerm = '';
-function filtrarMotivoColab(termo) {
-  _colabSearchTerm = (termo || '').trim().toLowerCase();
-  _aplicarFiltrosCombinados();
-}
-
-function _aplicarFiltrosCombinados() {
-  /* Aplica filtro de motivo E pesquisa de colaborador juntos */
-  let pends = _allPendencias || [];
-
-  /* Filtro por motivo (botões) */
-  const f = _motivoFiltro || 'todos';
-  if (f !== 'todos') {
-    pends = pends.filter(p => {
-      const m = normMotivo(p.motivo);
-      if (f === 'ft')  return m === 'Falta de Tempo';
-      if (f === 'eq')  return m === 'Equipamento';
-      if (f === 'ins') return m === 'Insumo/Ingrediente';
-      if (f === 'out') return m === 'Outro' || m === 'Não informado';
-      return true;
-    });
-  }
-
-  /* Filtro por colaborador (campo de texto) */
-  if (_colabSearchTerm) {
-    pends = pends.filter(p =>
-      (p.colaborador || '').toLowerCase().includes(_colabSearchTerm)
-    );
-  }
-
-  /* Renderiza o resultado filtrado */
-  const wrap = document.getElementById('motivo-table-wrap');
-  if (!wrap) return;
-
-  if (!pends.length) {
-    wrap.innerHTML = '<div class="empty-msg">' +
-      (_colabSearchTerm ? `Nenhuma pendência para "<strong>${_colabSearchTerm}</strong>". ✅` : 'Sem pendências no período. 🎉') +
-      '</div>';
-    return;
-  }
-
-  const ordemMotivo = {'Falta de Tempo':1,'Equipamento':2,'Insumo/Ingrediente':3,'Outro':4,'Não informado':5};
-  const pillClass = m => {
-    if (m === 'Falta de Tempo') return 'falta_tempo';
-    if (m === 'Equipamento')    return 'equipamento';
-    if (m.includes('Insumo'))   return 'insumo';
-    return 'outro';
-  };
-
-  const sorted = [...pends].sort((a,b) => {
-    const ma = ordemMotivo[normMotivo(a.motivo)] || 9;
-    const mb = ordemMotivo[normMotivo(b.motivo)] || 9;
-    return ma - mb || (a.data||'').localeCompare(b.data||'');
-  });
-
-  const exibidos = sorted.slice(0, 100);
-  let html = `<table class="motivo-table">
-    <thead><tr>
-      <th>Motivo</th><th>Colaborador</th><th>Item</th><th>Categoria</th><th>Data</th><th>Status</th>
-    </tr></thead><tbody>`;
-
-  exibidos.forEach(p => {
-    const m = normMotivo(p.motivo);
-    /* Destaca o texto pesquisado no nome do colaborador */
-    const cName = p.colaborador || '—';
-    const cDisplay = _colabSearchTerm
-      ? cName.replace(new RegExp('('+_colabSearchTerm.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')', 'gi'),
-          '<mark style="background:#fde68a;border-radius:3px;padding:0 2px">$1</mark>')
-      : cName;
-    html += `<tr>
-      <td><span class="motivo-pill ${pillClass(m)}">${m}</span></td>
-      <td style="font-weight:700">${emoji(p.colaborador)} ${cDisplay}</td>
-      <td>${p.item||'—'}</td>
-      <td>${(p.categoria||'—').replace(/^TRANSF:/,'')}</td>
-      <td>${fmtData(p.data)}</td>
-      <td style="font-size:11px;color:${p.status==='nao_finalizado'?'#dc2626':'#ea580c'}">
-        ${p.status==='nao_finalizado'?'❌ Não feita':'⚠️ Parcial'}
-      </td>
-    </tr>`;
-  });
-
-  html += '</tbody></table>';
-  if (pends.length > 100) html += `<div class="empty-msg" style="font-size:11px;padding:12px">Exibindo 100 de ${pends.length} registros.</div>`;
-  wrap.innerHTML = html;
+let _colabSearchTerm='';
+function filtrarMotivoColab(termo){ _colabSearchTerm=(termo||'').trim().toLowerCase(); _aplicarFiltrosCombinados(); }
+function _aplicarFiltrosCombinados(){
+  let pends=_allPendencias||[];
+  const f=_motivoFiltro||'todos';
+  if(f!=='todos'){ pends=pends.filter(p=>{ const m=normMotivo(p.motivo); if(f==='ft') return m==='Falta de Tempo'; if(f==='eq') return m==='Equipamento'; if(f==='ins') return m==='Insumo/Ingrediente'; if(f==='out') return m==='Outro'||m==='Não informado'; return true; }); }
+  if(_colabSearchTerm){ pends=pends.filter(p=>(p.colaborador||'').toLowerCase().includes(_colabSearchTerm)); }
+  const wrap=document.getElementById('motivo-table-wrap');
+  if(!wrap) return;
+  if(!pends.length){ wrap.innerHTML='<div class="empty-msg">'+(_colabSearchTerm?`Nenhuma pendência para "<strong>${_colabSearchTerm}</strong>". ✅`:'Sem pendências no período. 🎉')+'</div>'; return; }
+  const ordemMotivo={'Falta de Tempo':1,'Equipamento':2,'Insumo/Ingrediente':3,'Outro':4,'Não informado':5};
+  const pillClass=m=>{ if(m==='Falta de Tempo') return 'falta_tempo'; if(m==='Equipamento') return 'equipamento'; if(m.includes('Insumo')) return 'insumo'; return 'outro'; };
+  const sorted=[...pends].sort((a,b)=>{ const ma=ordemMotivo[normMotivo(a.motivo)]||9, mb=ordemMotivo[normMotivo(b.motivo)]||9; return ma-mb||(a.data||'').localeCompare(b.data||''); });
+  const exibidos=sorted.slice(0,100);
+  let html=`<table class="motivo-table"><thead><tr><th>Motivo</th><th>Colaborador</th><th>Item</th><th>Categoria</th><th>Data</th><th>Status</th></tr></thead><tbody>`;
+  exibidos.forEach(p=>{ const m=normMotivo(p.motivo); const cName=p.colaborador||'—'; const cDisplay=_colabSearchTerm?cName.replace(new RegExp('('+_colabSearchTerm.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark style="background:#fde68a;border-radius:3px;padding:0 2px">$1</mark>'):cName; html+=`<tr><td><span class="motivo-pill ${pillClass(m)}">${m}</span></td><td style="font-weight:700">${emoji(p.colaborador)} ${cDisplay}</td><td>${p.item||'—'}</td><td>${(p.categoria||'—').replace(/^TRANSF:/,'')}</td><td>${fmtData(p.data)}</td><td style="font-size:11px;color:${p.status==='nao_finalizado'?'#dc2626':'#ea580c'}">${p.status==='nao_finalizado'?'❌ Não feita':'⚠️ Parcial'}</td></tr>`; });
+  html+='</tbody></table>';
+  if(pends.length>100) html+=`<div class="empty-msg" style="font-size:11px;padding:12px">Exibindo 100 de ${pends.length} registros.</div>`;
+  wrap.innerHTML=html;
 }
 
 /* ══════════════════════════════════════════════════════════
    CONSISTÊNCIA
 ══════════════════════════════════════════════════════════ */
 function renderConsistencia(metricas){
-  const el = document.getElementById('consist-grid');
-  el.innerHTML = metricas.map(m=>{
-    const cls = m.pctConclusao>=90?'excelente':m.pctConclusao>=75?'bom':m.pctConclusao>=50?'regular':'baixo';
-    const lbl = m.pctConclusao>=90?'Excelente':m.pctConclusao>=75?'Bom':m.pctConclusao>=50?'Regular':'Baixo';
-    return `
-      <div class="consist-card">
-        <div class="consist-emoji">${emoji(m.nome)}</div>
-        <div class="consist-info">
-          <div class="consist-name">${m.nome}</div>
-          <div class="consist-days">${m.totalSess} turno${m.totalSess!==1?'s':''} · ${m.turnos100} completo${m.turnos100!==1?'s':''} · ${m.naoFeitas} ñ feita${m.naoFeitas!==1?'s':''}</div>
-        </div>
-        <div class="consist-pct ${cls}" title="${lbl}">${m.pctConclusao}%</div>
-      </div>`;
+  const el=document.getElementById('consist-grid');
+  el.innerHTML=metricas.map(m=>{
+    const cls=m.pctConclusao>=90?'excelente':m.pctConclusao>=75?'bom':m.pctConclusao>=50?'regular':'baixo';
+    return `<div class="consist-card">
+      <div class="consist-emoji">${emoji(m.nome)}</div>
+      <div class="consist-info">
+        <div class="consist-name">${m.nome}</div>
+        <div class="consist-days">${m.totalSess} turno${m.totalSess!==1?'s':''} · ${m.turnos100} completo${m.turnos100!==1?'s':''} · ${m.naoFeitas} ñ feita${m.naoFeitas!==1?'s':''}</div>
+      </div>
+      <div class="consist-pct ${cls}">${m.pctConclusao}%</div>
+    </div>`;
   }).join('');
-}
-
-/* ══════════════════════════════════════════════════════════
-   CHART: EVOLUÇÃO DIÁRIA
-══════════════════════════════════════════════════════════ */
-function renderEvolucao(sessoes, de, ate){
-  destroyChart('evolucao');
-  const ctx = document.getElementById('chart-evolucao').getContext('2d');
-
-  /* Gera lista de datas no período */
-  const datas = [];
-  const cur = new Date(de);
-  const fim = new Date(ate);
-  while(cur <= fim){ datas.push(cur.toISOString().slice(0,10)); cur.setDate(cur.getDate()+1); }
-
-  /* Média de conclusão por dia */
-  const porDia = {};
-  datas.forEach(d=>{ porDia[d]={total:0,conclui:0}; });
-  sessoes.forEach(s=>{
-    if(porDia[s.data]){
-      porDia[s.data].total  += (s.total_tarefas||0);
-      porDia[s.data].conclui+= (s.tarefas_concluidas||0);
-    }
-  });
-
-  const labels = datas.map(d=>fmtData(d));
-  const data   = datas.map(d=>{
-    const e = porDia[d];
-    return e.total ? Math.round(e.conclui/e.total*100) : null;
-  });
-
-  _charts.evolucao = new Chart(ctx,{
-    type:'line',
-    data:{
-      labels,
-      datasets:[{
-        label:'Taxa de conclusão (%)',
-        data,
-        borderColor:'#e6a800',
-        backgroundColor:'rgba(230,168,0,.1)',
-        borderWidth:3,
-        pointBackgroundColor:'#e6a800',
-        pointRadius:5,
-        pointHoverRadius:7,
-        fill:true,
-        tension:.35,
-        spanGaps:true
-      },{
-        label:'Meta (90%)',
-        data: datas.map(()=>90),
-        borderColor:'#16a34a',
-        borderDash:[6,4],
-        borderWidth:2,
-        pointRadius:0,
-        fill:false,
-      }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{ position:'bottom', labels:{ font:{family:'Nunito',weight:'700'} }},
-        tooltip:{ callbacks:{ label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y??'—'}%` }}
-      },
-      scales:{
-        x:{ grid:{color:'#f0f2f8'}, ticks:{ font:{family:'Nunito',size:11}, maxRotation:35 }},
-        y:{ min:0, max:100, grid:{color:'#f0f2f8'},
-            ticks:{ callback:v=>v+'%', font:{family:'Nunito',weight:'700'} }}
-      }
-    }
-  });
 }
 
 /* ══════════════════════════════════════════════════════════
    EXPORTAR PDF
 ══════════════════════════════════════════════════════════ */
 function exportarPDF(){
-  const btn = document.getElementById('btn-pdf');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparando...';
-  setTimeout(()=>{
-    window.print();
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-file-pdf"></i> Exportar PDF';
-  }, 300);
+  const btn=document.getElementById('btn-pdf');
+  btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Preparando...';
+  /* Expande ranking antes de imprimir */
+  if(!_rankingExpanded && _allMetricas.length>3) toggleRanking();
+  setTimeout(()=>{ window.print(); btn.disabled=false; btn.innerHTML='<i class="fas fa-file-pdf"></i> Exportar PDF'; },300);
 }
 
 /* ══════════════════════════════════════════════════════════
    UTILS
 ══════════════════════════════════════════════════════════ */
-function fmtData(d){
-  if(!d) return '—';
-  const [a,m,dia] = d.split('-');
-  return `${dia}/${m}/${a}`;
-}
+function fmtData(d){ if(!d) return '—'; const [a,m,dia]=d.split('-'); return `${dia}/${m}/${a}`; }
 </script>
+
 <!-- ══ BOTTOM NAV GLOBAL ══ -->
 <style>
 .gbn{position:fixed;bottom:0;left:0;right:0;z-index:300;background:#fff;border-top:1px solid #e2e6f0;
@@ -1653,13 +1404,13 @@ function fmtData(d){
 .gbn-amber{background:#fef3c7;color:#d97706}
 body{padding-bottom:72px}
 </style>
-<div class="gbn">
+<div class="gbn no-print">
   <div class="gbn-row">
-    <a href="index.html" class="gbn-btn gbn-amber"><i class="fas fa-home"></i>Home</a>
-    <a href="resultados_v2.html" class="gbn-btn gbn-blue"><i class="fas fa-chart-bar"></i>Resultados</a>
-    <a href="medias.html" class="gbn-btn gbn-pink"><i class="fas fa-photo-video"></i>Mídias</a>
-    <a href="insumos.html" class="gbn-btn gbn-green"><i class="fas fa-boxes"></i>Insumos</a>
-    <a href="faltas.html" class="gbn-btn" style="background:#fce7f3;color:#be185d;flex:1;min-width:0;max-width:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 4px;border-radius:12px;font-size:9px;font-weight:800;font-family:inherit;text-decoration:none;"><i class="fas fa-user-clock" style="font-size:17px"></i>Faltas</a>
+    <a href="index.html"         class="gbn-btn gbn-amber" ><i class="fas fa-home"></i>Home</a>
+    <a href="resultados_v2.html" class="gbn-btn gbn-blue"  ><i class="fas fa-chart-bar"></i>Resultados</a>
+    <a href="medias.html"        class="gbn-btn gbn-pink"  ><i class="fas fa-photo-video"></i>Mídias</a>
+    <a href="insumos.html"       class="gbn-btn gbn-green" ><i class="fas fa-boxes"></i>Insumos</a>
+    <a href="faltas.html"        class="gbn-btn"           style="background:#fce7f3;color:#be185d;flex:1;min-width:0;max-width:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 4px;border-radius:12px;font-size:9px;font-weight:800;font-family:inherit;text-decoration:none;"><i class="fas fa-user-clock" style="font-size:17px"></i>Faltas</a>
   </div>
 </div>
 </body>
