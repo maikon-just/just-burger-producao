@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>Just Burger 🏆 Ranking</title>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!--
+    ranking.html — Tela de Ranking para Colaboradores
+    Acessível a qualquer papel autenticado (colaborador, lider, admin, atendente).
+    Ao carregar: lê sessão, identifica departamento e turno do colaborador,
+    exibe ranking do mês corrente filtrado por departamento+turno.
+    Sem filtros visíveis — mostra automaticamente o contexto do colaborador.
+    Para líderes/admin: permite ver qualquer setor/turno via parâmetros URL.
+  -->
+  <script src="js/auth-guard.js?v=20260416"></script>
+  <script>
+  /* ── Guard mínimo: deve estar autenticado ── */
+  (function(){
+    const SAFE_HOSTS = ['localhost','127.0.0.1','gitpod','preview','genspark'];
+    const isSafe     = SAFE_HOSTS.some(s => (location.hostname||'').includes(s)) || location.protocol === 'blob:';
+    try {
+      const params = new URLSearchParams(location.search);
+      const token  = params.get('_jbs');
+      if (token) {
+        const json = decodeURIComponent(escape(atob(decodeURIComponent(token))));
+        const sess = JSON.parse(json);
+        if (sess && sess.username && sess.papel) {
+          if (typeof JbAuth !== 'undefined') { JbAuth.save(sess); }
+          else { sessionStorage.setItem('jb_user', JSON.stringify(sess)); }
+        }
+        params.delete('_jbs'); params.delete('_cb');
+        history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params.toString() : ''));
+      }
+    } catch(e) {}
+    let u = null;
+    try {
+      if (typeof JbAuth !== 'undefined') { u = JbAuth.read(); }
+      if (!u) { u = JSON.parse(sessionStorage.getItem('jb_user') || 'null'); }
+      if (!u) {
+        const lsRaw   = localStorage.getItem('jb_user');
+        const lsStamp = parseInt(localStorage.getItem('jb_ts') || '0', 10);
+        if (lsRaw && Date.now() < lsStamp) {
+          u = JSON.parse(lsRaw);
+          sessionStorage.setItem('jb_user', lsRaw);
+          sessionStorage.setItem('jb_ts', String(lsStamp));
+        }
+      }
+    } catch(e) {}
+    if (!u && !isSafe) { location.replace('portal.html?_acesso=negado'); return; }
+    if (u && typeof JbAuth !== 'undefined') { JbAuth.renew(); }
+    window.addEventListener('storage', e => {
+      if (e.key === 'jb_out' && e.newValue === '1') { sessionStorage.clear(); location.replace('portal.html'); }
+    });
+  })();
+  </script>
+  <style>
+    :root {
+      --black:#1a1d2e; --white:#fff;
+      --gray-50:#f8f9fc; --gray-100:#f0f2f8; --gray-200:#e2e6f0; --gray-400:#9ca3af; --gray-600:#4b5563;
+      --yellow:#e6a800; --green:#16a34a; --red:#dc2626; --blue:#2563eb;
+      --orange:#ea580c; --purple:#7c3aed; --teal:#0d9488; --gold:#f59e0b; --cyan:#0891b2;
+      --font:'Nunito',sans-serif;
+      --radius:16px; --radius-sm:10px; --radius-full:999px;
+      --shadow:0 2px 16px rgba(0,0,0,.09);
+      --shadow-lg:0 8px 40px rgba(0,0,0,.16);
+    }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    html { font-size:16px; }
+    body { font-family:var(--font); background:var(--gray-50); color:var(--black); min-height:100vh; }
+
+    /* ── HERO HEADER ── */
+    .hero {
+      background:linear-gradient(135deg,#1a1d2e 0%,#2d3158 100%);
+      color:#fff; padding:24px 20px 32px;
+      text-align:center; position:relative; overflow:hidden;
+    }
+    .hero::before {
+      content:''; position:absolute; inset:0;
+      background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      pointer-events:none;
+    }
+    .hero-back {
+      position:absolute; top:16px; left:16px;
+      width:36px; height:36px; border-radius:50%;
+      background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2);
+      color:#fff; display:flex; align-items:center; justify-content:center;
+      text-decoration:none; font-size:15px; transition:.2s;
+    }
+    .hero-back:hover { background:rgba(255,255,255,.22); }
+    .hero-trophy { font-size:52px; margin-bottom:8px; filter:drop-shadow(0 4px 8px rgba(0,0,0,.3)); }
+    .hero-title  { font-size:26px; font-weight:900; margin-bottom:4px; }
+    .hero-sub    { font-size:13px; color:rgba(255,255,255,.7); font-weight:600; }
+    .hero-context {
+      display:inline-flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:center;
+      margin-top:14px; padding:8px 18px; border-radius:var(--radius-full);
+      background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18);
+      font-size:13px; font-weight:800;
+    }
+    .hero-context .ctx-pill {
+      padding:3px 10px; border-radius:var(--radius-full);
+      font-size:11px; font-weight:800;
+    }
+    .ctx-pill.dept-prod  { background:#7c3aed; color:#fff; }
+    .ctx-pill.dept-oper  { background:#0d9488; color:#fff; }
+    .ctx-pill.dept-aten  { background:#2563eb; color:#fff; }
+    .ctx-pill.dept-todos { background:#4b5563; color:#fff; }
+    .ctx-pill.turno-dia  { background:#e6a800; color:#fff; }
+    .ctx-pill.turno-noite{ background:#1e293b; color:#fff; border:1px solid rgba(255,255,255,.2); }
+    .ctx-pill.turno-todos{ background:#374151; color:#fff; }
+    .ctx-pill.mes        { background:rgba(255,255,255,.2); color:#fff; }
+
+    /* ── LOADING ── */
+    .loading-box {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:16px; padding:60px 20px; text-align:center;
+    }
+    .loading-spinner {
+      width:48px; height:48px; border:4px solid var(--gray-200);
+      border-top-color:var(--yellow); border-radius:50%;
+      animation:spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .loading-box p { font-size:14px; font-weight:700; color:var(--gray-400); }
+
+    /* ── SEÇÃO KPIs TOPO ── */
+    .kpi-strip {
+      display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+      padding:16px 16px 0;
+    }
+    @media(max-width:420px){ .kpi-strip { grid-template-columns:repeat(3,1fr); gap:8px; padding:12px 12px 0; } }
+    .kpi-mini {
+      background:#fff; border-radius:var(--radius-sm); padding:14px 10px;
+      box-shadow:var(--shadow); text-align:center; border-top:3px solid var(--gray-200);
+    }
+    .kpi-mini.green  { border-color:var(--green); }
+    .kpi-mini.gold   { border-color:var(--gold); }
+    .kpi-mini.purple { border-color:var(--purple); }
+    .kpi-mini-icon { font-size:18px; }
+    .kpi-mini-val  { font-size:22px; font-weight:900; line-height:1.1; }
+    .kpi-mini-lbl  { font-size:10px; font-weight:700; color:var(--gray-600); margin-top:2px; }
+
+    /* ── SEÇÃO ── */
+    .section { padding:16px; }
+    .section-hdr {
+      display:flex; align-items:center; gap:10px; margin-bottom:14px;
+    }
+    .section-hdr h2 { font-size:15px; font-weight:900; }
+    .section-hdr .line { flex:1; height:1px; background:var(--gray-200); }
+
+    /* ── PREMIAÇÃO (troféus) ── */
+    .award-scroll {
+      display:flex; gap:12px; overflow-x:auto; padding-bottom:8px;
+      scrollbar-width:none;
+    }
+    .award-scroll::-webkit-scrollbar { display:none; }
+    .award-card-mini {
+      flex:0 0 auto; width:160px;
+      background:#fff; border-radius:var(--radius); padding:16px 12px;
+      box-shadow:var(--shadow); text-align:center;
+      border-top:4px solid var(--gray-200);
+    }
+    .award-card-mini.gold   { border-color:var(--gold); }
+    .award-card-mini.green  { border-color:var(--green); }
+    .award-card-mini.blue   { border-color:var(--blue); }
+    .award-card-mini.purple { border-color:var(--purple); }
+    .award-card-mini.cyan   { border-color:var(--cyan); }
+    .award-card-mini.silver { border-color:#94a3b8; }
+    .award-trophy-mini { font-size:30px; margin-bottom:6px; }
+    .award-title-mini  { font-size:10px; font-weight:900; color:var(--gray-600); text-transform:uppercase; letter-spacing:.4px; margin-bottom:4px; }
+    .award-winner-mini { font-size:13px; font-weight:900; line-height:1.2; margin-bottom:4px; }
+    .award-stat-mini   { font-size:10px; color:var(--gray-400); font-weight:700; }
+
+    /* ── RANKING ── */
+    .ranking-list { display:flex; flex-direction:column; gap:10px; }
+    .ranking-item {
+      display:flex; align-items:center; gap:12px;
+      background:#fff; border-radius:var(--radius-sm); padding:14px 14px;
+      box-shadow:var(--shadow); position:relative; overflow:hidden;
+      transition:.2s;
+    }
+    .ranking-item.highlight {
+      border:2px solid var(--yellow);
+      box-shadow:0 4px 20px rgba(230,168,0,.25);
+    }
+    .ranking-item.highlight::after {
+      content:'Você'; position:absolute; right:-1px; top:-1px;
+      background:var(--yellow); color:#fff; font-size:9px; font-weight:900;
+      padding:3px 8px; border-radius:0 var(--radius-sm) 0 var(--radius-sm);
+    }
+    .rank-pos-big {
+      width:36px; height:36px; border-radius:50%; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      font-size:16px; font-weight:900;
+    }
+    .rank-pos-big.gold   { background:#fef3c7; color:#92400e; font-size:18px; }
+    .rank-pos-big.silver { background:#f1f5f9; color:#475569; }
+    .rank-pos-big.bronze { background:#fef9c3; color:#78350f; }
+    .rank-pos-big.other  { background:var(--gray-100); color:var(--gray-600); font-size:14px; }
+    .rank-emoji-big { font-size:26px; flex-shrink:0; }
+    .rank-info-big { flex:1; min-width:0; }
+    .rank-name-big { font-size:14px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rank-meta-big { font-size:11px; color:var(--gray-400); margin-top:2px; }
+    .rank-bar-wrap { height:5px; background:var(--gray-100); border-radius:3px; margin-top:6px; }
+    .rank-bar      { height:5px; border-radius:3px; transition:.8s; }
+    .rank-score-big { text-align:right; flex-shrink:0; min-width:52px; }
+    .rank-score-big .sv { font-size:22px; font-weight:900; }
+    .rank-score-big .sl { font-size:10px; color:var(--gray-400); font-weight:700; }
+    .rank-stars { font-size:11px; }
+
+    /* ── CHART ── */
+    .chart-card {
+      background:#fff; border-radius:var(--radius); padding:16px;
+      box-shadow:var(--shadow); margin-bottom:14px;
+    }
+    .chart-card h3 { font-size:12px; font-weight:900; color:var(--gray-600); text-transform:uppercase; letter-spacing:.4px; margin-bottom:12px; }
+    .chart-wrap { position:relative; }
+    .chart-wrap.h260 { height:260px; }
+    .chart-wrap.h200 { height:200px; }
+    .chart-wrap.h180 { height:180px; }
+
+    /* ── CONSISTÊNCIA GRID ── */
+    .consist-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
+    .consist-card {
+      background:#fff; border-radius:var(--radius-sm); padding:12px 14px;
+      box-shadow:var(--shadow); display:flex; align-items:center; gap:10px;
+    }
+    .consist-emoji { font-size:24px; flex-shrink:0; }
+    .consist-info  { flex:1; min-width:0; }
+    .consist-name  { font-size:12px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .consist-days  { font-size:10px; color:var(--gray-400); margin-top:1px; }
+    .consist-pct   { font-size:16px; font-weight:900; flex-shrink:0; }
+    .consist-pct.excelente { color:var(--green); }
+    .consist-pct.bom       { color:var(--yellow); }
+    .consist-pct.regular   { color:var(--orange); }
+    .consist-pct.baixo     { color:var(--red); }
+
+    /* ── EMPTY / ERROR ── */
+    .empty-card {
+      background:#fff; border-radius:var(--radius); padding:40px 20px;
+      box-shadow:var(--shadow); text-align:center;
+    }
+    .empty-card .icon { font-size:48px; margin-bottom:12px; }
+    .empty-card p { font-size:14px; font-weight:700; color:var(--gray-400); }
+
+    /* ── TOAST ── */
+    #toast {
+      position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px);
+      background:var(--black); color:#fff; padding:12px 22px; border-radius:var(--radius-full);
+      font-size:13px; font-weight:700; z-index:9999; opacity:0; transition:.3s; pointer-events:none;
+      white-space:nowrap;
+    }
+    #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+    /* ── BOTTOM NAV ── */
+    .bottom-nav {
+      position:fixed; bottom:0; left:0; right:0; z-index:300;
+      background:#fff; border-top:1px solid var(--gray-200);
+      padding:8px 16px;
+      padding-bottom:max(8px, env(safe-area-inset-bottom, 8px));
+      box-shadow:0 -4px 20px rgba(0,0,0,.10);
+    }
+    .bottom-nav-row {
+      display:flex; gap:8px; justify-content:center; max-width:500px; margin:0 auto;
+    }
+    .nav-btn {
+      flex:1; display:flex; flex-direction:column; align-items:center;
+      gap:3px; padding:8px 4px; border-radius:12px;
+      font-size:9px; font-weight:800; font-family:var(--font);
+      cursor:pointer; text-decoration:none; border:none;
+      transition:.2s; color:inherit;
+    }
+    .nav-btn i { font-size:17px; }
+    .nav-btn:hover { opacity:.85; transform:translateY(-2px); }
+    .nav-btn.amber  { background:#fef3c7; color:#d97706; }
+    .nav-btn.green  { background:#ecfdf5; color:#065f46; }
+    body { padding-bottom:72px; }
+
+    /* ── RESPONSIVO TABLET ── */
+    @media(min-width:600px){
+      .hero-title { font-size:32px; }
+      .kpi-strip { grid-template-columns:repeat(3,1fr); max-width:600px; margin:0 auto; }
+      .ranking-item { padding:18px 20px; }
+      .rank-name-big { font-size:16px; }
+      .award-card-mini { width:190px; }
+      .consist-grid { grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); }
+      .section { padding:20px; max-width:700px; margin:0 auto; }
+      .kpi-strip { padding:20px 20px 0; max-width:700px; margin:0 auto; }
+    }
+    @media(min-width:900px){
+      body { max-width:900px; margin:0 auto; }
+      .hero { border-radius:0 0 24px 24px; }
+      .bottom-nav { left:50%; transform:translateX(-50%); width:900px; border-radius:16px 16px 0 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- HERO -->
+<header class="hero" id="hero">
+  <a href="javascript:history.back()" class="hero-back" title="Voltar"><i class="fas fa-arrow-left"></i></a>
+  <div class="hero-trophy">🏆</div>
+  <div class="hero-title">Ranking</div>
+  <div class="hero-sub" id="hero-sub">Carregando...</div>
+  <div class="hero-context" id="hero-context" style="display:none">
+    <span class="ctx-pill mes" id="ctx-mes">—</span>
+    <span class="ctx-pill" id="ctx-dept">—</span>
+    <span class="ctx-pill" id="ctx-turno">—</span>
+  </div>
+</header>
+
+<!-- LOADING -->
+<div class="loading-box" id="loading-box">
+  <div class="loading-spinner"></div>
+  <p>Calculando ranking do mês...</p>
+</div>
+
+<!-- CONTEÚDO -->
+<div id="rank-content" style="display:none">
+
+  <!-- KPIs topo -->
+  <div class="kpi-strip" id="kpi-strip"></div>
+
+  <!-- Premiação -->
+  <div class="section">
+    <div class="section-hdr">
+      <h2>🏅 Premiação do Mês</h2>
+      <div class="line"></div>
+    </div>
+    <div class="award-scroll" id="award-scroll"></div>
+  </div>
+
+  <!-- Ranking geral -->
+  <div class="section">
+    <div class="section-hdr">
+      <h2>🥇 Ranking de Produtividade</h2>
+      <div class="line"></div>
+    </div>
+    <div class="ranking-list" id="ranking-list"></div>
+  </div>
+
+  <!-- Gráfico de conclusão -->
+  <div class="section">
+    <div class="chart-card">
+      <h3>📊 Taxa de Conclusão (%)</h3>
+      <div class="chart-wrap h260">
+        <canvas id="chart-conclusao"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>📈 Distribuição de Status</h3>
+      <div class="chart-wrap h200">
+        <canvas id="chart-pizza"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Consistência -->
+  <div class="section">
+    <div class="section-hdr">
+      <h2>📅 Consistência de Presença</h2>
+      <div class="line"></div>
+    </div>
+    <div class="consist-grid" id="consist-grid"></div>
+  </div>
+
+</div><!-- /rank-content -->
+
+<!-- EMPTY -->
+<div class="section" id="empty-box" style="display:none">
+  <div class="empty-card">
+    <div class="icon">📊</div>
+    <p id="empty-msg">Sem dados para este mês ainda.<br>Os resultados aparecem após os primeiros turnos registrados.</p>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="bottom-nav-row">
+    <a href="javascript:history.back()" class="nav-btn amber"><i class="fas fa-arrow-left"></i>Voltar</a>
+    <a href="index-corrigido.html"      class="nav-btn green"><i class="fas fa-tasks"></i>Minhas Tarefas</a>
+  </div>
+</nav>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   MAPA DEPT ESTÁTICO (fallback)
+══════════════════════════════════════════════════════════ */
+const COLLAB_DEPT_STATIC = {
+  'ANTONIEL':'ATENDIMENTO','ANTONIEL INICIO':'ATENDIMENTO','ANTONIEL FINALIZAÇÃO':'ATENDIMENTO',
+  'MARCUS':'ATENDIMENTO','MARCUS INICIO':'ATENDIMENTO','MARCUS FINALIZAÇÃO':'ATENDIMENTO',
+  'ALINE':'ATENDIMENTO','ALINE INICIO':'ATENDIMENTO','ALINE FINALIZAÇÃO':'ATENDIMENTO',
+  'DESPACHO':'ATENDIMENTO','ATENDIMENTO / DESPACHO':'ATENDIMENTO','ABC':'ATENDIMENTO',
+  'ALAN RICARDO':'OPERACAO','SAMUEL':'OPERACAO','LOHAINE':'OPERACAO',
+  'GABRIEL LEITE':'OPERACAO','FRITADEIRA':'OPERACAO',
+  'NOITE - CHAPEIRO':'OPERACAO','NOITE - MONTADOR':'OPERACAO','NOITE - FRITADEIRA':'OPERACAO',
+  'GABRIEL KHALYL':'PRODUCAO','JOÃO':'PRODUCAO','PABLO':'PRODUCAO',
+  'MATEUS':'PRODUCAO','MATEUS PRODUÇÃO':'PRODUCAO','JOSÉ BRUNO':'PRODUCAO',
+  'FABIO':'PRODUCAO','SERGIO CAMARAS':'PRODUCAO','WESLEY MOTORISTA':'PRODUCAO','FAXINA':'PRODUCAO',
+  'HENRIQUE':'PRODUCAO','PEDRO':'PRODUCAO','DAVI':'PRODUCAO','DINA':'PRODUCAO','SANDRO':'PRODUCAO',
+};
+
+const EMOJI_MAP = {
+  'ALAN RICARDO':'🔥','ATENDIMENTO / DESPACHO':'🛎️','DAVI':'🍅','DINA':'👩‍💼',
+  'FABIO':'🧀','GABRIEL KHALYL':'🥩','GABRIEL LEITE':'🧊','HENRIQUE':'🥬',
+  'JOÃO':'🔪','JOSÉ BRUNO':'🥓','LOHAINE':'🍟','LUCAS':'🍳','MATEUS':'🥫',
+  'PABLO':'🍗','PEDRO':'🥤','SAMUEL':'🧊','SANDRO':'👨‍💼',
+  'WESLEY MOTORISTA':'🚚','FAXINA':'🧹','SERGIO CAMARAS':'📸',
+};
+function emj(n){ return EMOJI_MAP[(n||'').toUpperCase().trim()]||'👤'; }
+
+/* ══════════════════════════════════════════════════════════
+   FIREBASE
+══════════════════════════════════════════════════════════ */
+(function(){
+  const cfg={
+    apiKey:"AIzaSyDt1yzxGGzuT2cSdten1bFuXG7yeDQ90Po",
+    authDomain:"justburger-producao-e9b27.firebaseapp.com",
+    databaseURL:"https://justburger-producao-e9b27-default-rtdb.firebaseio.com",
+    projectId:"justburger-producao-e9b27",
+    storageBucket:"justburger-producao-e9b27.firebasestorage.app",
+    messagingSenderId:"387070713910",
+    appId:"1:387070713910:web:f156d3247a1715a58ab897"
+  };
+  if(!firebase.apps.length) firebase.initializeApp(cfg);
+  window._fbRank = firebase.database();
+})();
+
+async function fbGetAll(table){
+  try {
+    const snap = await window._fbRank.ref(table).once('value');
+    const val  = snap.val();
+    if(!val) return [];
+    return Object.entries(val).map(([id,obj])=>({id,...obj}));
+  } catch(e){ console.warn('fbGetAll',table,e.message); return []; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   SESSÃO + CONTEXTO
+══════════════════════════════════════════════════════════ */
+function getSession(){
+  try {
+    const r = sessionStorage.getItem('jb_user')||localStorage.getItem('jb_user');
+    return r ? JSON.parse(r) : null;
+  } catch(e){ return null; }
+}
+
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+/* ══════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', async () => {
+  const sess = getSession();
+
+  /* ── Determinar Departamento e Turno ── */
+  const params = new URLSearchParams(location.search);
+
+  /* Parâmetros de URL (passados pelo app quando abre ranking) */
+  let dept  = (params.get('dept')  || '').toUpperCase().trim();
+  let turno = (params.get('turno') || '').toLowerCase().trim();
+
+  /* Se não veio por URL, pega da sessão do colaborador */
+  if (!dept && sess) {
+    /* nome_card → pega dept das tarefas (será resolvido abaixo) */
+    /* Fallback para mapa estático */
+    const nomeCard = (sess.nome_card || sess.username || '').toUpperCase().trim();
+    dept  = COLLAB_DEPT_STATIC[nomeCard] || '';
+    turno = (sess.turno_preferido || '').toLowerCase().trim();
+  }
+
+  /* Se ainda não tem dept (admin/lider sem parâmetro), mostra tudo */
+  if (!dept) dept = 'TODOS';
+  if (!turno || turno === 'todos') turno = 'todos';
+
+  /* ── Mês corrente ── */
+  const now     = new Date();
+  const anoMes  = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const inicioDe= `${anoMes}-01`;
+  const fimAte  = now.toISOString().slice(0,10);
+
+  const MES_NOMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const nomeMes   = MES_NOMES[now.getMonth()];
+
+  /* ── Atualiza hero ── */
+  document.getElementById('hero-sub').textContent = `${nomeMes} ${now.getFullYear()}`;
+  const deptLabel  = dept==='PRODUCAO'?'🏭 Produção':dept==='OPERACAO'?'⚙️ Operação':dept==='ATENDIMENTO'?'🎯 Atendimento':'🏢 Todos';
+  const turnoLabel = turno==='dia'?'☀️ Turno Dia':turno==='noite'?'🌙 Turno Noite':'⏰ Todos os Turnos';
+  const ctxMes     = document.getElementById('ctx-mes');
+  const ctxDept    = document.getElementById('ctx-dept');
+  const ctxTurno   = document.getElementById('ctx-turno');
+  if(ctxMes)   { ctxMes.textContent = `${nomeMes} ${now.getFullYear()}`; }
+  if(ctxDept)  { ctxDept.textContent = deptLabel; ctxDept.className='ctx-pill '+(dept==='PRODUCAO'?'dept-prod':dept==='OPERACAO'?'dept-oper':dept==='ATENDIMENTO'?'dept-aten':'dept-todos'); }
+  if(ctxTurno) { ctxTurno.textContent = turnoLabel; ctxTurno.className='ctx-pill '+(turno==='dia'?'turno-dia':turno==='noite'?'turno-noite':'turno-todos'); }
+  document.getElementById('hero-context').style.display='inline-flex';
+
+  /* ── Busca dados ── */
+  try {
+    const [sessoes, pendencias, faltas, tarefas] = await Promise.all([
+      fbGetAll('sessoes'),
+      fbGetAll('pendencias'),
+      fbGetAll('faltas').catch(()=>[]),
+      fbGetAll('tarefas').catch(()=>[])
+    ]);
+
+    /* ── Mapa dept por colaborador (das tarefas reais) ── */
+    const deptMapCount = {};
+    tarefas.forEach(t => {
+      if(t.colaborador && t.departamento){
+        const k=t.colaborador.toUpperCase().trim();
+        if(!deptMapCount[k]) deptMapCount[k]={};
+        const d=t.departamento.toUpperCase().trim();
+        deptMapCount[k][d]=(deptMapCount[k][d]||0)+1;
+      }
+    });
+    const deptMapFinal = {};
+    Object.entries(deptMapCount).forEach(([k,cnts])=>{
+      deptMapFinal[k]=Object.entries(cnts).sort((a,b)=>b[1]-a[1])[0][0];
+    });
+    function getColabDept(nome){
+      if(!nome) return 'OUTROS';
+      const k=nome.toUpperCase().trim();
+      return deptMapFinal[k]||COLLAB_DEPT_STATIC[k]||'OUTROS';
+    }
+
+    /* ── Filtra por período ── */
+    const filtraSess = sessoes.filter(s => {
+      if(!s.data||s.data<inicioDe||s.data>fimAte) return false;
+      if(turno!=='todos'&&s.turno!==turno) return false;
+      if(dept!=='TODOS'&&getColabDept(s.colaborador_card||s.colaborador_nome)!==dept) return false;
+      return true;
+    });
+    const filtraPend = pendencias.filter(p => {
+      if(!p.data||p.data<inicioDe||p.data>fimAte) return false;
+      if(turno!=='todos'&&p.turno!==turno) return false;
+      if(dept!=='TODOS'&&getColabDept(p.colaborador)!==dept) return false;
+      return true;
+    });
+    const filtraFaltas = faltas.filter(f => {
+      if(!f.data||f.data<inicioDe||f.data>fimAte) return false;
+      if(turno!=='todos'&&f.turno!==turno) return false;
+      if(dept!=='TODOS'&&getColabDept(f.colaborador)!==dept) return false;
+      return true;
+    });
+
+    if(filtraSess.length===0){
+      document.getElementById('loading-box').style.display='none';
+      document.getElementById('empty-box').style.display='block';
+      return;
+    }
+
+    /* ── Agrega por colaborador ── */
+    const colabs={};
+    filtraSess.forEach(s=>{
+      const nome=s.colaborador_card||s.colaborador_nome||'Desconhecido';
+      if(!colabs[nome]) colabs[nome]={sessoes:[],pend:[]};
+      colabs[nome].sessoes.push(s);
+    });
+    filtraPend.forEach(p=>{ const n=p.colaborador||'Desconhecido'; if(colabs[n]) colabs[n].pend.push(p); });
+
+    const faltaMap={};
+    filtraFaltas.forEach(f=>{ const n=f.colaborador; if(!faltaMap[n]) faltaMap[n]={nj:0,j:0}; if(f.tipo==='nao_justificada') faltaMap[n].nj++; else faltaMap[n].j++; });
+
+    /* ── Métricas ── */
+    const metricas = Object.entries(colabs).map(([nome,d])=>{
+      const totalSess    = d.sessoes.length;
+      const totalTarefas = d.sessoes.reduce((a,s)=>a+(s.total_tarefas||0),0);
+      const concluidas   = d.sessoes.reduce((a,s)=>a+(s.tarefas_concluidas||0),0);
+      const pctConclusao = totalTarefas?Math.round(concluidas/totalTarefas*100):0;
+      const naoFeitas    = d.pend.filter(p=>p.status==='nao_finalizado').length;
+      const turnos100    = d.sessoes.filter(s=>s.status_geral==='completo').length;
+      const pctTurnos100 = totalSess?Math.round(turnos100/totalSess*100):0;
+      const fNJ=faltaMap[nome]?.nj||0, fJ=faltaMap[nome]?.j||0;
+      const penalidade   = Math.min(100, fNJ*15+fJ*7);
+      const scoreBase    = Math.round(pctConclusao*0.6+pctTurnos100*0.4);
+      const score        = Math.max(0,scoreBase-penalidade);
+      return { nome,totalSess,totalTarefas,concluidas,pctConclusao,naoFeitas,turnos100,pctTurnos100,score,penalidade,fNJ,fJ };
+    }).sort((a,b)=>b.score-a.score);
+
+    /* ── Nome do colaborador logado (para destacar no ranking) ── */
+    const meuNome = sess ? (sess.nome_card||sess.nome||sess.username||'').toUpperCase().trim() : '';
+
+    /* ── Renderiza ── */
+    renderKPIs(metricas, filtraSess, filtraPend);
+    renderAwards(metricas);
+    renderRanking(metricas, meuNome);
+    renderChartConclusao(metricas);
+    renderChartPizza(metricas);
+    renderConsistencia(metricas);
+
+    document.getElementById('loading-box').style.display='none';
+    document.getElementById('rank-content').style.display='block';
+
+  } catch(e){
+    console.error('Ranking error:',e);
+    document.getElementById('loading-box').style.display='none';
+    document.getElementById('empty-msg').textContent='Erro ao carregar dados. Tente novamente.';
+    document.getElementById('empty-box').style.display='block';
+    toast('❌ Erro ao carregar ranking');
+  }
+});
+
+/* ══════════════════════════════════════════════════════════
+   KPIs TOPO
+══════════════════════════════════════════════════════════ */
+function renderKPIs(metricas, sessoes, pendencias){
+  const totalSess    = sessoes.length;
+  const totalTarefas = sessoes.reduce((a,s)=>a+(s.total_tarefas||0),0);
+  const totalConclui = sessoes.reduce((a,s)=>a+(s.tarefas_concluidas||0),0);
+  const pct          = totalTarefas?Math.round(totalConclui/totalTarefas*100):0;
+  const nColabs      = metricas.length;
+  const mvpScore     = metricas[0]?.score||0;
+  document.getElementById('kpi-strip').innerHTML=`
+    <div class="kpi-mini green">
+      <div class="kpi-mini-icon">✅</div>
+      <div class="kpi-mini-val">${pct}%</div>
+      <div class="kpi-mini-lbl">Taxa Global</div>
+    </div>
+    <div class="kpi-mini gold">
+      <div class="kpi-mini-icon">👥</div>
+      <div class="kpi-mini-val">${nColabs}</div>
+      <div class="kpi-mini-lbl">Colaboradores</div>
+    </div>
+    <div class="kpi-mini purple">
+      <div class="kpi-mini-icon">🏆</div>
+      <div class="kpi-mini-val">${mvpScore}</div>
+      <div class="kpi-mini-lbl">Pontos MVP</div>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════
+   PREMIAÇÃO
+══════════════════════════════════════════════════════════ */
+function renderAwards(metricas){
+  const el=document.getElementById('award-scroll');
+  if(!metricas.length){ el.innerHTML=''; return; }
+  const awards=[];
+
+  awards.push({ trophy:'🏆', title:'MVP', color:'gold', winner:metricas[0].nome, stat:`${metricas[0].score} pts · ${metricas[0].pctConclusao}%` });
+
+  const perfeitos=metricas.filter(m=>m.pctTurnos100===100&&m.totalSess>=2);
+  if(perfeitos.length) awards.push({ trophy:'🎯', title:'Clube 100%', color:'green', winner:perfeitos[0].nome, stat:`${perfeitos[0].pctConclusao}% conclusão` });
+
+  const maisPresente=[...metricas].sort((a,b)=>b.totalSess-a.totalSess)[0];
+  awards.push({ trophy:'🔥', title:'Mais Presente', color:'blue', winner:maisPresente.nome, stat:`${maisPresente.totalSess} turno${maisPresente.totalSess!==1?'s':''}` });
+
+  const maisProd=[...metricas].sort((a,b)=>b.concluidas-a.concluidas)[0];
+  if(maisProd) awards.push({ trophy:'⚡', title:'Mais Produtivo', color:'purple', winner:maisProd.nome, stat:`${maisProd.concluidas} tarefas` });
+
+  const comSessoes=metricas.filter(m=>m.totalSess>=2);
+  if(comSessoes.length){
+    const maisRapido=[...comSessoes].sort((a,b)=>{ if(a.naoFeitas!==b.naoFeitas) return a.naoFeitas-b.naoFeitas; return b.pctConclusao-a.pctConclusao; })[0];
+    awards.push({ trophy:'⏱️', title:'Mais Rápido', color:'cyan', winner:maisRapido.nome, stat:`${maisRapido.naoFeitas} pendências` });
+  }
+
+  const semNaoFeitas=metricas.filter(m=>m.naoFeitas===0&&m.totalSess>=2);
+  if(semNaoFeitas.length) awards.push({ trophy:'🛡️', title:'Consistente', color:'silver', winner:semNaoFeitas.sort((a,b)=>b.pctConclusao-a.pctConclusao)[0].nome, stat:'0 não feitas' });
+
+  el.innerHTML=awards.map(a=>`
+    <div class="award-card-mini ${a.color}">
+      <div class="award-trophy-mini">${a.trophy}</div>
+      <div class="award-title-mini">${a.title}</div>
+      <div class="award-winner-mini">${emj(a.winner)} ${a.winner}</div>
+      <div class="award-stat-mini">${a.stat}</div>
+    </div>`).join('');
+}
+
+/* ══════════════════════════════════════════════════════════
+   RANKING
+══════════════════════════════════════════════════════════ */
+function renderRanking(metricas, meuNome){
+  const el=document.getElementById('ranking-list');
+  const maxScore=metricas[0]?.score||100;
+  const medalhas=['🥇','🥈','🥉'];
+  const posClass=['gold','silver','bronze'];
+  el.innerHTML=metricas.map((m,i)=>{
+    const pct=Math.round(m.score/maxScore*100);
+    const cls=i<3?posClass[i]:'other';
+    const stars=m.score>=90?'⭐⭐⭐':m.score>=75?'⭐⭐':m.score>=50?'⭐':'';
+    const isMe=(meuNome&&m.nome.toUpperCase()===meuNome)||false;
+    const barColor=m.score>=80?'#16a34a':m.score>=60?'#e6a800':'#dc2626';
+    const faltaInfo=(m.fNJ||m.fJ)?` · 🚫${m.fNJ} falta${m.fNJ>1?'s':''}`:'' ;
+    return `
+      <div class="ranking-item ${isMe?'highlight':''}">
+        <div class="rank-pos-big ${cls}">${i<3?medalhas[i]:i+1}</div>
+        <div class="rank-emoji-big">${emj(m.nome)}</div>
+        <div class="rank-info-big">
+          <div class="rank-name-big">${m.nome} <span class="rank-stars">${stars}</span></div>
+          <div class="rank-meta-big">${m.totalSess} turnos · ${m.pctConclusao}% conclusão${faltaInfo}</div>
+          <div class="rank-bar-wrap"><div class="rank-bar" style="width:${pct}%;background:${barColor}"></div></div>
+        </div>
+        <div class="rank-score-big">
+          <div class="sv">${m.score}</div>
+          <div class="sl">pts</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════════════════
+   CHARTS
+══════════════════════════════════════════════════════════ */
+let _charts={};
+function destroyChart(id){ if(_charts[id]){ _charts[id].destroy(); delete _charts[id]; } }
+
+function renderChartConclusao(metricas){
+  destroyChart('conc');
+  const ctx=document.getElementById('chart-conclusao').getContext('2d');
+  const labels=metricas.map(m=>m.nome);
+  const data=metricas.map(m=>m.pctConclusao);
+  const colors=data.map(v=>v>=90?'#16a34a':v>=75?'#e6a800':v>=50?'#ea580c':'#dc2626');
+  _charts.conc=new Chart(ctx,{
+    type:'bar',
+    data:{ labels, datasets:[{ label:'Taxa de conclusão (%)', data, backgroundColor:colors, borderRadius:6, borderSkipped:false }]},
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>` ${c.parsed.x}%` }}},
+      scales:{
+        x:{ min:0,max:100, ticks:{ callback:v=>v+'%', font:{family:'Nunito',size:11}}},
+        y:{ ticks:{ font:{family:'Nunito',weight:'800',size:11}, color:'#1a1d2e'}, grid:{display:false} }
+      }
+    }
+  });
+}
+
+function renderChartPizza(metricas){
+  destroyChart('pizza');
+  const ctx=document.getElementById('chart-pizza').getContext('2d');
+  const total    = metricas.reduce((a,m)=>a+m.concluidas,0);
+  const naoFeitas= metricas.reduce((a,m)=>a+m.naoFeitas,0);
+  const parciais = metricas.reduce((a,m)=>a+(m.totalTarefas-m.concluidas-m.naoFeitas),0);
+  _charts.pizza=new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      labels:['✅ Concluídas','⚠️ Parciais','❌ Não feitas'],
+      datasets:[{ data:[total,Math.max(0,parciais),naoFeitas], backgroundColor:['#16a34a','#e6a800','#dc2626'], borderWidth:3, borderColor:'#fff', hoverOffset:8 }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{ font:{family:'Nunito',weight:'700',size:11}, padding:12 }}},
+      cutout:'60%'
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
+   CONSISTÊNCIA
+══════════════════════════════════════════════════════════ */
+function renderConsistencia(metricas){
+  const el=document.getElementById('consist-grid');
+  el.innerHTML=metricas.map(m=>{
+    const cls=m.pctConclusao>=90?'excelente':m.pctConclusao>=75?'bom':m.pctConclusao>=50?'regular':'baixo';
+    return `<div class="consist-card">
+      <div class="consist-emoji">${emj(m.nome)}</div>
+      <div class="consist-info">
+        <div class="consist-name">${m.nome}</div>
+        <div class="consist-days">${m.totalSess} turno${m.totalSess!==1?'s':''} · ${m.turnos100} 100%</div>
+      </div>
+      <div class="consist-pct ${cls}">${m.pctConclusao}%</div>
+    </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
