@@ -1,10 +1,10 @@
-/* ═════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    Just Burger 🍔 — Service Worker
    ⚠️  A cada novo deploy, troque o número abaixo (ex: v4, v5...)
        Isso força todos os browsers a baixar tudo de novo.
 ═══════════════════════════════════════════════════════════ */
 
-const VERSAO = 'justburger-v20260415-03';
+const VERSAO = 'justburger-v20260415-05';
 
 /* ── INSTALL ── apaga cache antigo e registra o novo ── */
 self.addEventListener('install', event => {
