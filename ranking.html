@@ -1,4 +1,4 @@
-<!DOCTYPE html>.
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8"/>
@@ -154,26 +154,27 @@
 
     /* ── PREMIAÇÃO (troféus) ── */
     .award-scroll {
-      display:flex; gap:12px; overflow-x:auto; padding-bottom:8px;
-      scrollbar-width:none;
+      display:flex; flex-direction:column; gap:12px;
     }
-    .award-scroll::-webkit-scrollbar { display:none; }
     .award-card-mini {
-      flex:0 0 auto; width:160px;
-      background:#fff; border-radius:var(--radius); padding:16px 12px;
-      box-shadow:var(--shadow); text-align:center;
-      border-top:4px solid var(--gray-200);
+      width:100%;
+      background:#fff; border-radius:var(--radius); padding:16px 18px;
+      box-shadow:var(--shadow);
+      border-left:5px solid var(--gray-200);
+      border-top:none;
+      display:flex; align-items:center; gap:14px; text-align:left;
     }
-    .award-card-mini.gold   { border-color:var(--gold); }
-    .award-card-mini.green  { border-color:var(--green); }
-    .award-card-mini.blue   { border-color:var(--blue); }
-    .award-card-mini.purple { border-color:var(--purple); }
-    .award-card-mini.cyan   { border-color:var(--cyan); }
-    .award-card-mini.silver { border-color:#94a3b8; }
-    .award-trophy-mini { font-size:30px; margin-bottom:6px; }
-    .award-title-mini  { font-size:10px; font-weight:900; color:var(--gray-600); text-transform:uppercase; letter-spacing:.4px; margin-bottom:4px; }
-    .award-winner-mini { font-size:13px; font-weight:900; line-height:1.2; margin-bottom:4px; }
-    .award-stat-mini   { font-size:10px; color:var(--gray-400); font-weight:700; }
+    .award-card-mini.gold   { border-left-color:var(--gold); }
+    .award-card-mini.green  { border-left-color:var(--green); }
+    .award-card-mini.blue   { border-left-color:var(--blue); }
+    .award-card-mini.purple { border-left-color:var(--purple); }
+    .award-card-mini.cyan   { border-left-color:var(--cyan); }
+    .award-card-mini.silver { border-left-color:#94a3b8; }
+    .award-trophy-mini { font-size:32px; flex-shrink:0; }
+    .award-info-mini   { flex:1; min-width:0; }
+    .award-title-mini  { font-size:10px; font-weight:900; color:var(--gray-600); text-transform:uppercase; letter-spacing:.4px; margin-bottom:3px; }
+    .award-winner-mini { font-size:14px; font-weight:900; line-height:1.2; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .award-stat-mini   { font-size:11px; color:var(--gray-400); font-weight:700; }
 
     /* ── RANKING ── */
     .ranking-list { display:flex; flex-direction:column; gap:10px; }
@@ -286,7 +287,7 @@
       .kpi-strip { grid-template-columns:repeat(3,1fr); max-width:600px; margin:0 auto; }
       .ranking-item { padding:18px 20px; }
       .rank-name-big { font-size:16px; }
-      .award-card-mini { width:190px; }
+      .award-card-mini { width:100%; }
       .consist-grid { grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); }
       .section { padding:20px; max-width:700px; margin:0 auto; }
       .kpi-strip { padding:20px 20px 0; max-width:700px; margin:0 auto; }
@@ -384,7 +385,7 @@
 <nav class="bottom-nav">
   <div class="bottom-nav-row">
     <a href="javascript:history.back()" class="nav-btn amber"><i class="fas fa-arrow-left"></i>Voltar</a>
-    <a href="index-corrigido.html"      class="nav-btn green"><i class="fas fa-tasks"></i>Minhas Tarefas</a>
+    <a href="index.html"      class="nav-btn green"><i class="fas fa-tasks"></i>Minhas Tarefas</a>
   </div>
 </nav>
 
@@ -669,9 +670,11 @@ function renderAwards(metricas){
   el.innerHTML=awards.map(a=>`
     <div class="award-card-mini ${a.color}">
       <div class="award-trophy-mini">${a.trophy}</div>
-      <div class="award-title-mini">${a.title}</div>
-      <div class="award-winner-mini">${emj(a.winner)} ${a.winner}</div>
-      <div class="award-stat-mini">${a.stat}</div>
+      <div class="award-info-mini">
+        <div class="award-title-mini">${a.title}</div>
+        <div class="award-winner-mini">${emj(a.winner)} ${a.winner}</div>
+        <div class="award-stat-mini">${a.stat}</div>
+      </div>
     </div>`).join('');
 }
 
